@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enrollment Form</title>
+    <style>
+        :root {
+            color-scheme: light;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 32px;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #1f2937;
+            background: #f3f4f6;
+        }
+
+        .sheet {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #ffffff;
+            border: 1px solid #d1d5db;
+            border-radius: 16px;
+            padding: 28px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 26px;
+            letter-spacing: 0.02em;
+        }
+
+        .header p {
+            margin: 8px 0 0;
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .section {
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .section h2 {
+            margin: 0 0 12px;
+            font-size: 16px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .field {
+            border-bottom: 1px solid #9ca3af;
+            min-height: 30px;
+            padding-bottom: 6px;
+            font-size: 14px;
+        }
+
+        .field label {
+            display: block;
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 6px;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+        }
+
+        .table th,
+        .table td {
+            border: 1px solid #d1d5db;
+            padding: 10px;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        .table th {
+            background: #f9fafb;
+        }
+
+        .note {
+            margin-top: 18px;
+            font-size: 13px;
+            color: #6b7280;
+        }
+
+        @media print {
+            body {
+                background: #fff;
+                padding: 0;
+            }
+
+            .sheet {
+                box-shadow: none;
+                border-radius: 0;
+                border: 0;
+                max-width: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="sheet">
+        <div class="header">
+            <h1>Enrollment Form</h1>
+            <p>Please print and submit this form during on-site enrollment.</p>
+        </div>
+
+        <div class="section">
+            <h2>Student Information</h2>
+            <div class="grid">
+                <div class="field"><label>Student Name</label></div>
+                <div class="field"><label>LRN</label></div>
+                <div class="field"><label>Student ID</label></div>
+                <div class="field"><label>Grade Level</label></div>
+                <div class="field"><label>Section</label></div>
+                <div class="field"><label>School Year</label></div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Parent / Guardian Information</h2>
+            <div class="grid">
+                <div class="field"><label>Parent / Guardian Name</label></div>
+                <div class="field"><label>Contact Number</label></div>
+                <div class="field"><label>Address</label></div>
+                <div class="field"><label>Relationship to Student</label></div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Requirements Checklist</h2>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Requirement</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>Birth Certificate</td><td></td></tr>
+                    <tr><td>Report Card</td><td></td></tr>
+                    <tr><td>Good Moral Certificate</td><td></td></tr>
+                    <tr><td>2x2 ID Picture</td><td></td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <p class="note">This form is for on-site enrollment only. Submit it with the required documents at the school office.</p>
+    </div>
+</body>
+</html>
