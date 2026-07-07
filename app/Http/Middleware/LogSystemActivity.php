@@ -30,27 +30,38 @@ class LogSystemActivity
 
     private function storeLog(Request $request, int $statusCode, array $extra = []): void
     {
-        $routeName = optional($request->route())->getName();
-        $user = $request->user();
-        $payload = $this->sanitizeData($request->all());
+        try {
+            $routeName = optional($request->route())->getName();
+            $user = $request->user();
 
-        SystemLog::create([
-            'user_uuid' => $user?->uuid,
-            'action' => $routeName
-                ? strtoupper($request->method()).' '.$routeName
-                : strtoupper($request->method()).' '.$request->path(),
-            'route_name' => $routeName,
-            'method' => strtoupper($request->method()),
-            'path' => '/'.ltrim($request->path(), '/'),
-            'ip_address' => $request->ip(),
-            'user_agent' => $request->userAgent(),
-            'status_code' => $statusCode,
-            'metadata' => array_filter([
-                'payload' => $payload ?: null,
-                'query' => $request->query() ?: null,
-                'exception' => $extra ?: null,
-            ]),
-        ]);
+            // Get request data without triggering file processing
+            $payload = [];
+            foreach ($request->request->all() as $key => $value) {
+                if ($key !== 'avatar') {
+                    $payload[$key] = $value;
+                }
+            }
+
+            SystemLog::create([
+                'user_uuid' => $user?->uuid,
+                'action' => $routeName
+                    ? strtoupper($request->method()).' '.$routeName
+                    : strtoupper($request->method()).' '.$request->path(),
+                'route_name' => $routeName,
+                'method' => strtoupper($request->method()),
+                'path' => '/'.ltrim($request->path(), '/'),
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'status_code' => $statusCode,
+                'metadata' => array_filter([
+                    'payload' => $payload ?: null,
+                    'query' => $request->query() ?: null,
+                    'exception' => $extra ?: null,
+                ]),
+            ]);
+        } catch (Throwable $e) {
+            // Silently fail if database is unavailable
+        }
     }
 
     private function sanitizeData(array $data): array
@@ -71,6 +82,11 @@ class LogSystemActivity
             if (in_array($key, $sensitiveKeys, true)) {
                 $data[$key] = '[hidden]';
 
+                continue;
+            }
+
+            if ($value instanceof \Illuminate\Http\UploadedFile || $value instanceof \Symfony\Component\HttpFoundation\File\UploadedFile) {
+                $data[$key] = '[uploaded file]';
                 continue;
             }
 

@@ -34,9 +34,17 @@
         <link rel="icon" href="/favicon.svg" type="image/svg+xml">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
+        @php
+            $usesLocalViteServer = in_array(request()->getHost(), ['127.0.0.1', 'localhost'], true);
+
+            Vite::useHotFile(public_path($usesLocalViteServer ? 'hot' : 'hot.disabled'));
+        @endphp
+
         @fonts
 
-        @viteReactRefresh
+        @if ($usesLocalViteServer)
+            @viteReactRefresh
+        @endif
         @vite(['resources/css/app.css', 'resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])
         <x-inertia::head>
             <title>{{ config('app.name', 'Laravel') }}</title>

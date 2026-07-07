@@ -1,6 +1,6 @@
 import { Head, router, usePage } from '@inertiajs/react';
-import { PortalPageShell } from '@/components/portal-page-shell';
 import { useEffect, useMemo, useState } from 'react';
+import { PortalPageShell } from '@/components/portal-page-shell';
 
 type Subject = {
     uuid: string;
@@ -91,7 +91,9 @@ export default function AdminSections() {
     }
 
     function updateSection() {
-        if (!selectedSection) return;
+        if (!selectedSection) {
+return;
+}
 
         setSubmitting(true);
         router.patch('/admin/sections', {
@@ -131,6 +133,7 @@ export default function AdminSections() {
                             <div className="mt-2 grid gap-2 md:grid-cols-2">
                                 {subjects.map((subject) => {
                                     const preselected = createSubjectUuids.includes(subject.uuid);
+
                                     return (
                                         <label key={subject.uuid} className={`flex items-start gap-3 rounded border px-3 py-2 ${preselected ? 'border-sky-600 bg-sky-50 dark:bg-sky-950' : 'border-sidebar-border/70'}`}>
                                             <input type="checkbox" checked={preselected} onChange={() => toggleCreateSubject(subject.uuid)} className="mt-1" />
@@ -198,6 +201,7 @@ export default function AdminSections() {
                                     <div className="mt-2 grid gap-2 md:grid-cols-2">
                                         {subjects.map((subject) => {
                                             const checked = editSubjectUuids.includes(subject.uuid);
+
                                             return (
                                                 <label key={subject.uuid} className={`flex items-start gap-3 rounded border px-3 py-2 ${checked ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950' : 'border-sidebar-border/70'}`}>
                                                     <input type="checkbox" checked={checked} onChange={() => toggleEditSubject(subject.uuid)} className="mt-1" />

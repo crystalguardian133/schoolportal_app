@@ -38,14 +38,12 @@ class ProfileController extends Controller
             $avatar = $request->file('avatar');
 
             $user = $request->user();
-            $subfolder = 'admin&staff';
+            $subfolder = 'admin-staff';
             if (method_exists($user, 'hasRole')) {
                 if ($user->hasRole('student')) {
                     $subfolder = 'students';
                 } elseif ($user->hasRole('teacher')) {
                     $subfolder = 'teachers';
-                } else {
-                    $subfolder = 'admin&staff';
                 }
             }
 
@@ -54,7 +52,7 @@ class ProfileController extends Controller
                 File::makeDirectory($destDir, 0755, true);
             }
 
-            $filename = ($request->user()->uuid ?? uniqid()).'.'.$avatar->getClientOriginalExtension();
+            $filename = ($user->uuid ?? uniqid()).'.'.$avatar->getClientOriginalExtension();
             $avatar->move($destDir, $filename);
 
             $data['profile_picture'] = 'profile_pictures/'.$subfolder.'/'.$filename;
@@ -68,6 +66,29 @@ class ProfileController extends Controller
 
         $request->user()->save();
 
+        $request->user()->refresh();
+
+        $request->session()->put('auth', ['user' => $request->user()]);
+
+        $profilePicture = $data['profile_picture'] ?? null;
+        if ($request->user()->hasRole('student')) {
+            $student = $request->user()->student;
+            if ($student) {
+                $studentData = [];
+                if (isset($profilePicture)) {
+                    $studentData['profile_picture'] = $profilePicture;
+                }
+                if (isset($data['first_name'], $data['middle_name'], $data['last_name'])) {
+                    $studentData['first_name'] = $data['first_name'];
+                    $studentData['middle_name'] = $data['middle_name'];
+                    $studentData['last_name'] = $data['last_name'];
+                }
+                if (!empty($studentData)) {
+                    $student->update($studentData);
+                }
+            }
+        }
+
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Profile updated.')]);
 
         return to_route('profile.edit');
@@ -80,6 +101,10 @@ class ProfileController extends Controller
     {
         /** @var \App\Models\User|null $user */
         $user = $request->user();
+
+        if ($user && method_exists($user, 'hasRole') && $user->hasRole('student')) {
+            abort(403, 'Student accounts cannot be deleted from the profile screen.');
+        }
 
         Auth::logout();
 

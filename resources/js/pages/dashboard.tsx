@@ -1,6 +1,5 @@
 import { Head } from '@inertiajs/react';
 import { usePage } from '@inertiajs/react';
-import { dashboard } from '@/routes';
 import {
     AnnouncementsSection,
     GradesSection,
@@ -8,6 +7,7 @@ import {
     SubjectsEnrolledSection,
     WelcomeSection,
 } from '@/components/student-dashboard';
+import { dashboard } from '@/routes';
 
 type DashboardPageProps = {
     auth: {

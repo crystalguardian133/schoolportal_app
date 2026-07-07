@@ -35,7 +35,10 @@ export default function AdminRoles() {
 
     function saveRole(e: React.FormEvent) {
         e.preventDefault();
-        if (!selectedRole) return;
+
+        if (!selectedRole) {
+return;
+}
 
         setSaving(true);
         router.patch(`/admin/roles/${selectedRole.id}`, {
@@ -49,7 +52,10 @@ export default function AdminRoles() {
 
     function createRole(e: React.FormEvent) {
         e.preventDefault();
-        if (!newRoleName.trim()) return;
+
+        if (!newRoleName.trim()) {
+return;
+}
 
         setSaving(true);
         router.post('/admin/roles', { name: newRoleName }, {
@@ -120,6 +126,7 @@ export default function AdminRoles() {
                                     <div className="grid gap-2 sm:grid-cols-2">
                                         {permissions.map((permission) => {
                                             const checked = selectedPermissions.includes(permission.id);
+
                                             return (
                                                 <label key={permission.id} className="flex items-center gap-2 rounded-xl border border-sidebar-border/70 bg-sidebar/40 px-3 py-2 text-sm text-foreground transition-colors hover:bg-sidebar/60 dark:border-sidebar-border/70 dark:bg-sidebar/80 dark:text-sidebar-foreground dark:hover:bg-sidebar-accent/50">
                                                     <input

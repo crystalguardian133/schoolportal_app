@@ -1,7 +1,14 @@
+import { usePage } from '@inertiajs/react';
 import { Megaphone } from 'lucide-react';
 import { SectionShell } from '@/components/student-dashboard/section-shell';
+import { useAnnouncementRealtime } from '@/hooks/use-announcement-realtime';
 
 export function AnnouncementsSection() {
+    const { props } = usePage<{ announcements?: any[] }>();
+    const announcements = props.announcements || [];
+
+    useAnnouncementRealtime();
+
     return (
         <SectionShell
             id="announcements"

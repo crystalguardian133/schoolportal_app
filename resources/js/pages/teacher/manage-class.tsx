@@ -1,7 +1,7 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Users } from 'lucide-react';
-import { PortalPageShell } from '@/components/portal-page-shell';
 import { useState, useEffect, useMemo } from 'react';
+import { PortalPageShell } from '@/components/portal-page-shell';
 
 type TeacherClass = {
     id: string;
@@ -65,14 +65,27 @@ export default function ManageClass({ classes, selectedClass, students, advisory
     }
 
     const hasChanges = useMemo(() => {
-        if (!students || students.length !== gradeRows.length) return true;
+        if (!students || students.length !== gradeRows.length) {
+return true;
+}
+
         for (let i = 0; i < students.length; i++) {
             const s = students[i];
             const g = gradeRows[i];
-            if ((s.q1 ?? null) !== (g.q1 ?? null)) return true;
-            if ((s.q2 ?? null) !== (g.q2 ?? null)) return true;
-            if ((s.q3 ?? null) !== (g.q3 ?? null)) return true;
+
+            if ((s.q1 ?? null) !== (g.q1 ?? null)) {
+return true;
+}
+
+            if ((s.q2 ?? null) !== (g.q2 ?? null)) {
+return true;
+}
+
+            if ((s.q3 ?? null) !== (g.q3 ?? null)) {
+return true;
+}
         }
+
         return false;
     }, [students, gradeRows]);
 
@@ -148,6 +161,7 @@ export default function ManageClass({ classes, selectedClass, students, advisory
                                                         const cell = advisoryMatrix?.[student.uuid ?? '']?.[sub.uuid];
                                                         const display = cell?.total ?? '-';
                                                         const tooltip = `Q1: ${cell?.q1 ?? '-'}\nQ2: ${cell?.q2 ?? '-'}\nQ3: ${cell?.q3 ?? '-'}`;
+
                                                         return (
                                                             <td key={`${student.studentId}-${sub.uuid}`} className="px-4 py-3 text-center text-muted-foreground" title={tooltip}>
                                                                 {display}
@@ -159,6 +173,7 @@ export default function ManageClass({ classes, selectedClass, students, advisory
                                                             const overall = studentAverages?.[student.uuid ?? '']?.overall;
                                                             const isNum = typeof overall === 'number';
                                                             const colorClass = isNum ? (overall! >= 75 ? 'text-emerald-600' : 'text-rose-600') : 'text-sidebar-foreground';
+
                                                             return (
                                                                 <td className={`px-4 py-3 text-center font-semibold sticky right-0 bg-white dark:bg-sidebar z-20 ${colorClass}`}>
                                                                     {isNum ? overall : '-'}
@@ -187,6 +202,7 @@ export default function ManageClass({ classes, selectedClass, students, advisory
                                                                         <tbody>
                                                                             {advisorySubjects?.map((sub) => {
                                                                                 const cell = advisoryMatrix?.[student.uuid ?? '']?.[sub.uuid];
+
                                                                                 return (
                                                                                     <tr key={`detail-${student.studentId}-${sub.uuid}`}>
                                                                                         <td className="px-2 py-1">{sub.name}</td>
@@ -247,7 +263,10 @@ export default function ManageClass({ classes, selectedClass, students, advisory
                                                     onKeyDown={(e) => {
                                                         if (e.key === 'Enter') {
                                                             e.preventDefault();
-                                                            if (!submitting && hasChanges) saveGrades();
+
+                                                            if (!submitting && hasChanges) {
+saveGrades();
+}
                                                         }
                                                     }}
                                                     className="w-16 rounded border px-2 py-1 text-center"
@@ -265,7 +284,10 @@ export default function ManageClass({ classes, selectedClass, students, advisory
                                                     onKeyDown={(e) => {
                                                         if (e.key === 'Enter') {
                                                             e.preventDefault();
-                                                            if (!submitting && hasChanges) saveGrades();
+
+                                                            if (!submitting && hasChanges) {
+saveGrades();
+}
                                                         }
                                                     }}
                                                     className="w-16 rounded border px-2 py-1 text-center"
@@ -283,7 +305,10 @@ export default function ManageClass({ classes, selectedClass, students, advisory
                                                     onKeyDown={(e) => {
                                                         if (e.key === 'Enter') {
                                                             e.preventDefault();
-                                                            if (!submitting && hasChanges) saveGrades();
+
+                                                            if (!submitting && hasChanges) {
+saveGrades();
+}
                                                         }
                                                     }}
                                                     className="w-16 rounded border px-2 py-1 text-center"

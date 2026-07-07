@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ClassSection;
+use App\Models\CommonAddress;
 use App\Models\Student;
 use App\Models\StudentSubject;
 use App\Models\EnrollmentAudit;
@@ -159,6 +160,20 @@ class EnrollmentController extends Controller
                 ])->values()->all(),
             ])->all();
 
+        $commonAddresses = CommonAddress::query()
+            ->orderBy('label')
+            ->get()
+            ->map(fn (CommonAddress $address) => [
+                'id' => $address->id,
+                'label' => $address->label,
+                'address_zone_street' => $address->address_zone_street,
+                'address_barangay' => $address->address_barangay,
+                'address_municipality' => $address->address_municipality,
+                'address_province' => $address->address_province,
+            ])
+            ->values()
+            ->all();
+
         $selectedSectionUuid = $request->query('section_uuid');
         $selectedSection = null;
         if (! empty($selectedSectionUuid)) {
@@ -170,6 +185,7 @@ class EnrollmentController extends Controller
             'studentHistory' => $studentHistory,
             'yearLevelOptions' => $yearLevelOptions,
             'classSections' => $classSections,
+            'commonAddresses' => $commonAddresses,
             'selectedSection' => $selectedSection ? [
                 'uuid' => $selectedSection->uuid,
                 'name' => $selectedSection->name,
@@ -234,9 +250,24 @@ class EnrollmentController extends Controller
             ->values()
             ->all();
 
+        $commonAddresses = CommonAddress::query()
+            ->orderBy('label')
+            ->get()
+            ->map(fn (CommonAddress $address) => [
+                'id' => $address->id,
+                'label' => $address->label,
+                'address_zone_street' => $address->address_zone_street,
+                'address_barangay' => $address->address_barangay,
+                'address_municipality' => $address->address_municipality,
+                'address_province' => $address->address_province,
+            ])
+            ->values()
+            ->all();
+
         return inertia('admin/create-student-enroll', [
             'classSections' => $classSections,
             'yearLevelOptions' => $yearLevelOptions,
+            'commonAddresses' => $commonAddresses,
         ]);
     }
 
@@ -273,14 +304,14 @@ class EnrollmentController extends Controller
             'new_student.middle_name' => 'nullable|string|max:255',
             'new_student.last_name' => 'nullable|string|max:255',
             'new_student.birthday' => 'nullable|date',
-            'new_student.contact_number' => 'nullable|string|max:50',
+            'new_student.contact_number' => ['nullable', 'string', 'max:50', 'regex:/^\d*$/'],
             'new_student.address_zone_street' => 'nullable|string|max:255',
-            'new_student.address_barangay' => 'nullable|string|max:255',
-            'new_student.address_municipality' => 'nullable|string|max:255',
-            'new_student.address_province' => 'nullable|string|max:255',
-            'new_student.previous_school' => 'nullable|string|max:255',
-            'new_student.last_school_year' => 'nullable|string|max:50',
-            'new_student.last_grade_level' => 'nullable|string|max:100',
+            'new_student.address_barangay' => 'required|string|max:255',
+            'new_student.address_municipality' => 'required|string|max:255',
+            'new_student.address_province' => 'required|string|max:255',
+            'new_student.previous_school' => 'required|string|max:255',
+            'new_student.last_school_year' => ['required', 'string', 'max:50', 'regex:/^\d*(?:-\d+)*$/'],
+            'new_student.last_grade_level' => ['required', 'string', 'max:100', 'regex:/^\d*$/'],
             'new_student.previous_section' => 'nullable|string|max:255',
             'new_student.avatar' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         ]);

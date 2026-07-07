@@ -1,6 +1,6 @@
 import { Head, router } from '@inertiajs/react';
-import { useState } from 'react';
 import { ArrowRightLeft, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 import ReassignAssignmentModal from '@/components/admin/reassign-assignment-modal';
 
 function toArray(value) {
@@ -42,20 +42,32 @@ export default function Assignments({ subjects, teachers }) {
 
     function setTeacher(idx, teacherUuid) {
         const copy = [...rows];
-        if (!copy[idx]) return;
+
+        if (!copy[idx]) {
+return;
+}
+
         copy[idx].teacher_uuid = teacherUuid;
         setRows(copy);
     }
 
     function save(idx) {
         const row = rows[idx];
-        if (!row) return;
+
+        if (!row) {
+return;
+}
+
         router.post('/admin/assignments', row);
     }
 
     function removeAssignment(idx) {
         const row = rows[idx];
-        if (!row) return;
+
+        if (!row) {
+return;
+}
+
         const removedTeacherUuid = row.teacher_uuid;
 
         router.post('/admin/assignments', {
@@ -76,12 +88,17 @@ export default function Assignments({ subjects, teachers }) {
 
     function openReassignModal(idx) {
         const row = rows[idx];
-        if (!row || !row.teacher_uuid) return;
+
+        if (!row || !row.teacher_uuid) {
+return;
+}
 
         const teacher = teacherList.find((item) => item.uuid === row.teacher_uuid) ?? null;
         const sourceSubject = subjectList[idx] ?? null;
 
-        if (!teacher || !sourceSubject) return;
+        if (!teacher || !sourceSubject) {
+return;
+}
 
         setReassignState({
             open: true,

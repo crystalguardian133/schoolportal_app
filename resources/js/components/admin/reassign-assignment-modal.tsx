@@ -35,6 +35,7 @@ export default function ReassignAssignmentModal({
         if (!open) {
             setTargetSubjectUuid('');
             setProcessing(false);
+
             return;
         }
 

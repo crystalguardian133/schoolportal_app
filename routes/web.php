@@ -13,6 +13,7 @@ use App\Http\Controllers\AdminAssetController;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/login');
+Route::get('/assets/profile_pictures/{folder}/{filename}', [AdminAssetController::class, 'serveProfilePicture']);
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', [StudentPortalController::class, 'dashboard'])->name('dashboard');
@@ -40,14 +41,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('admin/roles/{id}', [AdminRoleController::class, 'update'])->name('admin.roles.update');
     Route::get('admin/announcements', [AnnouncementController::class, 'index'])->name('admin.announcements');
     Route::post('admin/announcements', [AnnouncementController::class, 'store'])->name('admin.announcements.store');
+    Route::patch('admin/announcements/{uuid}', [AnnouncementController::class, 'update'])->name('admin.announcements.update');
+    Route::delete('admin/announcements/{uuid}', [AnnouncementController::class, 'destroy'])->name('admin.announcements.destroy');
     Route::get('assets/announcements/{filename}', [AnnouncementController::class, 'serveImage']);
     Route::get('admin/sections', [AdminSectionController::class, 'index'])->name('admin.sections');
     Route::post('admin/sections', [AdminSectionController::class, 'store'])->name('admin.sections.store');
     Route::patch('admin/sections', [AdminSectionController::class, 'update'])->name('admin.sections.update');
     Route::get('/admin/profile-images', [AdminAssetController::class, 'listProfilePictures']);
-    Route::get('/assets/profile_pictures/{folder}/{filename}', [AdminAssetController::class, 'serveProfilePicture']);
     Route::inertia('teacher/schedule', 'teacher/schedule')->name('teacher.schedule');
     Route::get('teacher/announcements', [AnnouncementController::class, 'teacherIndex'])->name('teacher.announcements');
+    Route::patch('teacher/announcements/{uuid}', [AnnouncementController::class, 'update'])->name('teacher.announcements.update');
+    Route::delete('teacher/announcements/{uuid}', [AnnouncementController::class, 'destroy'])->name('teacher.announcements.destroy');
+    Route::get('announcements/new-count', [AnnouncementController::class, 'newCount'])->name('announcements.new-count');
 });
 
 require __DIR__.'/settings.php';

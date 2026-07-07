@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             RolesTableSeeder::class,
             PermissionsTableSeeder::class,
             RolePermissionSeeder::class,
+            CommonAddressSeeder::class,
         ]);
 
         // User::factory(10)->create();

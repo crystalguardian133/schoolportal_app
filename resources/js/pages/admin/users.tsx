@@ -1,10 +1,9 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Eye, EyeOff, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import EditUserModal from '@/components/admin/edit-user-modal';
 import { PortalPageShell } from '@/components/portal-page-shell';
-import { useState, useEffect } from 'react';
-import { Eye, EyeOff, Trash2, Edit2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
     Dialog,
     DialogTrigger,
@@ -14,12 +13,14 @@ import {
     DialogFooter,
     DialogClose,
 } from '@/components/ui/dialog';
-import EditUserModal from '@/components/admin/edit-user-modal';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 type UserRow = {
     uuid: string;
     name: string;
     email: string;
+    profile_picture?: string | null;
     is_adviser?: boolean;
     adviser_section?: string | null;
 };
@@ -38,7 +39,7 @@ export default function AdminUsers() {
         email: '',
         password: '',
         password_confirmation: '',
-        role: roleOptions.length ? roleOptions[0].name : '',
+        role: roleOptions[0]?.name || '',
         is_adviser: false,
         adviser_section: '',
     });
@@ -50,13 +51,6 @@ export default function AdminUsers() {
     function showToast(message: string, type: 'success' | 'error' = 'success') {
         window.dispatchEvent(new CustomEvent('local-toast', { detail: { message, type } }));
     }
-
-    useEffect(() => {
-        if (!form.role && roleOptions.length > 0) {
-            setForm((f) => ({ ...f, role: roleOptions[0].name }));
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [roleOptions]);
 
     function composeName(first?: string, middle?: string, last?: string) {
         const f = (first || '').trim();

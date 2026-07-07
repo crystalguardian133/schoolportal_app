@@ -1,4 +1,4 @@
-import { Form } from '@inertiajs/react';
+import { Form, usePage } from '@inertiajs/react';
 import { useRef } from 'react';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import Heading from '@/components/heading';
@@ -15,9 +15,15 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import type { Auth } from '@/types';
 
 export default function DeleteUser() {
+    const { auth } = usePage<{ auth: Auth }>().props;
     const passwordInput = useRef<HTMLInputElement>(null);
+
+    if (auth.user.role === 'student') {
+        return null;
+    }
 
     return (
         <div className="space-y-6">

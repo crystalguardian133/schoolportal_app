@@ -49,7 +49,7 @@ trait HasRolesAndPermissions
             return $this->roles()->where('id', (string) $role)->exists();
         }
 
-        return $this->roles()->where('name', (string) $role)->exists();
+        return $this->roles()->where('roles.name', (string) $role)->exists();
     }
 
     /** Check if model has a permission via roles. */

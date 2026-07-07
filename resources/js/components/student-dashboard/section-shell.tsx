@@ -1,6 +1,6 @@
 import { Link } from '@inertiajs/react';
-import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
+import type { ReactNode } from 'react';
 
 type SectionShellProps = {
     id: string;

@@ -9,6 +9,7 @@ use App\Models\Permission;
 use App\Models\ClassSection;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\File;
 
 class AdminUserController extends Controller
 {
@@ -17,7 +18,7 @@ class AdminUserController extends Controller
         $this->authorizeAdmin($request);
 
         $users = User::query()
-            ->select(['uuid', 'name', 'email', 'is_adviser', 'adviser_section'])
+            ->select(['uuid', 'name', 'email', 'profile_picture', 'is_adviser', 'adviser_section'])
             ->paginate((int) $request->query('per_page', 25))
             ->withQueryString();
 
@@ -134,6 +135,7 @@ class AdminUserController extends Controller
                 'uuid' => $user->uuid,
                 'name' => $user->name,
                 'email' => $user->email,
+                'profile_picture' => $user->profile_picture,
                 'is_adviser' => $user->is_adviser,
                 'adviser_section' => $user->adviser_section,
                 'roles' => $userRoles,
@@ -158,6 +160,7 @@ class AdminUserController extends Controller
             'role' => 'required|string',
             'is_adviser' => 'nullable|boolean',
             'adviser_section' => 'nullable|string',
+            'avatar' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
         ]);
 
         // ensure email is unique except for current user
@@ -176,6 +179,29 @@ class AdminUserController extends Controller
         $user->email = $data['email'];
         $user->is_adviser = ! empty($data['is_adviser']);
         $user->adviser_section = ! empty($data['is_adviser']) ? ($data['adviser_section'] ?? null) : null;
+
+        if ($request->hasFile('avatar')) {
+            $avatar = $request->file('avatar');
+            $subfolder = 'admin-staff';
+
+            if (method_exists($user, 'hasRole')) {
+                if ($user->hasRole('student')) {
+                    $subfolder = 'students';
+                } elseif ($user->hasRole('teacher')) {
+                    $subfolder = 'teachers';
+                }
+            }
+
+            $destDir = base_path('resources/assets/profile_pictures/'.$subfolder);
+            if (! File::exists($destDir)) {
+                File::makeDirectory($destDir, 0755, true);
+            }
+
+            $filename = ($user->uuid ?? uniqid()).'.'.$avatar->getClientOriginalExtension();
+            $avatar->move($destDir, $filename);
+
+            $user->profile_picture = 'profile_pictures/'.$subfolder.'/'.$filename;
+        }
 
         if (! empty($data['password'])) {
             $user->password = Hash::make($data['password']);

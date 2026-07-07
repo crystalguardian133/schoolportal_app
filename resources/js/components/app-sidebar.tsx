@@ -12,12 +12,11 @@ import {
     UserCog,
     Clock3,
 } from 'lucide-react';
+import { Sun, Moon } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
-import { useAppearance } from '@/hooks/use-appearance';
-import { Sun, Moon } from 'lucide-react';
-import { useEffect, useState } from 'react';
 import {
     Sidebar,
     SidebarContent,
@@ -27,9 +26,10 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import { useAppearance } from '@/hooks/use-appearance';
 import { dashboard } from '@/routes';
-import type { Auth } from '@/types/auth';
 import type { NavItem } from '@/types';
+import type { Auth } from '@/types/auth';
 
 const mainNavItems: NavItem[] = [
     {
