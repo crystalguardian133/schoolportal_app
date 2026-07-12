@@ -11,6 +11,7 @@
 /resources/js/routes
 /resources/js/wayfinder
 /vendor
+supabase.txt
 .DS_Store
 .env
 .env.backup
