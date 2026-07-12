@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::table('subjects', function (Blueprint $table) {
             if (!Schema::hasColumn('subjects', 'subject_teacher_uuid')) {
-                $table->uuid('subject_teacher_uuid')->nullable()->after('code');
+                $table->string('subject_teacher_uuid',36)->nullable()->after('code');
                 $table->foreign('subject_teacher_uuid')->references('uuid')->on('users')->onDelete('set null');
             }
         });
