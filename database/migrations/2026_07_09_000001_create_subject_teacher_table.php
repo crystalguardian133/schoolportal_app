@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('subject_teacher', function (Blueprint $table) {
             $table->id();
             $table->uuid('subject_uuid');
-            $table->uuid('teacher_uuid');
+            $table->string('teacher_uuid', 36);
             $table->boolean('is_substitute')->default(false);
             $table->timestamps();
 
