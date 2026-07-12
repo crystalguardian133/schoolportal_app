@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('students', function (Blueprint $table) {
-            $table->uuid('user_uuid')->nullable()->unique()->after('uuid');
+            $table->string('user_uuid', 36)->nullable()->unique()->after('uuid');
             $table->string('school_year')->nullable()->after('grade_level');
             $table->foreign('user_uuid')->references('uuid')->on('users')->cascadeOnDelete();
         });
