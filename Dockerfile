@@ -27,7 +27,9 @@ RUN npm ci --legacy-peer-deps
 COPY . .
 
 # Ensure Laravel's required storage directories exist and are writable
-RUN mkdir -p storage/framework/{cache,sessions,views} \
+RUN mkdir -p storage/framework/cache \
+    storage/framework/sessions \
+    storage/framework/views \
     storage/logs \
     bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
@@ -37,9 +39,10 @@ RUN composer dump-autoload --optimize
 # Create .env for build-time artisan commands (wayfinder needs Laravel to boot)
 ARG APP_KEY
 RUN cp .env.example .env && \
-    sed -i "s|^APP_KEY=.*|APP_KEY=${APP_KEY}|" .env
+    sed -i "s|^APP_KEY=.*|APP_KEY=${APP_KEY}|" .env && \
+    php artisan config:clear
 
-# Build-time env vars for Vite
+# Build-time env vars for Vite (baked into JS bundle at build time)
 ARG VITE_APP_NAME
 ARG VITE_REVERB_APP_KEY
 ARG VITE_REVERB_HOST
@@ -50,16 +53,6 @@ ENV VITE_REVERB_APP_KEY=$VITE_REVERB_APP_KEY
 ENV VITE_REVERB_HOST=$VITE_REVERB_HOST
 ENV VITE_REVERB_PORT=$VITE_REVERB_PORT
 ENV VITE_REVERB_SCHEME=$VITE_REVERB_SCHEME
-
-# TEMP DEBUG: run wayfinder directly to see the real error
-RUN php artisan config:clear && \
-    php artisan view:clear && \
-    php artisan cache:clear && \
-    echo "=== Checking view cache path ===" && \
-    php artisan tinker --execute="echo config('view.compiled');" && \
-    echo "=== Checking directory exists ===" && \
-    ls -la storage/framework/views
-RUN php artisan wayfinder:generate --with-form
 
 RUN npm run build
 
