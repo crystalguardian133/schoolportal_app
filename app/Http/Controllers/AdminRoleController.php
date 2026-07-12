@@ -13,7 +13,10 @@ class AdminRoleController extends Controller
     {
         $user = $request->user();
 
-        if (! $user || ! method_exists($user, 'hasRole') || (! $user->hasRole('admin') && ! $user->hasRole('principal') && ! $user->hasRole('registrar'))) {
+        $hasPermission = $user && method_exists($user, 'hasPermission') && $user->hasPermission('manage roles');
+        $hasRole = $user && method_exists($user, 'hasRole') && ($user->hasRole('admin') || $user->hasRole('principal') || $user->hasRole('registrar'));
+
+        if (! $user || (! $hasPermission && ! $hasRole)) {
             abort(403);
         }
     }
@@ -84,5 +87,22 @@ class AdminRoleController extends Controller
         });
 
         return back()->with('success', 'Role updated successfully.');
+    }
+
+    public function destroy(Request $request, string $id)
+    {
+        $this->authorizeAdmin($request);
+
+        $role = Role::query()->where('id', $id)->firstOrFail();
+
+        // Prevent deletion of protected roles
+        $protectedRoles = ['admin', 'principal', 'registrar', 'student', 'staff', 'teacher'];
+        if (in_array($role->name, $protectedRoles)) {
+            return back()->with('error', 'This role is protected and cannot be deleted.');
+        }
+
+        $role->delete();
+
+        return back()->with('success', 'Role deleted successfully.');
     }
 }

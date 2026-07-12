@@ -10,6 +10,7 @@ use App\Http\Controllers\AdminRoleController;
 use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\AdminAssetController;
+use App\Http\Controllers\AdminSubjectController;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/login');
@@ -39,6 +40,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('admin/roles', [AdminRoleController::class, 'index'])->name('admin.roles');
     Route::post('admin/roles', [AdminRoleController::class, 'store'])->name('admin.roles.store');
     Route::patch('admin/roles/{id}', [AdminRoleController::class, 'update'])->name('admin.roles.update');
+    Route::delete('admin/roles/{id}', [AdminRoleController::class, 'destroy'])->name('admin.roles.destroy');
     Route::get('admin/announcements', [AnnouncementController::class, 'index'])->name('admin.announcements');
     Route::post('admin/announcements', [AnnouncementController::class, 'store'])->name('admin.announcements.store');
     Route::patch('admin/announcements/{uuid}', [AnnouncementController::class, 'update'])->name('admin.announcements.update');
@@ -48,6 +50,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('admin/sections', [AdminSectionController::class, 'store'])->name('admin.sections.store');
     Route::patch('admin/sections', [AdminSectionController::class, 'update'])->name('admin.sections.update');
     Route::get('/admin/profile-images', [AdminAssetController::class, 'listProfilePictures']);
+    Route::get('admin/subjects', [AdminSubjectController::class, 'index'])->name('admin.subjects');
+Route::post('admin/subjects', [AdminSubjectController::class, 'store'])->name('admin.subjects.store');
+Route::patch('admin/subjects', [AdminSubjectController::class, 'update'])->name('admin.subjects.update');
+Route::delete('admin/subjects', [AdminSubjectController::class, 'destroy'])->name('admin.subjects.destroy');
+Route::post('admin/subjects/assign-teacher', [AdminSubjectController::class, 'assignTeacher'])->name('admin.subjects.assign-teacher');
+Route::delete('admin/subjects/teachers/{teacherUuid}/{subjectUuid}', [AdminSubjectController::class, 'removeTeacher'])->name('admin.subjects.teachers.remove');
+    Route::get('admin/id-cards', [\App\Http\Controllers\AdminIdCardController::class, 'index'])->name('admin.id-cards');
     Route::inertia('teacher/schedule', 'teacher/schedule')->name('teacher.schedule');
     Route::get('teacher/announcements', [AnnouncementController::class, 'teacherIndex'])->name('teacher.announcements');
     Route::patch('teacher/announcements/{uuid}', [AnnouncementController::class, 'update'])->name('teacher.announcements.update');

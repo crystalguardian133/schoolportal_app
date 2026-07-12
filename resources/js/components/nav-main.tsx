@@ -32,7 +32,8 @@ export function NavMain({
                                 typeof item.href === 'string' &&
                                 item.href.startsWith('#')
                                     ? currentHash === item.href ||
-                                      (item.href === '#dashboard' && !currentHash)
+                                      (item.href === '#dashboard' &&
+                                          !currentHash)
                                     : isCurrentUrl(item.href)
                             }
                             tooltip={item.title}
@@ -43,7 +44,8 @@ export function NavMain({
                                     href={item.href}
                                     aria-current={
                                         currentHash === item.href ||
-                                        (item.href === '#dashboard' && !currentHash)
+                                        (item.href === '#dashboard' &&
+                                            !currentHash)
                                             ? 'page'
                                             : undefined
                                     }
@@ -56,7 +58,9 @@ export function NavMain({
                                     href={item.href}
                                     prefetch
                                     aria-current={
-                                        isCurrentUrl(item.href) ? 'page' : undefined
+                                        isCurrentUrl(item.href)
+                                            ? 'page'
+                                            : undefined
                                     }
                                 >
                                     {item.icon && <item.icon />}

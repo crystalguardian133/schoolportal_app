@@ -7,7 +7,9 @@ function getStorageKey(uuid?: string | null) {
 }
 
 export function useAnnouncementRealtime(onAnnouncementsUpdate?: () => void) {
-    const { props } = usePage<{ auth?: { user?: { uuid?: string; role?: string | null } } }>();
+    const { props } = usePage<{
+        auth?: { user?: { uuid?: string; role?: string | null } };
+    }>();
     const role = props.auth?.user?.role;
     const userUuid = props.auth?.user?.uuid;
     const [unreadCount, setUnreadCount] = useState(0);
@@ -39,7 +41,10 @@ export function useAnnouncementRealtime(onAnnouncementsUpdate?: () => void) {
         seenRef.current = Date.now();
 
         if (typeof window !== 'undefined') {
-            localStorage.setItem(getStorageKey(userUuid), String(seenRef.current));
+            localStorage.setItem(
+                getStorageKey(userUuid),
+                String(seenRef.current),
+            );
         }
 
         setUnreadCount(0);
@@ -52,28 +57,34 @@ export function useAnnouncementRealtime(onAnnouncementsUpdate?: () => void) {
 
     const checkNew = useCallback(async () => {
         if (seenRef.current === null) {
-return;
-}
+            return;
+        }
 
         try {
             const since = new Date(seenRef.current).toISOString();
-            const res = await fetch(`/announcements/new-count?since=${encodeURIComponent(since)}`);
+            const res = await fetch(
+                `/announcements/new-count?since=${encodeURIComponent(since)}`,
+            );
 
             if (!res.ok) {
-return;
-}
+                return;
+            }
 
             const data = await res.json();
 
             if (typeof data.count !== 'number') {
-return;
-}
+                return;
+            }
 
             if (data.count > 0 && !skipToastRef.current) {
                 setUnreadCount(data.count);
             }
 
-            if (callbackRef.current && (data.total !== lastTotalRef.current || data.updated_at !== lastUpdatedRef.current)) {
+            if (
+                callbackRef.current &&
+                (data.total !== lastTotalRef.current ||
+                    data.updated_at !== lastUpdatedRef.current)
+            ) {
                 lastTotalRef.current = data.total;
                 lastUpdatedRef.current = data.updated_at;
                 callbackRef.current();
@@ -86,7 +97,10 @@ return;
     // Initialize seenRef from localStorage and set skipToast flag
     useEffect(() => {
         if (seenRef.current === null) {
-            const stored = typeof window !== 'undefined' ? localStorage.getItem(getStorageKey(userUuid)) : null;
+            const stored =
+                typeof window !== 'undefined'
+                    ? localStorage.getItem(getStorageKey(userUuid))
+                    : null;
             seenRef.current = stored ? Number(stored) : Date.now();
         }
 
@@ -96,7 +110,10 @@ return;
             seenRef.current = Date.now();
 
             if (typeof window !== 'undefined') {
-                localStorage.setItem(getStorageKey(userUuid), String(seenRef.current));
+                localStorage.setItem(
+                    getStorageKey(userUuid),
+                    String(seenRef.current),
+                );
             }
 
             skipToastRef.current = true;
@@ -115,16 +132,17 @@ return;
 
     useEffect(() => {
         if (unreadCount <= 0) {
-return;
-}
+            return;
+        }
 
         if (toastIdRef.current) {
             toast.dismiss(toastIdRef.current);
         }
 
-        const message = unreadCount === 1
-            ? '1 new announcement is posted. Please check the announcement page for details.'
-            : `${unreadCount} new announcements are posted. Please check the announcement page for details.`;
+        const message =
+            unreadCount === 1
+                ? '1 new announcement is posted. Please check the announcement page for details.'
+                : `${unreadCount} new announcements are posted. Please check the announcement page for details.`;
 
         toastIdRef.current = toast.success(message, {
             duration: Infinity,

@@ -85,18 +85,24 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
         return () => window.clearInterval(timer);
     }, []);
 
-    const clockLabel = mounted ? now.toLocaleTimeString([], {
-        hour: 'numeric',
-        minute: '2-digit',
-        second: '2-digit',
-    }) : 'Loading time';
-    const dateLabel = mounted ? now.toLocaleDateString([], {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-    }) : 'Loading date';
-    const timeZoneLabel = mounted ? (Intl.DateTimeFormat().resolvedOptions().timeZone || 'Local time') : 'Local time';
+    const clockLabel = mounted
+        ? now.toLocaleTimeString([], {
+              hour: 'numeric',
+              minute: '2-digit',
+              second: '2-digit',
+          })
+        : 'Loading time';
+    const dateLabel = mounted
+        ? now.toLocaleDateString([], {
+              weekday: 'short',
+              month: 'short',
+              day: 'numeric',
+              year: 'numeric',
+          })
+        : 'Loading date';
+    const timeZoneLabel = mounted
+        ? Intl.DateTimeFormat().resolvedOptions().timeZone || 'Local time'
+        : 'Local time';
 
     return (
         <>
@@ -245,13 +251,17 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                     variant="ghost"
                                     className="size-10 rounded-full p-1"
                                 >
-<Avatar className="size-8 overflow-hidden rounded-full">
-                                            <AvatarImage
-                                                src={auth.user?.profile_picture ? `/assets/${auth.user?.profile_picture}` : auth.user?.avatar}
-                                                alt={auth.user?.name}
-                                            />
-                                            <AvatarFallback className="rounded-lg bg-neutral-200 text-black dark:bg-neutral-700 dark:text-white">
-                                                {getInitials(auth.user?.name ?? '')}
+                                    <Avatar className="size-8 overflow-hidden rounded-full">
+                                        <AvatarImage
+                                            src={
+                                                auth.user?.profile_picture
+                                                    ? `/assets/${auth.user?.profile_picture}`
+                                                    : auth.user?.avatar
+                                            }
+                                            alt={auth.user?.name}
+                                        />
+                                        <AvatarFallback className="rounded-lg bg-neutral-200 text-black dark:bg-neutral-700 dark:text-white">
+                                            {getInitials(auth.user?.name ?? '')}
                                         </AvatarFallback>
                                     </Avatar>
                                 </Button>
@@ -268,20 +278,28 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
             <div className="flex w-full border-b border-sidebar-border/70">
                 <div className="mx-auto flex min-h-12 w-full items-center justify-between gap-3 px-4 py-2 text-neutral-500 md:max-w-7xl">
                     <div className="min-w-0">
-                        {breadcrumbs.length > 1 ? <Breadcrumbs breadcrumbs={breadcrumbs} /> : null}
+                        {breadcrumbs.length > 1 ? (
+                            <Breadcrumbs breadcrumbs={breadcrumbs} />
+                        ) : null}
                     </div>
                     <div className="hidden items-center gap-3 rounded-full border border-border bg-muted/60 px-3 py-2 shadow-sm lg:flex">
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <CalendarDays className="size-4 text-foreground" />
-                            <span className="font-medium text-foreground">{dateLabel}</span>
+                            <span className="font-medium text-foreground">
+                                {dateLabel}
+                            </span>
                         </div>
                         <div className="h-4 w-px bg-border" />
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <Clock3 className="size-4 text-foreground" />
-                            <span className="tabular-nums font-medium text-foreground">{clockLabel}</span>
+                            <span className="font-medium text-foreground tabular-nums">
+                                {clockLabel}
+                            </span>
                         </div>
                         <div className="h-4 w-px bg-border" />
-                        <div className="max-w-[160px] truncate text-xs text-muted-foreground">{timeZoneLabel}</div>
+                        <div className="max-w-[160px] truncate text-xs text-muted-foreground">
+                            {timeZoneLabel}
+                        </div>
                     </div>
                 </div>
             </div>

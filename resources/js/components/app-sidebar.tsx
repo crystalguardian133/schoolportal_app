@@ -11,6 +11,8 @@ import {
     FileText,
     UserCog,
     Clock3,
+    Book,
+    CreditCard,
 } from 'lucide-react';
 import { Sun, Moon } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -101,15 +103,20 @@ const adminNavItems: NavItem[] = [
         href: '/admin/enrollments',
         icon: ClipboardList,
     },
-        {
-            title: 'Create Student',
-            href: '/admin/create-student',
-            icon: Users,
-        },
+    {
+        title: 'Create Student',
+        href: '/admin/create-student',
+        icon: Users,
+    },
     {
         title: 'Class Sections',
         href: '/admin/sections',
         icon: Users,
+    },
+    {
+        title: 'Subjects',
+        href: '/admin/subjects',
+        icon: Book,
     },
     {
         title: 'Assignments',
@@ -141,19 +148,47 @@ const adminNavItems: NavItem[] = [
         href: '/admin/roles',
         icon: Shield,
     },
+    {
+        title: 'ID Cards',
+        href: '/admin/id-cards',
+        icon: CreditCard,
+    },
 ];
 
 export function AppSidebar() {
     const { auth } = usePage<{ auth: Auth }>().props;
     const isStudent = auth.user?.role === 'student';
     const isStaff = auth.user?.role === 'staff';
-    const isAdmin = auth.user?.role === 'admin' || auth.user?.role === 'principal' || auth.user?.role === 'registrar';
-    const navItems = isAdmin ? adminNavItems : isStaff ? staffNavItems : studentNavItems;
+    const permissions = auth.permissions || [];
+    const isAdmin =
+        auth.user?.role === 'admin' ||
+        auth.user?.role === 'principal' ||
+        auth.user?.role === 'registrar' ||
+        permissions.some((p: string) =>
+            [
+                'manage users',
+                'manage roles',
+                'manage subjects',
+                'manage sections',
+                'manage assignments',
+                'manage enrollments',
+                'manage announcements',
+                'view logs',
+            ].includes(p.toLowerCase()),
+        );
+
+    const navItems = isAdmin
+        ? adminNavItems
+        : isStaff
+          ? staffNavItems
+          : studentNavItems;
 
     return (
         <Sidebar collapsible="icon" variant="inset">
             <SidebarHeader
-                className={isStudent ? 'border-b border-sidebar-border/60 pb-3' : ''}
+                className={
+                    isStudent ? 'border-b border-sidebar-border/60 pb-3' : ''
+                }
             >
                 <SidebarMenu>
                     <SidebarMenuItem>
@@ -169,17 +204,23 @@ export function AppSidebar() {
             <SidebarContent className={isStudent ? 'pt-3' : ''}>
                 <NavMain
                     items={navItems}
-                    label={isStudent ? null : isAdmin ? 'Administrative Tools' : 'Platform'}
+                    label={
+                        isStudent
+                            ? null
+                            : isAdmin
+                              ? 'Administrative Tools'
+                              : 'Platform'
+                    }
                 />
             </SidebarContent>
 
             <SidebarFooter>
                 <div className="px-3 pb-3">
-                    <div className="flex items-center justify-center mb-2">
+                    <div className="mb-2 flex items-center justify-center">
                         <div className="flex items-center gap-3">
-                            <Sun className="w-4 h-4 text-muted-foreground" />
+                            <Sun className="h-4 w-4 text-muted-foreground" />
                             <AppearanceSwitch />
-                            <Moon className="w-4 h-4 text-muted-foreground" />
+                            <Moon className="h-4 w-4 text-muted-foreground" />
                         </div>
                     </div>
                     <NavUser />
@@ -205,8 +246,20 @@ function AppearanceSwitch() {
             aria-label="Toggle light/dark"
             className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none"
         >
-            <span className={isDark ? 'absolute left-0.5 w-5 h-5 rounded-full bg-white transform translate-x-5 transition-transform' : 'absolute left-0.5 w-5 h-5 rounded-full bg-white transition-transform'} />
-            <span className={isDark ? 'block h-6 w-11 rounded-full bg-neutral-800' : 'block h-6 w-11 rounded-full bg-neutral-200'} />
+            <span
+                className={
+                    isDark
+                        ? 'absolute left-0.5 h-5 w-5 translate-x-5 transform rounded-full bg-white transition-transform'
+                        : 'absolute left-0.5 h-5 w-5 rounded-full bg-white transition-transform'
+                }
+            />
+            <span
+                className={
+                    isDark
+                        ? 'block h-6 w-11 rounded-full bg-neutral-800'
+                        : 'block h-6 w-11 rounded-full bg-neutral-200'
+                }
+            />
         </button>
     );
 }

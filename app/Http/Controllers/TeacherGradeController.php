@@ -21,7 +21,12 @@ class TeacherGradeController extends Controller
 
         // Authorization: only admin or assigned teacher can update
         if (! $user->hasRole('admin')) {
-            if (empty($subject->subject_teacher_uuid) || $subject->subject_teacher_uuid !== $user->uuid) {
+            $isAssignedTeacher = DB::table('subject_teacher')
+                ->where('subject_uuid', $subject->uuid)
+                ->where('teacher_uuid', $user->uuid)
+                ->exists();
+
+            if (! $isAssignedTeacher) {
                 return redirect()->back()->with('error', 'Forbidden');
             }
         }

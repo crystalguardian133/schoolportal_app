@@ -7,6 +7,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 use App\Models\Subject;
 use App\Models\StudentSubject;
+use Illuminate\Support\Facades\DB;
 
 class TeacherClassController extends Controller
 {
@@ -33,7 +34,7 @@ class TeacherClassController extends Controller
                 'subject' => $s->name,
                 'students' => $s->enrollments()->count(),
                 'timeSchedule' => $s->time_schedule ?? '',
-                'subject_teacher_uuid' => $s->subject_teacher_uuid ?? null,
+                'subject_teacher_uuid' => $s->subject_teacher ?? null,
             ];
         })->toArray();
 
@@ -49,10 +50,15 @@ class TeacherClassController extends Controller
 
         $filtered = [];
 
-        // Staff: include only subjects assigned to this teacher
-        if ($user->hasRole('staff')) {
+        // Staff: include only subjects assigned to this teacher (via pivot or substitute)
+        if ($user->hasRole('staff') || !empty($user->is_adviser)) {
+            $assignedSubjects = DB::table('subject_teacher')
+                ->where('teacher_uuid', $user->uuid)
+                ->pluck('subject_uuid')
+                ->toArray();
+
             foreach ($rows as $r) {
-                if (!empty($r['subject_teacher_uuid']) && $r['subject_teacher_uuid'] === $user->uuid) {
+                if (in_array($r['id'], $assignedSubjects)) {
                     $filtered[] = $r;
                 }
             }
@@ -206,7 +212,12 @@ class TeacherClassController extends Controller
                 'students' => $students,
                 'canEdit' => $user->hasRole('admin') ? true : false,
                 'advisorySubjects' => $subjects->map(function ($s) {
-                    return [ 'uuid' => $s->uuid, 'name' => $s->name, 'teacher' => $s->subject_teacher ?? null ];
+                    $teacher = DB::table('subject_teacher')
+                        ->where('subject_uuid', $s->uuid)
+                        ->join('users', 'subject_teacher.teacher_uuid', '=', 'users.uuid')
+                        ->first(['name']);
+
+                    return [ 'uuid' => $s->uuid, 'name' => $s->name, 'teacher' => $teacher->name ?? null ];
                 })->toArray(),
                 'advisoryMatrix' => $matrix,
                 'studentAverages' => $studentAverages,
@@ -220,9 +231,14 @@ class TeacherClassController extends Controller
             abort(404);
         }
 
-        // check permissions: admin or assigned teacher
+        // check permissions: admin or assigned teacher (including substitute)
         if (! $user->hasRole('admin')) {
-            if (empty($subject->subject_teacher_uuid) || $subject->subject_teacher_uuid !== $user->uuid) {
+            $isAssignedTeacher = DB::table('subject_teacher')
+                ->where('subject_uuid', $subject->uuid)
+                ->where('teacher_uuid', $user->uuid)
+                ->exists();
+
+            if (! $isAssignedTeacher) {
                 abort(403);
             }
         }
@@ -233,10 +249,10 @@ class TeacherClassController extends Controller
             'subject' => $subject->name,
             'students' => $subject->enrollments()->count(),
             'timeSchedule' => $subject->time_schedule ?? '',
-            'subject_teacher_uuid' => $subject->subject_teacher_uuid ?? null,
+            'subject_teacher_uuid' => null,
         ];
 
-        $canEdit = $user->hasRole('admin') || (!empty($subject->subject_teacher_uuid) && $user->uuid === $subject->subject_teacher_uuid);
+        $canEdit = $user->hasRole('admin') || $user->hasRole('staff') || !empty($user->is_adviser);
 
         return Inertia::render('teacher/manage-class', [
             'classes' => $classes,

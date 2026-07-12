@@ -13,10 +13,13 @@ export default function PreRegistration() {
                 <section className="rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
                     <div className="flex items-center gap-3">
                         <Download className="size-5 text-sky-600" />
-                        <h2 className="text-lg font-semibold">Download Enrollment Form</h2>
+                        <h2 className="text-lg font-semibold">
+                            Download Enrollment Form
+                        </h2>
                     </div>
                     <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                        Please download, print, and bring this form during on-site enrollment.
+                        Please download, print, and bring this form during
+                        on-site enrollment.
                     </p>
 
                     <a

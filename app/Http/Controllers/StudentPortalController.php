@@ -76,6 +76,23 @@ class StudentPortalController extends Controller
             ]);
         }
 
+        $currentSchoolYear = $student?->school_year;
+
+        $enrollments = $student
+            ? $student->enrollments()
+                ->when($currentSchoolYear, fn ($query) => $query->where('school_year', $currentSchoolYear))
+                ->get()
+            : collect();
+
+        $subjectsEnrolledCount = $enrollments->count();
+
+        $averageGrade = $enrollments->isNotEmpty()
+            ? round($enrollments->avg('total') ?? 0, 1)
+            : null;
+
+        $announcements = $this->getVisibleAnnouncements($request);
+        $unseenAnnouncementsCount = $announcements->count();
+
         return Inertia::render('dashboard', [
             'student' => $student ? [
                 'name' => $student->full_name ?: $student->name,
@@ -86,7 +103,48 @@ class StudentPortalController extends Controller
                 'section' => $student->section,
                 'schoolYear' => $student->school_year,
             ] : null,
+            'subjectsEnrolledCount' => $subjectsEnrolledCount,
+            'averageGrade' => $averageGrade,
+            'unseenAnnouncementsCount' => $unseenAnnouncementsCount,
         ]);
+    }
+
+    private function getVisibleAnnouncements(Request $request)
+    {
+        $user = $request->user();
+        $studentSection = null;
+        $classSectionUuid = null;
+
+        if ($user && method_exists($user, 'hasRole') && $user->hasRole('student')) {
+            $studentSection = $user->student?->section;
+            if ($studentSection) {
+                $classSectionUuid = \App\Models\ClassSection::query()->where('name', $studentSection)->value('uuid');
+            }
+        }
+
+        $query = \App\Models\Announcement::query();
+
+        if ($user && method_exists($user, 'hasRole') && $user->hasRole('student')) {
+            $query->where(function ($builder) use ($studentSection, $classSectionUuid) {
+                $builder->where('scope', 'system');
+
+                if ($studentSection !== null) {
+                    $builder->orWhere(function ($sectionQuery) use ($studentSection) {
+                        $sectionQuery->where('scope', 'section')
+                            ->where('section_name', $studentSection);
+                    });
+                }
+
+                if ($classSectionUuid !== null) {
+                    $builder->orWhere(function ($classQuery) use ($classSectionUuid) {
+                        $classQuery->where('scope', 'class')
+                            ->where('class_section_uuid', $classSectionUuid);
+                    });
+                }
+            });
+        }
+
+        return $query->get();
     }
 
     public function grades(Request $request): Response

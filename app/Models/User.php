@@ -15,6 +15,7 @@ use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Symfony\Component\Uid\Uuid;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Models\Role;
 use App\Models\Concerns\HasRolesAndPermissions;
 
@@ -56,9 +57,9 @@ class User extends Authenticatable implements PasskeyUser
         });
     }
 
-    /**
-     * A user can have many roles (many-to-many via role_user pivot).
-     */
+/**
+      * A user can have many roles (many-to-many via role_user pivot).
+      */
     public function roles(): BelongsToMany
     {
         return $this->belongsToMany(Role::class, 'role_user', 'user_uuid', 'role_uuid', 'uuid', 'id');
@@ -80,5 +81,18 @@ class User extends Authenticatable implements PasskeyUser
         }
 
         return $this->roles->first()?->name;
+    }
+
+    public function getAllPermissions(): \Illuminate\Support\Collection
+    {
+        $this->loadMissing('roles.permissions');
+        return $this->roles->pluck('permissions')->flatten()->unique('id')->values();
+    }
+
+    public function subjects(): BelongsToMany
+    {
+        return $this->belongsToMany(Subject::class, 'subject_teacher', 'teacher_uuid', 'subject_uuid', 'uuid', 'uuid')
+            ->withPivot('is_substitute')
+            ->withTimestamps();
     }
 }

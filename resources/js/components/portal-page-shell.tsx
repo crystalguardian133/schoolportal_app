@@ -11,19 +11,32 @@ type PortalPageShellProps = {
     showBackLink?: boolean;
 };
 
-export function PortalPageShell({ title, description, children, showBackLink = true }: PortalPageShellProps) {
+export function PortalPageShell({
+    title,
+    description,
+    children,
+    showBackLink = true,
+}: PortalPageShellProps) {
     const { props } = usePage();
     const flash: any = props.flash || {};
     const message = flash.success ?? flash.error ?? null;
     const type = flash.success ? 'success' : flash.error ? 'error' : 'info';
-    const [localToast, setLocalToast] = useState<{ message: string; type?: string; link?: string; linkLabel?: string } | null>(null);
+    const [localToast, setLocalToast] = useState<{
+        message: string;
+        type?: string;
+        link?: string;
+        linkLabel?: string;
+    } | null>(null);
 
     useEffect(() => {
         function handler(e: any) {
             const detail = e?.detail;
 
             if (detail?.message) {
-                setLocalToast({ message: detail.message, type: detail.type ?? 'success' });
+                setLocalToast({
+                    message: detail.message,
+                    type: detail.type ?? 'success',
+                });
 
                 setTimeout(() => setLocalToast(null), detail.ttl ?? 3000);
             }
@@ -31,14 +44,17 @@ export function PortalPageShell({ title, description, children, showBackLink = t
 
         window.addEventListener('local-toast', handler as EventListener);
 
-        return () => window.removeEventListener('local-toast', handler as EventListener);
+        return () =>
+            window.removeEventListener('local-toast', handler as EventListener);
     }, []);
 
     return (
         <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-4">
             <section className="rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
                 <h1 className="text-2xl font-semibold">{title}</h1>
-                <p className="mt-3 text-sm leading-6 text-muted-foreground">{description}</p>
+                <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                    {description}
+                </p>
 
                 {showBackLink ? (
                     <div className="mt-4 flex flex-wrap gap-3">

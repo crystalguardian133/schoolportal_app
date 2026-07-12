@@ -32,11 +32,15 @@ export function SectionShell({
                 <h3 className="text-lg font-semibold">{title}</h3>
             </div>
 
-            <p className="mt-3 text-sm leading-6 text-muted-foreground">{description}</p>
+            <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                {description}
+            </p>
 
             {children}
 
-            <span className={`mt-4 inline-flex items-center gap-2 text-sm font-medium ${linkClassName}`}>
+            <span
+                className={`mt-4 inline-flex items-center gap-2 text-sm font-medium ${linkClassName}`}
+            >
                 {linkLabel}
             </span>
         </>

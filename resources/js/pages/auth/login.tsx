@@ -92,11 +92,12 @@ export default function Login({ status, canResetPassword }: Props) {
             return;
         }
 
-        const nextPortal = option === portal
-            ? portal === 'student'
-                ? 'staff'
-                : 'student'
-            : option;
+        const nextPortal =
+            option === portal
+                ? portal === 'student'
+                    ? 'staff'
+                    : 'student'
+                : option;
 
         setPortal(nextPortal);
         setIsSliding(true);
@@ -135,48 +136,51 @@ export default function Login({ status, canResetPassword }: Props) {
                                         }`}
                                     />
                                     <div className="relative grid grid-cols-2 gap-1">
-                                        {(Object.keys(portalContent) as Portal[]).map(
-                                            (option) => {
-                                                const optionContent =
-                                                    portalContent[option];
-                                                const isActive =
-                                                    portal === option;
-                                                const Icon = optionContent.icon;
+                                        {(
+                                            Object.keys(
+                                                portalContent,
+                                            ) as Portal[]
+                                        ).map((option) => {
+                                            const optionContent =
+                                                portalContent[option];
+                                            const isActive = portal === option;
+                                            const Icon = optionContent.icon;
 
-                                                return (
-                                                    <button
-                                                        key={option}
-                                                        type="button"
-                                                        onClick={() =>
-                                                            handlePortalClick(option)
+                                            return (
+                                                <button
+                                                    key={option}
+                                                    type="button"
+                                                    onClick={() =>
+                                                        handlePortalClick(
+                                                            option,
+                                                        )
+                                                    }
+                                                    aria-pressed={isActive}
+                                                    className="relative z-10 flex items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-medium transition-colors"
+                                                >
+                                                    <Icon
+                                                        className={`size-4 ${
+                                                            isActive
+                                                                ? 'text-slate-950'
+                                                                : 'text-slate-500'
+                                                        }`}
+                                                    />
+                                                    <span
+                                                        className={
+                                                            isActive
+                                                                ? 'text-slate-950'
+                                                                : 'text-slate-500'
                                                         }
-                                                        aria-pressed={isActive}
-                                                        className="relative z-10 flex items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-medium transition-colors"
                                                     >
-                                                        <Icon
-                                                            className={`size-4 ${
-                                                                isActive
-                                                                    ? 'text-slate-950'
-                                                                    : 'text-slate-500'
-                                                            }`}
-                                                        />
-                                                        <span
-                                                            className={
-                                                                isActive
-                                                                    ? 'text-slate-950'
-                                                                    : 'text-slate-500'
-                                                            }
-                                                        >
-                                                            {optionContent.label}
-                                                        </span>
-                                                    </button>
-                                                );
-                                            },
-                                        )}
+                                                        {optionContent.label}
+                                                    </span>
+                                                </button>
+                                            );
+                                        })}
                                     </div>
                                 </div>
 
-                                <div className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700">
+                                <div className="text-xs font-semibold tracking-[0.24em] text-sky-700 uppercase">
                                     {content.badge}
                                 </div>
                             </div>
@@ -205,7 +209,9 @@ export default function Login({ status, canResetPassword }: Props) {
                                         autoComplete="email"
                                         placeholder={content.emailPlaceholder}
                                         value={emailValue}
-                                        onChange={(e) => setEmailValue(e.target.value)}
+                                        onChange={(e) =>
+                                            setEmailValue(e.target.value)
+                                        }
                                     />
                                     <InputError message={errors.email} />
                                 </div>
@@ -231,9 +237,13 @@ export default function Login({ status, canResetPassword }: Props) {
                                         required
                                         tabIndex={2}
                                         autoComplete="current-password"
-                                        placeholder={content.passwordPlaceholder}
+                                        placeholder={
+                                            content.passwordPlaceholder
+                                        }
                                         value={passwordValue}
-                                        onChange={(e: any) => setPasswordValue(e.target.value)}
+                                        onChange={(e: any) =>
+                                            setPasswordValue(e.target.value)
+                                        }
                                     />
                                     <InputError message={errors.password} />
                                 </div>
@@ -257,8 +267,9 @@ export default function Login({ status, canResetPassword }: Props) {
                                 <Button
                                     type="submit"
                                     className={`mt-4 w-full transition-shadow ${
-                                        emailValue.trim() && passwordValue.trim()
-                                            ? 'bg-[#2ead4c] text-white shadow-sm focus-visible:ring-4 focus-visible:ring-[#2ead4c]/25 hover:bg-[#2ead4c] hover:shadow-[0_8px_24px_rgba(46,173,76,0.12)]'
+                                        emailValue.trim() &&
+                                        passwordValue.trim()
+                                            ? 'bg-[#2ead4c] text-white shadow-sm hover:bg-[#2ead4c] hover:shadow-[0_8px_24px_rgba(46,173,76,0.12)] focus-visible:ring-4 focus-visible:ring-[#2ead4c]/25'
                                             : 'bg-slate-200 text-slate-600 hover:bg-slate-200'
                                     }`}
                                     tabIndex={4}

@@ -26,19 +26,56 @@ type Props = {
     selectedClass: TeacherClass;
     students: StudentRow[];
     advisorySubjects?: { uuid: string; name: string; teacher?: string }[];
-    advisoryMatrix?: { [studentUuid: string]: { [subjectUuid: string]: { q1: number | null; q2: number | null; q3: number | null; total: number | null } } };
-    studentAverages?: { [studentUuid: string]: { q1: number | null; q2: number | null; q3: number | null; overall: number | null } };
+    advisoryMatrix?: {
+        [studentUuid: string]: {
+            [subjectUuid: string]: {
+                q1: number | null;
+                q2: number | null;
+                q3: number | null;
+                total: number | null;
+            };
+        };
+    };
+    studentAverages?: {
+        [studentUuid: string]: {
+            q1: number | null;
+            q2: number | null;
+            q3: number | null;
+            overall: number | null;
+        };
+    };
     canEdit?: boolean;
 };
 
-export default function ManageClass({ classes, selectedClass, students, advisorySubjects, advisoryMatrix, studentAverages, canEdit = false }: Props) {
-    const classList = Array.isArray(classes) ? classes : (classes ? Object.values(classes) : []);
+export default function ManageClass({
+    classes,
+    selectedClass,
+    students,
+    advisorySubjects,
+    advisoryMatrix,
+    studentAverages,
+    canEdit = false,
+}: Props) {
+    const classList = Array.isArray(classes)
+        ? classes
+        : classes
+          ? Object.values(classes)
+          : [];
 
     const [gradeRows, setGradeRows] = useState(() =>
-        students.map((s) => ({ studentId: s.studentId, q1: s.q1 ?? null, q2: s.q2 ?? null, q3: s.q3 ?? null }))
+        students.map((s) => ({
+            studentId: s.studentId,
+            q1: s.q1 ?? null,
+            q2: s.q2 ?? null,
+            q3: s.q3 ?? null,
+        })),
     );
 
-    function setGrade(idx: number, field: 'q1' | 'q2' | 'q3', value: number | null) {
+    function setGrade(
+        idx: number,
+        field: 'q1' | 'q2' | 'q3',
+        value: number | null,
+    ) {
         const copy = [...gradeRows];
         copy[idx] = { ...copy[idx], [field]: value };
         setGradeRows(copy);
@@ -46,7 +83,14 @@ export default function ManageClass({ classes, selectedClass, students, advisory
 
     useEffect(() => {
         // Keep local gradeRows in sync when server props change (e.g., after save)
-        setGradeRows(students.map((s) => ({ studentId: s.studentId, q1: s.q1 ?? null, q2: s.q2 ?? null, q3: s.q3 ?? null })));
+        setGradeRows(
+            students.map((s) => ({
+                studentId: s.studentId,
+                q1: s.q1 ?? null,
+                q2: s.q2 ?? null,
+                q3: s.q3 ?? null,
+            })),
+        );
     }, [students]);
 
     const [submitting, setSubmitting] = useState(false);
@@ -54,36 +98,47 @@ export default function ManageClass({ classes, selectedClass, students, advisory
 
     function saveGrades() {
         setSubmitting(true);
-        router.post(`/teacher/classes/${selectedClass.id}/grades`, { grades: gradeRows }, {
-            onFinish: () => setSubmitting(false),
-            onSuccess: () => {
-                // trigger a client toast since partial reloads may not include flash
-                window.dispatchEvent(new CustomEvent('local-toast', { detail: { message: 'Grades updated', type: 'success' } }));
-                router.reload({ only: ['students'] });
+        router.post(
+            `/teacher/classes/${selectedClass.id}/grades`,
+            { grades: gradeRows },
+            {
+                onFinish: () => setSubmitting(false),
+                onSuccess: () => {
+                    // trigger a client toast since partial reloads may not include flash
+                    window.dispatchEvent(
+                        new CustomEvent('local-toast', {
+                            detail: {
+                                message: 'Grades updated',
+                                type: 'success',
+                            },
+                        }),
+                    );
+                    router.reload({ only: ['students'] });
+                },
             },
-        });
+        );
     }
 
     const hasChanges = useMemo(() => {
         if (!students || students.length !== gradeRows.length) {
-return true;
-}
+            return true;
+        }
 
         for (let i = 0; i < students.length; i++) {
             const s = students[i];
             const g = gradeRows[i];
 
             if ((s.q1 ?? null) !== (g.q1 ?? null)) {
-return true;
-}
+                return true;
+            }
 
             if ((s.q2 ?? null) !== (g.q2 ?? null)) {
-return true;
-}
+                return true;
+            }
 
             if ((s.q3 ?? null) !== (g.q3 ?? null)) {
-return true;
-}
+                return true;
+            }
         }
 
         return false;
@@ -102,8 +157,13 @@ return true;
                     <div className="flex items-center gap-3">
                         <Users className="size-5 text-sky-600" />
                         <div>
-                            <h2 className="text-lg font-semibold">{selectedClass.section}</h2>
-                            <p className="text-sm text-muted-foreground">{selectedClass.subject} · {selectedClass.timeSchedule}</p>
+                            <h2 className="text-lg font-semibold">
+                                {selectedClass.section}
+                            </h2>
+                            <p className="text-sm text-muted-foreground">
+                                {selectedClass.subject} ·{' '}
+                                {selectedClass.timeSchedule}
+                            </p>
                         </div>
                     </div>
 
@@ -124,101 +184,235 @@ return true;
                     </div>
 
                     {!canEdit && (
-                        <div className="mt-4 rounded-md bg-yellow-50 border border-yellow-200 p-3 text-sm text-yellow-800">
-                            You do not have permission to edit grades for this class.
+                        <div className="mt-4 rounded-md border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800">
+                            You do not have permission to edit grades for this
+                            class.
                         </div>
                     )}
 
-                    <div className="mt-5 rounded-xl border border-sidebar-border/70 table-scroll-container table-scroll-manage">
+                    <div className="table-scroll-container table-scroll-manage mt-5 rounded-xl border border-sidebar-border/70">
                         {selectedClass.subject === 'Advisory' ? (
                             <>
                                 <table className="min-w-full divide-y divide-sidebar-border/70 text-sm">
-                                    <thead className="bg-sidebar/60 text-left text-muted-foreground sticky top-0 z-20">
+                                    <thead className="sticky top-0 z-20 bg-sidebar/60 text-left text-muted-foreground">
                                         <tr>
-                                            <th className="px-3 py-2 font-medium w-10"></th>
-                                            <th className="px-4 py-3 font-medium sticky left-0 bg-sidebar/60 z-30">Student</th>
+                                            <th className="w-10 px-3 py-2 font-medium"></th>
+                                            <th className="sticky left-0 z-30 bg-sidebar/60 px-4 py-3 font-medium">
+                                                Student
+                                            </th>
                                             {advisorySubjects?.map((sub) => (
-                                                <th key={sub.uuid} className="px-4 py-3 font-medium text-center whitespace-nowrap">{sub.name}</th>
+                                                <th
+                                                    key={sub.uuid}
+                                                    className="px-4 py-3 text-center font-medium whitespace-nowrap"
+                                                >
+                                                    {sub.name}
+                                                </th>
                                             ))}
-                                            <th className="px-4 py-3 font-medium text-center sticky right-0 bg-sidebar/60 z-30">Overall</th>
+                                            <th className="sticky right-0 z-30 bg-sidebar/60 px-4 py-3 text-center font-medium">
+                                                Overall
+                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-sidebar-border/70 bg-white dark:bg-sidebar">
                                         {students.map((student) => (
                                             <>
-                                                <tr key={student.studentId} className="hover:bg-sidebar-accent/40">
+                                                <tr
+                                                    key={student.studentId}
+                                                    className="hover:bg-sidebar-accent/40"
+                                                >
                                                     <td className="px-3 py-2 text-center">
                                                         <button
-                                                            onClick={() => setExpandedStudent(expandedStudent === student.uuid ? null : student.uuid)}
+                                                            onClick={() =>
+                                                                setExpandedStudent(
+                                                                    expandedStudent ===
+                                                                        student.uuid
+                                                                        ? null
+                                                                        : student.uuid,
+                                                                )
+                                                            }
                                                             className="rounded p-1 text-muted-foreground hover:text-sidebar-foreground"
                                                             aria-label="Toggle details"
                                                         >
-                                                            {expandedStudent === student.uuid ? '▾' : '▸'}
+                                                            {expandedStudent ===
+                                                            student.uuid
+                                                                ? '▾'
+                                                                : '▸'}
                                                         </button>
                                                     </td>
-                                                    <td className="px-4 py-3 font-medium text-sidebar-foreground sticky left-0 bg-white dark:bg-sidebar z-20">{student.name}</td>
-                                                    {advisorySubjects?.map((sub) => {
-                                                        const cell = advisoryMatrix?.[student.uuid ?? '']?.[sub.uuid];
-                                                        const display = cell?.total ?? '-';
-                                                        const tooltip = `Q1: ${cell?.q1 ?? '-'}\nQ2: ${cell?.q2 ?? '-'}\nQ3: ${cell?.q3 ?? '-'}`;
-
-                                                        return (
-                                                            <td key={`${student.studentId}-${sub.uuid}`} className="px-4 py-3 text-center text-muted-foreground" title={tooltip}>
-                                                                {display}
-                                                            </td>
-                                                        );
-                                                    })}
-                                                    {
-                                                        (() => {
-                                                            const overall = studentAverages?.[student.uuid ?? '']?.overall;
-                                                            const isNum = typeof overall === 'number';
-                                                            const colorClass = isNum ? (overall! >= 75 ? 'text-emerald-600' : 'text-rose-600') : 'text-sidebar-foreground';
+                                                    <td className="sticky left-0 z-20 bg-white px-4 py-3 font-medium text-sidebar-foreground dark:bg-sidebar">
+                                                        {student.name}
+                                                    </td>
+                                                    {advisorySubjects?.map(
+                                                        (sub) => {
+                                                            const cell =
+                                                                advisoryMatrix?.[
+                                                                    student.uuid ??
+                                                                        ''
+                                                                ]?.[sub.uuid];
+                                                            const display =
+                                                                cell?.total ??
+                                                                '-';
+                                                            const tooltip = `Q1: ${cell?.q1 ?? '-'}\nQ2: ${cell?.q2 ?? '-'}\nQ3: ${cell?.q3 ?? '-'}`;
 
                                                             return (
-                                                                <td className={`px-4 py-3 text-center font-semibold sticky right-0 bg-white dark:bg-sidebar z-20 ${colorClass}`}>
-                                                                    {isNum ? overall : '-'}
+                                                                <td
+                                                                    key={`${student.studentId}-${sub.uuid}`}
+                                                                    className="px-4 py-3 text-center text-muted-foreground"
+                                                                    title={
+                                                                        tooltip
+                                                                    }
+                                                                >
+                                                                    {display}
                                                                 </td>
                                                             );
-                                                        })()
-                                                    }
+                                                        },
+                                                    )}
+                                                    {(() => {
+                                                        const overall =
+                                                            studentAverages?.[
+                                                                student.uuid ??
+                                                                    ''
+                                                            ]?.overall;
+                                                        const isNum =
+                                                            typeof overall ===
+                                                            'number';
+                                                        const colorClass = isNum
+                                                            ? overall! >= 75
+                                                                ? 'text-emerald-600'
+                                                                : 'text-rose-600'
+                                                            : 'text-sidebar-foreground';
+
+                                                        return (
+                                                            <td
+                                                                className={`sticky right-0 z-20 bg-white px-4 py-3 text-center font-semibold dark:bg-sidebar ${colorClass}`}
+                                                            >
+                                                                {isNum
+                                                                    ? overall
+                                                                    : '-'}
+                                                            </td>
+                                                        );
+                                                    })()}
                                                 </tr>
 
-                                                {expandedStudent === student.uuid && (
+                                                {expandedStudent ===
+                                                    student.uuid && (
                                                     <tr className="bg-white/50 dark:bg-sidebar/60">
-                                                        <td colSpan={advisorySubjects ? advisorySubjects.length + 3 : 3} className="px-4 py-3">
+                                                        <td
+                                                            colSpan={
+                                                                advisorySubjects
+                                                                    ? advisorySubjects.length +
+                                                                      3
+                                                                    : 3
+                                                            }
+                                                            className="px-4 py-3"
+                                                        >
                                                             <div className="flex flex-col gap-3">
-                                                                <div className="text-sm font-medium">{student.name} — Detailed Grades</div>
+                                                                <div className="text-sm font-medium">
+                                                                    {
+                                                                        student.name
+                                                                    }{' '}
+                                                                    — Detailed
+                                                                    Grades
+                                                                </div>
                                                                 <div className="overflow-auto">
                                                                     <table className="w-full text-sm">
                                                                         <thead>
                                                                             <tr>
-                                                                                <th className="px-2 py-1 text-left">Subject</th>
-                                                                                <th className="px-2 py-1 text-center">Q1</th>
-                                                                                <th className="px-2 py-1 text-center">Q2</th>
-                                                                                <th className="px-2 py-1 text-center">Q3</th>
-                                                                                <th className="px-2 py-1 text-center">Total</th>
+                                                                                <th className="px-2 py-1 text-left">
+                                                                                    Subject
+                                                                                </th>
+                                                                                <th className="px-2 py-1 text-center">
+                                                                                    Q1
+                                                                                </th>
+                                                                                <th className="px-2 py-1 text-center">
+                                                                                    Q2
+                                                                                </th>
+                                                                                <th className="px-2 py-1 text-center">
+                                                                                    Q3
+                                                                                </th>
+                                                                                <th className="px-2 py-1 text-center">
+                                                                                    Total
+                                                                                </th>
                                                                             </tr>
                                                                         </thead>
                                                                         <tbody>
-                                                                            {advisorySubjects?.map((sub) => {
-                                                                                const cell = advisoryMatrix?.[student.uuid ?? '']?.[sub.uuid];
+                                                                            {advisorySubjects?.map(
+                                                                                (
+                                                                                    sub,
+                                                                                ) => {
+                                                                                    const cell =
+                                                                                        advisoryMatrix?.[
+                                                                                            student.uuid ??
+                                                                                                ''
+                                                                                        ]?.[
+                                                                                            sub
+                                                                                                .uuid
+                                                                                        ];
 
-                                                                                return (
-                                                                                    <tr key={`detail-${student.studentId}-${sub.uuid}`}>
-                                                                                        <td className="px-2 py-1">{sub.name}</td>
-                                                                                        <td className="px-2 py-1 text-center">{cell?.q1 ?? '-'}</td>
-                                                                                        <td className="px-2 py-1 text-center">{cell?.q2 ?? '-'}</td>
-                                                                                        <td className="px-2 py-1 text-center">{cell?.q3 ?? '-'}</td>
-                                                                                        <td className="px-2 py-1 text-center font-semibold">{cell?.total ?? '-'}</td>
-                                                                                    </tr>
-                                                                                );
-                                                                            })}
+                                                                                    return (
+                                                                                        <tr
+                                                                                            key={`detail-${student.studentId}-${sub.uuid}`}
+                                                                                        >
+                                                                                            <td className="px-2 py-1">
+                                                                                                {
+                                                                                                    sub.name
+                                                                                                }
+                                                                                            </td>
+                                                                                            <td className="px-2 py-1 text-center">
+                                                                                                {cell?.q1 ??
+                                                                                                    '-'}
+                                                                                            </td>
+                                                                                            <td className="px-2 py-1 text-center">
+                                                                                                {cell?.q2 ??
+                                                                                                    '-'}
+                                                                                            </td>
+                                                                                            <td className="px-2 py-1 text-center">
+                                                                                                {cell?.q3 ??
+                                                                                                    '-'}
+                                                                                            </td>
+                                                                                            <td className="px-2 py-1 text-center font-semibold">
+                                                                                                {cell?.total ??
+                                                                                                    '-'}
+                                                                                            </td>
+                                                                                        </tr>
+                                                                                    );
+                                                                                },
+                                                                            )}
                                                                         </tbody>
                                                                     </table>
                                                                 </div>
                                                                 <div>
-                                                                    <div className="text-sm font-medium">Averages</div>
-                                                                    <div className="mt-1 text-sm text-muted-foreground">Q1: {studentAverages?.[student.uuid ?? '']?.q1 ?? '-'} · Q2: {studentAverages?.[student.uuid ?? '']?.q2 ?? '-'} · Q3: {studentAverages?.[student.uuid ?? '']?.q3 ?? '-'} · Overall: {studentAverages?.[student.uuid ?? '']?.overall ?? '-'}</div>
+                                                                    <div className="text-sm font-medium">
+                                                                        Averages
+                                                                    </div>
+                                                                    <div className="mt-1 text-sm text-muted-foreground">
+                                                                        Q1:{' '}
+                                                                        {studentAverages?.[
+                                                                            student.uuid ??
+                                                                                ''
+                                                                        ]?.q1 ??
+                                                                            '-'}{' '}
+                                                                        · Q2:{' '}
+                                                                        {studentAverages?.[
+                                                                            student.uuid ??
+                                                                                ''
+                                                                        ]?.q2 ??
+                                                                            '-'}{' '}
+                                                                        · Q3:{' '}
+                                                                        {studentAverages?.[
+                                                                            student.uuid ??
+                                                                                ''
+                                                                        ]?.q3 ??
+                                                                            '-'}{' '}
+                                                                        ·
+                                                                        Overall:{' '}
+                                                                        {studentAverages?.[
+                                                                            student.uuid ??
+                                                                                ''
+                                                                        ]
+                                                                            ?.overall ??
+                                                                            '-'}
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </td>
@@ -231,96 +425,174 @@ return true;
                             </>
                         ) : (
                             <table className="min-w-full divide-y divide-sidebar-border/70 text-sm">
-                            <thead className="bg-sidebar/60 text-left text-muted-foreground">
-                                <tr>
-                                    <th className="px-4 py-3 font-medium">Student</th>
-                                    <th className="px-4 py-3 font-medium">LRN</th>
-                                    <th className="px-4 py-3 font-medium">Student ID</th>
-                                    <th className="px-4 py-3 font-medium text-center">Q1</th>
-                                    <th className="px-4 py-3 font-medium text-center">Q2</th>
-                                    <th className="px-4 py-3 font-medium text-center">Q3</th>
-                                    <th className="px-4 py-3 font-medium text-center">TOTAL</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-sidebar-border/70 bg-white dark:bg-sidebar">
-                                {students.map((student, idx) => {
-                                    const total = Math.round((gradeRows[idx].q1 + gradeRows[idx].q2 + gradeRows[idx].q3) / 3);
+                                <thead className="bg-sidebar/60 text-left text-muted-foreground">
+                                    <tr>
+                                        <th className="px-4 py-3 font-medium">
+                                            Student
+                                        </th>
+                                        <th className="px-4 py-3 font-medium">
+                                            LRN
+                                        </th>
+                                        <th className="px-4 py-3 font-medium">
+                                            Student ID
+                                        </th>
+                                        <th className="px-4 py-3 text-center font-medium">
+                                            Q1
+                                        </th>
+                                        <th className="px-4 py-3 text-center font-medium">
+                                            Q2
+                                        </th>
+                                        <th className="px-4 py-3 text-center font-medium">
+                                            Q3
+                                        </th>
+                                        <th className="px-4 py-3 text-center font-medium">
+                                            TOTAL
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-sidebar-border/70 bg-white dark:bg-sidebar">
+                                    {students.map((student, idx) => {
+                                        const total = Math.round(
+                                            (gradeRows[idx].q1 +
+                                                gradeRows[idx].q2 +
+                                                gradeRows[idx].q3) /
+                                                3,
+                                        );
 
-                                    return (
-                                        <tr key={student.studentId} className="hover:bg-sidebar-accent/40">
-                                            <td className="px-4 py-3 font-medium text-sidebar-foreground">{student.name}</td>
-                                            <td className="px-4 py-3 text-muted-foreground">{student.lrn}</td>
-                                            <td className="px-4 py-3 text-muted-foreground">{student.studentId}</td>
-                                            <td className="px-4 py-3 text-center text-sidebar-foreground">
-                                                <input
-                                                    type="number"
-                                                    value={gradeRows[idx].q1 ?? ''}
-                                                    disabled={!canEdit}
-                                                    onChange={(e) => {
-                                                        const v = e.target.value;
-                                                        setGrade(idx, 'q1', v === '' ? null : Number(v));
-                                                    }}
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === 'Enter') {
-                                                            e.preventDefault();
-
-                                                            if (!submitting && hasChanges) {
-saveGrades();
-}
+                                        return (
+                                            <tr
+                                                key={student.studentId}
+                                                className="hover:bg-sidebar-accent/40"
+                                            >
+                                                <td className="px-4 py-3 font-medium text-sidebar-foreground">
+                                                    {student.name}
+                                                </td>
+                                                <td className="px-4 py-3 text-muted-foreground">
+                                                    {student.lrn}
+                                                </td>
+                                                <td className="px-4 py-3 text-muted-foreground">
+                                                    {student.studentId}
+                                                </td>
+                                                <td className="px-4 py-3 text-center text-sidebar-foreground">
+                                                    <input
+                                                        type="number"
+                                                        value={
+                                                            gradeRows[idx].q1 ??
+                                                            ''
                                                         }
-                                                    }}
-                                                    className="w-16 rounded border px-2 py-1 text-center"
-                                                />
-                                            </td>
-                                            <td className="px-4 py-3 text-center text-sidebar-foreground">
-                                                <input
-                                                    type="number"
-                                                    value={gradeRows[idx].q2 ?? ''}
-                                                    disabled={!canEdit}
-                                                    onChange={(e) => {
-                                                        const v = e.target.value;
-                                                        setGrade(idx, 'q2', v === '' ? null : Number(v));
-                                                    }}
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === 'Enter') {
-                                                            e.preventDefault();
+                                                        disabled={!canEdit}
+                                                        onChange={(e) => {
+                                                            const v =
+                                                                e.target.value;
+                                                            setGrade(
+                                                                idx,
+                                                                'q1',
+                                                                v === ''
+                                                                    ? null
+                                                                    : Number(v),
+                                                            );
+                                                        }}
+                                                        onKeyDown={(e) => {
+                                                            if (
+                                                                e.key ===
+                                                                'Enter'
+                                                            ) {
+                                                                e.preventDefault();
 
-                                                            if (!submitting && hasChanges) {
-saveGrades();
-}
+                                                                if (
+                                                                    !submitting &&
+                                                                    hasChanges
+                                                                ) {
+                                                                    saveGrades();
+                                                                }
+                                                            }
+                                                        }}
+                                                        className="w-16 rounded border px-2 py-1 text-center"
+                                                    />
+                                                </td>
+                                                <td className="px-4 py-3 text-center text-sidebar-foreground">
+                                                    <input
+                                                        type="number"
+                                                        value={
+                                                            gradeRows[idx].q2 ??
+                                                            ''
                                                         }
-                                                    }}
-                                                    className="w-16 rounded border px-2 py-1 text-center"
-                                                />
-                                            </td>
-                                            <td className="px-4 py-3 text-center text-sidebar-foreground">
-                                                <input
-                                                    type="number"
-                                                    value={gradeRows[idx].q3 ?? ''}
-                                                    disabled={!canEdit}
-                                                    onChange={(e) => {
-                                                        const v = e.target.value;
-                                                        setGrade(idx, 'q3', v === '' ? null : Number(v));
-                                                    }}
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === 'Enter') {
-                                                            e.preventDefault();
+                                                        disabled={!canEdit}
+                                                        onChange={(e) => {
+                                                            const v =
+                                                                e.target.value;
+                                                            setGrade(
+                                                                idx,
+                                                                'q2',
+                                                                v === ''
+                                                                    ? null
+                                                                    : Number(v),
+                                                            );
+                                                        }}
+                                                        onKeyDown={(e) => {
+                                                            if (
+                                                                e.key ===
+                                                                'Enter'
+                                                            ) {
+                                                                e.preventDefault();
 
-                                                            if (!submitting && hasChanges) {
-saveGrades();
-}
+                                                                if (
+                                                                    !submitting &&
+                                                                    hasChanges
+                                                                ) {
+                                                                    saveGrades();
+                                                                }
+                                                            }
+                                                        }}
+                                                        className="w-16 rounded border px-2 py-1 text-center"
+                                                    />
+                                                </td>
+                                                <td className="px-4 py-3 text-center text-sidebar-foreground">
+                                                    <input
+                                                        type="number"
+                                                        value={
+                                                            gradeRows[idx].q3 ??
+                                                            ''
                                                         }
-                                                    }}
-                                                    className="w-16 rounded border px-2 py-1 text-center"
-                                                />
-                                            </td>
-                                            <td className="px-4 py-3 text-center font-semibold text-sidebar-foreground">{total}</td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                        ) }
+                                                        disabled={!canEdit}
+                                                        onChange={(e) => {
+                                                            const v =
+                                                                e.target.value;
+                                                            setGrade(
+                                                                idx,
+                                                                'q3',
+                                                                v === ''
+                                                                    ? null
+                                                                    : Number(v),
+                                                            );
+                                                        }}
+                                                        onKeyDown={(e) => {
+                                                            if (
+                                                                e.key ===
+                                                                'Enter'
+                                                            ) {
+                                                                e.preventDefault();
+
+                                                                if (
+                                                                    !submitting &&
+                                                                    hasChanges
+                                                                ) {
+                                                                    saveGrades();
+                                                                }
+                                                            }
+                                                        }}
+                                                        className="w-16 rounded border px-2 py-1 text-center"
+                                                    />
+                                                </td>
+                                                <td className="px-4 py-3 text-center font-semibold text-sidebar-foreground">
+                                                    {total}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        )}
                     </div>
 
                     {canEdit && (
@@ -335,9 +607,6 @@ saveGrades();
                         </div>
                     )}
                 </section>
-
-                
-
             </PortalPageShell>
         </>
     );

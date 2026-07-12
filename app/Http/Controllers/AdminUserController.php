@@ -60,7 +60,10 @@ class AdminUserController extends Controller
     {
         $user = $request->user();
 
-        if (! $user || ! method_exists($user, 'hasRole') || (! $user->hasRole('admin') && ! $user->hasRole('principal') && ! $user->hasRole('registrar'))) {
+        $hasPermission = $user && method_exists($user, 'hasPermission') && $user->hasPermission('manage users');
+        $hasRole = $user && method_exists($user, 'hasRole') && ($user->hasRole('admin') || $user->hasRole('principal') || $user->hasRole('registrar'));
+
+        if (! $user || (! $hasPermission && ! $hasRole)) {
             abort(403);
         }
     }
@@ -162,6 +165,17 @@ class AdminUserController extends Controller
             'adviser_section' => 'nullable|string',
             'avatar' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
         ]);
+
+        // prevent demoting yourself
+        $currentUser = $request->user();
+        if ($currentUser && method_exists($currentUser, 'uuid') && $currentUser->uuid === $user->uuid) {
+            $currentUserRoles = $currentUser->roles->pluck('name')->values()->all();
+            $adminRoles = ['admin', 'principal', 'registrar'];
+            $hasAdminRole = !empty(array_intersect($currentUserRoles, $adminRoles));
+            if (!in_array($data['role'], $adminRoles) && $hasAdminRole) {
+                return back()->with('error', 'Cannot remove your own admin privileges.');
+            }
+        }
 
         // ensure email is unique except for current user
         $exists = DB::table('users')->where('email', $data['email'])->where('uuid', '<>', $user->uuid)->exists();

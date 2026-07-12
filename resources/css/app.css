@@ -142,14 +142,27 @@
     }
 }
 
+/* Native select styling for dark mode */
+select {
+    @apply bg-background text-foreground;
+}
+
+select option {
+    @apply bg-background text-foreground;
+}
+
+.dark select option {
+    @apply bg-background text-foreground;
+}
+
 /* Remove native number input spinners so keyboard users have a cleaner UX */
-input[type="number"]::-webkit-outer-spin-button,
-input[type="number"]::-webkit-inner-spin-button {
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
     -webkit-appearance: none;
     margin: 0;
 }
 
-input[type="number"] {
+input[type='number'] {
     -moz-appearance: textfield;
 }
 
@@ -164,8 +177,12 @@ input[type="number"] {
 }
 
 /* modifier sizes */
-.table-scroll-small { max-height: 40vh; }
-.table-scroll-manage { max-height: 75vh; }
+.table-scroll-small {
+    max-height: 40vh;
+}
+.table-scroll-manage {
+    max-height: 75vh;
+}
 
 /* WebKit scrollbar (Chrome, Edge, Safari) */
 .table-scroll-container::-webkit-scrollbar {
@@ -175,21 +192,23 @@ input[type="number"] {
 .table-scroll-container::-webkit-scrollbar-thumb {
     background: transparent;
     border-radius: 8px;
-    transition: background-color 0.18s ease, opacity 0.18s ease;
+    transition:
+        background-color 0.18s ease,
+        opacity 0.18s ease;
     opacity: 0;
 }
 .table-scroll-container:hover::-webkit-scrollbar-thumb {
-    background: rgba(0,0,0,0.12);
+    background: rgba(0, 0, 0, 0.12);
     opacity: 1;
 }
 .dark .table-scroll-container:hover::-webkit-scrollbar-thumb {
-    background: rgba(255,255,255,0.12);
+    background: rgba(255, 255, 255, 0.12);
 }
 
 /* Firefox: use scrollbar-color to hide until hover */
 .table-scroll-container:hover {
-    scrollbar-color: rgba(0,0,0,0.12) transparent;
+    scrollbar-color: rgba(0, 0, 0, 0.12) transparent;
 }
 .dark .table-scroll-container:hover {
-    scrollbar-color: rgba(255,255,255,0.12) transparent;
+    scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
 }

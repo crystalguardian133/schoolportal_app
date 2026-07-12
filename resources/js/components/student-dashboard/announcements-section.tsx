@@ -1,23 +1,31 @@
-import { usePage } from '@inertiajs/react';
 import { Megaphone } from 'lucide-react';
 import { SectionShell } from '@/components/student-dashboard/section-shell';
 import { useAnnouncementRealtime } from '@/hooks/use-announcement-realtime';
 
-export function AnnouncementsSection() {
-    const { props } = usePage<{ announcements?: any[] }>();
-    const announcements = props.announcements || [];
+type AnnouncementsSectionProps = {
+    unseenCount: number;
+};
 
-    useAnnouncementRealtime();
+export function AnnouncementsSection({
+    unseenCount,
+}: AnnouncementsSectionProps) {
+    const { unreadCount } = useAnnouncementRealtime();
+
+    const displayCount = Math.max(unseenCount, unreadCount);
 
     return (
         <SectionShell
             id="announcements"
             title="Announcements"
-            description="Check school announcements, reminders, and important schedule changes."
+            description={
+                displayCount > 0
+                    ? `${displayCount} unseen announcement${displayCount !== 1 ? 's' : ''}`
+                    : 'No unread announcements'
+            }
             icon={Megaphone}
             iconClassName="size-5 text-amber-600"
             linkHref="/student/announcements"
-            linkLabel="Back to top"
+            linkLabel="View all"
             linkClassName="text-amber-700 hover:underline"
         />
     );

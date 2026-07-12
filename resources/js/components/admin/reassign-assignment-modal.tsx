@@ -27,7 +27,8 @@ export default function ReassignAssignmentModal({
     const [processing, setProcessing] = useState(false);
 
     const availableSubjects = useMemo(
-        () => subjects.filter((subject) => subject.uuid !== sourceSubject?.uuid),
+        () =>
+            subjects.filter((subject) => subject.uuid !== sourceSubject?.uuid),
         [sourceSubject?.uuid, subjects],
     );
 
@@ -78,7 +79,8 @@ export default function ReassignAssignmentModal({
                     </div>
                     <DialogTitle>Reassign teacher</DialogTitle>
                     <DialogDescription>
-                        Move this teacher to another subject and clear the current source assignment.
+                        Move this teacher to another subject and clear the
+                        current source assignment.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -89,9 +91,15 @@ export default function ReassignAssignmentModal({
                                 <UserRound className="size-4" />
                             </div>
                             <div>
-                                <div className="text-xs uppercase tracking-wide text-muted-foreground">Teacher</div>
-                                <div className="font-medium text-foreground">{teacher?.name ?? '—'}</div>
-                                <div className="text-muted-foreground">{teacher?.email ?? ''}</div>
+                                <div className="text-xs tracking-wide text-muted-foreground uppercase">
+                                    Teacher
+                                </div>
+                                <div className="font-medium text-foreground">
+                                    {teacher?.name ?? '—'}
+                                </div>
+                                <div className="text-muted-foreground">
+                                    {teacher?.email ?? ''}
+                                </div>
                             </div>
                         </div>
 
@@ -100,26 +108,39 @@ export default function ReassignAssignmentModal({
                                 <School2 className="size-4" />
                             </div>
                             <div>
-                                <div className="text-xs uppercase tracking-wide text-muted-foreground">Current subject</div>
-                                <div className="font-medium text-foreground">{sourceSubject ? subjectLabel(sourceSubject) : '—'}</div>
-                                <div className="text-muted-foreground">Will be cleared after reassignment</div>
+                                <div className="text-xs tracking-wide text-muted-foreground uppercase">
+                                    Current subject
+                                </div>
+                                <div className="font-medium text-foreground">
+                                    {sourceSubject
+                                        ? subjectLabel(sourceSubject)
+                                        : '—'}
+                                </div>
+                                <div className="text-muted-foreground">
+                                    Will be cleared after reassignment
+                                </div>
                             </div>
                         </div>
                     </div>
 
                     <div className="space-y-2">
-                        <label className="block text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        <label className="block text-xs font-medium tracking-wide text-muted-foreground uppercase">
                             Reassign to subject
                         </label>
                         <select
                             value={targetSubjectUuid}
-                            onChange={(e) => setTargetSubjectUuid(e.target.value)}
-                            className="w-full rounded-2xl border border-input bg-background px-3 py-3 text-sm outline-none transition focus:border-ring focus:ring-4 focus:ring-ring/15"
+                            onChange={(e) =>
+                                setTargetSubjectUuid(e.target.value)
+                            }
+                            className="w-full rounded-2xl border border-input bg-background px-3 py-3 text-sm transition outline-none focus:border-ring focus:ring-4 focus:ring-ring/15"
                             disabled={availableSubjects.length === 0}
                         >
                             {availableSubjects.length > 0 ? (
                                 availableSubjects.map((subject) => (
-                                    <option key={subject.uuid} value={subject.uuid}>
+                                    <option
+                                        key={subject.uuid}
+                                        value={subject.uuid}
+                                    >
                                         {subjectLabel(subject)}
                                     </option>
                                 ))
@@ -135,16 +156,39 @@ export default function ReassignAssignmentModal({
                             Reassign summary
                         </div>
                         <p className="mt-2">
-                            This will detach <span className="font-medium text-foreground">{teacher?.name ?? 'the teacher'}</span> from <span className="font-medium text-foreground">{sourceSubject ? subjectLabel(sourceSubject) : 'the current subject'}</span> and attach them to the selected subject.
+                            This will detach{' '}
+                            <span className="font-medium text-foreground">
+                                {teacher?.name ?? 'the teacher'}
+                            </span>{' '}
+                            from{' '}
+                            <span className="font-medium text-foreground">
+                                {sourceSubject
+                                    ? subjectLabel(sourceSubject)
+                                    : 'the current subject'}
+                            </span>{' '}
+                            and attach them to the selected subject.
                         </p>
                     </div>
                 </div>
 
                 <DialogFooter className="gap-2 sm:gap-2">
-                    <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={processing}>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => onOpenChange(false)}
+                        disabled={processing}
+                    >
                         Cancel
                     </Button>
-                    <Button type="button" onClick={handleConfirm} disabled={processing || !targetSubjectUuid || availableSubjects.length === 0}>
+                    <Button
+                        type="button"
+                        onClick={handleConfirm}
+                        disabled={
+                            processing ||
+                            !targetSubjectUuid ||
+                            availableSubjects.length === 0
+                        }
+                    >
                         <ArrowRightLeft className="mr-2 size-4" />
                         {processing ? 'Reassigning...' : 'Reassign'}
                     </Button>

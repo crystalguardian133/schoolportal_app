@@ -11,11 +11,20 @@ class PermissionsTableSeeder extends Seeder
     public function run(): void
     {
         $perms = [
-            'view grades',
-            'edit grades',
-            'view schedules',
-            'manage users',
-            'access admin',
+            'View Grades',
+            'Edit Grades',
+            'View Schedules',
+            'Manage Users',
+            'Access Admin',
+            'Manage Roles',
+            'Manage Subjects',
+            'Assign Subject Teacher',
+            'Manage Sections',
+            'Manage Assignments',
+            'Manage Enrollments',
+            'View Announcements',
+            'Manage Announcements',
+            'View Logs',
         ];
 
         foreach ($perms as $permission) {

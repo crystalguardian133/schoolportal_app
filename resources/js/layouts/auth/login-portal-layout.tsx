@@ -4,7 +4,11 @@ import AppLogoIcon from '@/components/app-logo-icon';
 import { home } from '@/lib/home';
 import type { AuthLayoutProps } from '@/types';
 
-export default function LoginPortalLayout({ children, title, description }: AuthLayoutProps) {
+export default function LoginPortalLayout({
+    children,
+    title,
+    description,
+}: AuthLayoutProps) {
     const { name } = usePage().props;
 
     return (
@@ -22,23 +26,38 @@ export default function LoginPortalLayout({ children, title, description }: Auth
                             <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15">
                                 <AppLogoIcon className="size-6 fill-current text-white" />
                             </span>
-                            <span className="text-sm font-medium tracking-wide">{name}</span>
+                            <span className="text-sm font-medium tracking-wide">
+                                {name}
+                            </span>
                         </Link>
                     </div>
 
                     <div className="relative z-10 max-w-xl">
-                        <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-medium uppercase tracking-[0.24em] text-sky-100">Portal choice</div>
-                        <h1 className="max-w-lg text-5xl font-semibold leading-tight text-white">Sign in to your school portal</h1>
-                        <p className="mt-4 max-w-xl text-base leading-7 text-slate-200">Choose Student or Staff to access the tools and information specific to your role.</p>
+                        <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-medium tracking-[0.24em] text-sky-100 uppercase">
+                            Portal choice
+                        </div>
+                        <h1 className="max-w-lg text-5xl leading-tight font-semibold text-white">
+                            Sign in to your school portal
+                        </h1>
+                        <p className="mt-4 max-w-xl text-base leading-7 text-slate-200">
+                            Choose Student or Staff to access the tools and
+                            information specific to your role.
+                        </p>
                     </div>
                 </aside>
 
                 <main className="flex items-center justify-center px-6 py-12">
                     <div className="mx-auto w-full max-w-md">
-                        <h2 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950">{title}</h2>
-                        {description && <p className="mt-3 text-sm leading-6 text-slate-600">{description}</p>}
+                        <h2 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950">
+                            {title}
+                        </h2>
+                        {description && (
+                            <p className="mt-3 text-sm leading-6 text-slate-600">
+                                {description}
+                            </p>
+                        )}
 
-                        <div className="mt-6 px-6 py-8 sm:px-10 bg-white rounded-2xl shadow-sm">
+                        <div className="mt-6 rounded-2xl bg-white px-6 py-8 shadow-sm sm:px-10">
                             {children}
                         </div>
                     </div>

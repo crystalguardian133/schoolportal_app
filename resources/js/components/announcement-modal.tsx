@@ -1,5 +1,10 @@
 import { Megaphone } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 
 type AnnouncementRow = {
     uuid: string;
@@ -18,10 +23,14 @@ type AnnouncementModalProps = {
     onOpenChange: (open: boolean) => void;
 };
 
-export function AnnouncementModal({ announcement, open, onOpenChange }: AnnouncementModalProps) {
+export function AnnouncementModal({
+    announcement,
+    open,
+    onOpenChange,
+}: AnnouncementModalProps) {
     if (!announcement) {
-return null;
-}
+        return null;
+    }
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -32,17 +41,26 @@ return null;
                         <DialogTitle>{announcement.title}</DialogTitle>
                     </div>
                     <div className="mt-2 text-xs text-muted-foreground">
-                        {announcement.target_label}{announcement.created_by ? ` · by ${announcement.created_by}` : ''}
-                        {announcement.created_at ? ` · ${announcement.created_at}` : ''}
+                        {announcement.target_label}
+                        {announcement.created_by
+                            ? ` · by ${announcement.created_by}`
+                            : ''}
+                        {announcement.created_at
+                            ? ` · ${announcement.created_at}`
+                            : ''}
                     </div>
                 </DialogHeader>
                 <div className="mt-4 space-y-3">
                     {announcement.image_url ? (
                         <div className="overflow-hidden rounded-xl border border-sidebar-border/70">
-                            <img src={announcement.image_url} alt={announcement.title} className="max-h-80 w-full object-cover" />
+                            <img
+                                src={announcement.image_url}
+                                alt={announcement.title}
+                                className="max-h-80 w-full object-cover"
+                            />
                         </div>
                     ) : null}
-                    <p className="whitespace-pre-line text-sm leading-6 text-foreground dark:text-sidebar-foreground">
+                    <p className="text-sm leading-6 whitespace-pre-line text-foreground dark:text-sidebar-foreground">
                         {announcement.body}
                     </p>
                 </div>

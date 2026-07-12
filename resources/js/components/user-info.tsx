@@ -10,7 +10,9 @@ export function UserInfo({
     showEmail?: boolean;
 }) {
     const getInitials = useInitials();
-    const avatarSrc = user.profile_picture ? `/assets/${user.profile_picture}` : user.avatar;
+    const avatarSrc = user.profile_picture
+        ? `/assets/${user.profile_picture}`
+        : user.avatar;
 
     return (
         <>

@@ -14,18 +14,21 @@ class AdminSectionController extends Controller
         return date('Y');
     }
 
-    private function authorizeSections(Request $request): void
+    private function authorizeAdmin(Request $request): void
     {
         $user = $request->user();
 
-        if (! $user || ! method_exists($user, 'hasRole') || (! $user->hasRole('admin') && ! $user->hasRole('principal') && ! $user->hasRole('registrar'))) {
+        $hasPermission = $user && method_exists($user, 'hasPermission') && $user->hasPermission('manage sections');
+        $hasRole = $user && method_exists($user, 'hasRole') && ($user->hasRole('admin') || $user->hasRole('principal') || $user->hasRole('registrar'));
+
+        if (! $user || (! $hasPermission && ! $hasRole)) {
             abort(403);
         }
     }
 
     public function index(Request $request)
     {
-        $this->authorizeSections($request);
+        $this->authorizeAdmin($request);
 
         $q = $request->query('q');
         $perPage = (int) $request->query('per_page', 25);
@@ -66,13 +69,14 @@ class AdminSectionController extends Controller
             ->all();
 
         $subjects = Subject::query()
-            ->select(['uuid', 'name', 'code', 'subject_teacher_uuid'])
+            ->select(['uuid', 'name', 'code'])
+            ->with('teachers')
             ->get()
             ->sortBy('name')
             ->values();
 
         $assignedSubjectUuids = $subjects
-            ->filter(fn (Subject $subject) => ! empty($subject->subject_teacher_uuid))
+            ->filter(fn (Subject $subject) => $subject->teachers->isNotEmpty())
             ->map(fn (Subject $subject) => $subject->uuid)
             ->values()
             ->all();
@@ -82,7 +86,7 @@ class AdminSectionController extends Controller
         $sectionSubjects = [];
 
         if (! empty($activeSectionUuid)) {
-            $selectedSection = ClassSection::query()->with('subjects')->where('uuid', $activeSectionUuid)->first();
+            $selectedSection = ClassSection::query()->with(['subjects.teachers'])->where('uuid', $activeSectionUuid)->first();
 
             if ($selectedSection) {
                 $sectionStudents = DB::table('students')
@@ -95,7 +99,7 @@ class AdminSectionController extends Controller
                     'uuid' => $subject->uuid,
                     'name' => $subject->name,
                     'code' => $subject->code,
-                    'subject_teacher_uuid' => $subject->subject_teacher_uuid,
+                    'teachers' => $subject->teachers->map(fn ($t) => $t->uuid)->toArray(),
                 ])->all();
             }
         }
@@ -123,7 +127,7 @@ class AdminSectionController extends Controller
 
     public function store(Request $request)
     {
-        $this->authorizeSections($request);
+        $this->authorizeAdmin($request);
 
         $data = $request->validate([
             'name' => 'required|string|max:100',
@@ -136,7 +140,7 @@ class AdminSectionController extends Controller
 
         if (empty($subjectUuids)) {
             $subjectUuids = Subject::all()
-                ->filter(fn (Subject $subject) => ! empty($subject->subject_teacher_uuid))
+                ->filter(fn (Subject $subject) => $subject->teachers->isNotEmpty())
                 ->map(fn (Subject $subject) => $subject->uuid)
                 ->values()
                 ->all();
@@ -155,7 +159,7 @@ class AdminSectionController extends Controller
 
     public function update(Request $request)
     {
-        $this->authorizeSections($request);
+        $this->authorizeAdmin($request);
 
         $data = $request->validate([
             'section_uuid' => 'required|string',

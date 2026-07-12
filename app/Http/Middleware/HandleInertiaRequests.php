@@ -7,41 +7,42 @@ use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
 {
-    /**
-     * The root template that's loaded on the first page visit.
-     *
-     * @see https://inertiajs.com/server-side-setup#root-template
-     *
-     * @var string
-     */
     protected $rootView = 'app';
 
-    /**
-     * Determines the current asset version.
-     *
-     * @see https://inertiajs.com/asset-versioning
-     */
     public function version(Request $request): ?string
     {
         return parent::version($request);
     }
 
-    /**
-     * Define the props that are shared by default.
-     *
-     * @see https://inertiajs.com/shared-data
-     *
-     * @return array<string, mixed>
-     */
     public function share(Request $request): array
     {
+        $user = $request->user();
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $user,
+                'permissions' => $user ? $this->getUserPermissions($user) : [],
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
+    }
+
+    private function getUserPermissions($user): array
+    {
+        $user->loadMissing('roles');
+
+        $adminRoles = ['admin', 'principal', 'registrar'];
+        $userRoles = $user->roles->pluck('name')->toArray();
+        $hasAdminRole = !empty(array_intersect($userRoles, $adminRoles));
+
+        if ($hasAdminRole) {
+            return ['manage users', 'manage roles', 'manage subjects', 'manage sections', 'manage assignments', 'manage enrollments', 'manage announcements', 'view logs', 'view announcements'];
+        }
+
+        $permissions = $user->getAllPermissions()->pluck('name')->map(fn ($name) => strtolower($name))->unique()->values();
+
+        return $permissions->toArray();
     }
 }

@@ -38,66 +38,99 @@ export default function Grades({ student, yearLevelGroups }: GradesPageProps) {
             >
                 {student ? (
                     <p className="mb-3 text-sm font-medium text-violet-700 dark:text-violet-300">
-                        {student.gradeLevel ?? 'Grade level not set'}{student.section ? ` Section ${student.section}` : ''}{student.schoolYear ? ` · ${student.schoolYear}` : ''}
+                        {student.gradeLevel ?? 'Grade level not set'}
+                        {student.section ? ` Section ${student.section}` : ''}
+                        {student.schoolYear ? ` · ${student.schoolYear}` : ''}
                     </p>
                 ) : null}
 
-                {yearLevelGroups.length > 0 ? yearLevelGroups.map((group) => (
-                    <section
-                        key={`${group.yearLevel}-${group.schoolYear}`}
-                        className="rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm dark:border-sidebar-border dark:bg-sidebar"
-                    >
-                        <div className="flex items-center gap-3">
-                            <GraduationCap className="size-5 text-violet-600" />
-                            <h2 className="text-lg font-semibold">
-                                {group.yearLevel}{' '}
-                                <span className="ml-3 text-sm font-medium text-violet-700 dark:text-violet-300">
-                                    {group.schoolYear}
-                                </span>
-                            </h2>
-                        </div>
-                        <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                            This container shows the quarterly grades for {group.yearLevel} section {group.section} and the school year when the grades were applied.
-                        </p>
+                {yearLevelGroups.length > 0 ? (
+                    yearLevelGroups.map((group) => (
+                        <section
+                            key={`${group.yearLevel}-${group.schoolYear}`}
+                            className="rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm dark:border-sidebar-border dark:bg-sidebar"
+                        >
+                            <div className="flex items-center gap-3">
+                                <GraduationCap className="size-5 text-violet-600" />
+                                <h2 className="text-lg font-semibold">
+                                    {group.yearLevel}{' '}
+                                    <span className="ml-3 text-sm font-medium text-violet-700 dark:text-violet-300">
+                                        {group.schoolYear}
+                                    </span>
+                                </h2>
+                            </div>
+                            <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                                This container shows the quarterly grades for{' '}
+                                {group.yearLevel} section {group.section} and
+                                the school year when the grades were applied.
+                            </p>
 
-                        <div className="mt-5 rounded-xl border border-sidebar-border/70 table-scroll-container table-scroll-manage">
-                            <table className="min-w-full divide-y divide-sidebar-border/70 text-sm">
-                                <thead className="bg-sidebar/60 text-left text-muted-foreground">
-                                    <tr>
-                                        <th className="px-4 py-3 font-medium">Section</th>
-                                        <th className="px-4 py-3 font-medium">Subject Code</th>
-                                        <th className="px-4 py-3 font-medium">Subject Name</th>
-                                        {quarterLabels.map((quarter) => (
-                                            <th key={quarter} className="px-4 py-3 font-medium text-center">
-                                                {quarter}
+                            <div className="table-scroll-container table-scroll-manage mt-5 rounded-xl border border-sidebar-border/70">
+                                <table className="min-w-full divide-y divide-sidebar-border/70 text-sm">
+                                    <thead className="bg-sidebar/60 text-left text-muted-foreground">
+                                        <tr>
+                                            <th className="px-4 py-3 font-medium">
+                                                Section
                                             </th>
-                                        ))}
-                                        <th className="px-4 py-3 font-medium text-center">TOTAL</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-sidebar-border/70 bg-white dark:bg-sidebar">
-                                    {group.rows.map((row) => (
-                                        <tr key={`${group.yearLevel}-${group.section}-${row.subjectCode}`} className="hover:bg-sidebar-accent/40">
-                                            <td className="px-4 py-3 font-medium text-sidebar-foreground">{group.section}</td>
-                                            <td className="px-4 py-3 font-medium text-sidebar-foreground">{row.subjectCode}</td>
-                                            <td className="px-4 py-3 text-sidebar-foreground">{row.subjectName}</td>
-                                            {row.quarters.map((quarterGrade, index) => (
-                                                <td key={`${row.subjectCode}-${quarterLabels[index]}`} className="px-4 py-3 text-center text-muted-foreground">
-                                                    {quarterGrade}
-                                                </td>
+                                            <th className="px-4 py-3 font-medium">
+                                                Subject Code
+                                            </th>
+                                            <th className="px-4 py-3 font-medium">
+                                                Subject Name
+                                            </th>
+                                            {quarterLabels.map((quarter) => (
+                                                <th
+                                                    key={quarter}
+                                                    className="px-4 py-3 text-center font-medium"
+                                                >
+                                                    {quarter}
+                                                </th>
                                             ))}
-                                            <td className="px-4 py-3 text-center font-semibold text-sidebar-foreground">
-                                                {row.total}
-                                            </td>
+                                            <th className="px-4 py-3 text-center font-medium">
+                                                TOTAL
+                                            </th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </section>
-                )) : (
+                                    </thead>
+                                    <tbody className="divide-y divide-sidebar-border/70 bg-white dark:bg-sidebar">
+                                        {group.rows.map((row) => (
+                                            <tr
+                                                key={`${group.yearLevel}-${group.section}-${row.subjectCode}`}
+                                                className="hover:bg-sidebar-accent/40"
+                                            >
+                                                <td className="px-4 py-3 font-medium text-sidebar-foreground">
+                                                    {group.section}
+                                                </td>
+                                                <td className="px-4 py-3 font-medium text-sidebar-foreground">
+                                                    {row.subjectCode}
+                                                </td>
+                                                <td className="px-4 py-3 text-sidebar-foreground">
+                                                    {row.subjectName}
+                                                </td>
+                                                {row.quarters.map(
+                                                    (quarterGrade, index) => (
+                                                        <td
+                                                            key={`${row.subjectCode}-${quarterLabels[index]}`}
+                                                            className="px-4 py-3 text-center text-muted-foreground"
+                                                        >
+                                                            {quarterGrade}
+                                                        </td>
+                                                    ),
+                                                )}
+                                                <td className="px-4 py-3 text-center font-semibold text-sidebar-foreground">
+                                                    {row.total}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </section>
+                    ))
+                ) : (
                     <section className="rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
-                        <p className="text-sm text-muted-foreground">No grade records found for the current student.</p>
+                        <p className="text-sm text-muted-foreground">
+                            No grade records found for the current student.
+                        </p>
                     </section>
                 )}
             </StudentPageShell>

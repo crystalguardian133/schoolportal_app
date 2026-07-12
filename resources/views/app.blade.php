@@ -19,6 +19,22 @@
             })();
         </script>
 
+        {{-- Detect client's public IPv4 and store in cookie for logging --}}
+        <script>
+            (function() {
+                if (!document.cookie.includes('client_ipv4=')) {
+                    fetch('https://api4.ipify.org?format=json')
+                        .then(function(r) { return r.json(); })
+                        .then(function(data) {
+                            if (data && data.ip) {
+                                document.cookie = 'client_ipv4=' + data.ip + ';path=/;max-age=86400;samesite=lax';
+                            }
+                        })
+                        .catch(function() {});
+                }
+            })();
+        </script>
+
         {{-- Inline style to set the HTML background color based on our theme in app.css --}}
         <style>
             html {

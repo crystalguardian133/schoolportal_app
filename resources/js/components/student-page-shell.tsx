@@ -8,13 +8,19 @@ type StudentPageShellProps = {
     children?: ReactNode;
 };
 
-export function StudentPageShell({ title, description, children }: StudentPageShellProps) {
+export function StudentPageShell({
+    title,
+    description,
+    children,
+}: StudentPageShellProps) {
     return (
         <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-4">
             <section className="rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
                 <p className="text-sm text-muted-foreground">Student section</p>
                 <h1 className="mt-1 text-2xl font-semibold">{title}</h1>
-                <p className="mt-3 text-sm leading-6 text-muted-foreground">{description}</p>
+                <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                    {description}
+                </p>
 
                 <div className="mt-4 flex flex-wrap gap-3">
                     <Link

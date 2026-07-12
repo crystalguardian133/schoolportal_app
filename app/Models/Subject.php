@@ -19,9 +19,8 @@ class Subject extends Model
     protected $fillable = [
         'name',
         'code',
+        'description',
         'time_schedule',
-        'subject_teacher',
-        'subject_teacher_uuid',
     ];
 
     protected static function booted(): void
@@ -41,5 +40,12 @@ class Subject extends Model
     public function classSections(): BelongsToMany
     {
         return $this->belongsToMany(ClassSection::class, 'class_section_subjects', 'subject_uuid', 'class_section_uuid', 'uuid', 'uuid');
+    }
+
+    public function teachers(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'subject_teacher', 'subject_uuid', 'teacher_uuid', 'uuid', 'uuid')
+            ->withPivot('is_substitute')
+            ->withTimestamps();
     }
 }

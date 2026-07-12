@@ -7,16 +7,41 @@ use Illuminate\Support\Facades\DB;
 
 class AdminSystemLogController extends Controller
 {
-    public function index(Request $request)
+    private function authorizeAdmin(Request $request): void
     {
         $user = $request->user();
 
-        if (! $user || ! method_exists($user, 'hasRole') || (! $user->hasRole('admin') && ! $user->hasRole('principal') && ! $user->hasRole('registrar'))) {
+        $hasPermission = $user && method_exists($user, 'hasPermission') && $user->hasPermission('view logs');
+        $hasRole = $user && method_exists($user, 'hasRole') && ($user->hasRole('admin') || $user->hasRole('principal') || $user->hasRole('registrar'));
+
+        if (! $user || (! $hasPermission && ! $hasRole)) {
             abort(403);
         }
+    }
+
+    private array $allowedSortColumns = [
+        'created_at',
+        'action',
+        'method',
+        'status_code',
+        'route_name',
+    ];
+
+    public function index(Request $request)
+    {
+        $this->authorizeAdmin($request);
 
         $search = trim((string) $request->query('q', ''));
         $perPage = max(10, min(100, (int) $request->query('per_page', 25)));
+        $sortBy = (string) $request->query('sort_by', 'created_at');
+        $sortDir = strtolower((string) $request->query('sort_dir', 'desc'));
+
+        if (! in_array($sortBy, $this->allowedSortColumns)) {
+            $sortBy = 'created_at';
+        }
+
+        $sortDir = $sortDir === 'asc' ? 'asc' : 'desc';
+        $sortColumn = $sortBy === 'created_at' ? 'logs.id' : "logs.{$sortBy}";
 
         $logs = DB::table('system_logs as logs')
             ->leftJoin('users as users', 'users.uuid', '=', 'logs.user_uuid')
@@ -41,11 +66,10 @@ class AdminSystemLogController extends Controller
                         ->orWhere('logs.route_name', 'like', '%'.$search.'%')
                         ->orWhere('logs.path', 'like', '%'.$search.'%')
                         ->orWhere('users.name', 'like', '%'.$search.'%')
-                        ->orWhere('users.email', 'like', '%'.$search.'%')
-                        ->orWhere('logs.ip_address', 'like', '%'.$search.'%');
+                        ->orWhere('users.email', 'like', '%'.$search.'%');
                 });
             })
-            ->orderByDesc('logs.id')
+            ->orderBy($sortColumn, $sortDir)
             ->paginate($perPage)
             ->withQueryString();
 
@@ -54,6 +78,8 @@ class AdminSystemLogController extends Controller
             'filters' => [
                 'q' => $search,
                 'per_page' => $perPage,
+                'sort_by' => $sortBy,
+                'sort_dir' => $sortDir,
             ],
         ]);
     }

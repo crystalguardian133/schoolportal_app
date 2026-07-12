@@ -16,7 +16,10 @@ class AnnouncementController extends Controller
     {
         $user = $request->user();
 
-        if (! $user || ! method_exists($user, 'hasRole') || (! $user->hasRole('admin') && ! $user->hasRole('principal') && ! $user->hasRole('registrar') && ! $user->hasRole('staff'))) {
+        $hasPermission = $user && method_exists($user, 'hasPermission') && ($user->hasPermission('manage announcements') || $user->hasPermission('view announcements'));
+        $hasRole = $user && method_exists($user, 'hasRole') && ($user->hasRole('admin') || $user->hasRole('principal') || $user->hasRole('registrar') || $user->hasRole('staff'));
+
+        if (! $user || (! $hasPermission && ! $hasRole)) {
             abort(403);
         }
     }
@@ -29,7 +32,11 @@ class AnnouncementController extends Controller
             return false;
         }
 
-        if ($user->hasRole('admin') || $user->hasRole('principal') || $user->hasRole('registrar')) {
+        if ($user->hasRole('admin') || $user->hasRole('principal') || $user->hasRole('registrar') || $user->hasRole('staff')) {
+            return true;
+        }
+
+        if (method_exists($user, 'hasPermission') && ($user->hasPermission('manage announcements') || $user->hasPermission('view announcements'))) {
             return true;
         }
 

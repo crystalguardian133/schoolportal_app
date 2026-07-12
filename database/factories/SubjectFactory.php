@@ -14,6 +14,7 @@ class SubjectFactory extends Factory
         return [
             'name' => $this->faker->unique()->word(),
             'code' => strtoupper($this->faker->bothify('??###')),
+            'description' => $this->faker->sentence(),
         ];
     }
 }

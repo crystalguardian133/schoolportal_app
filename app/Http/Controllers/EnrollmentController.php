@@ -10,6 +10,8 @@ use App\Models\EnrollmentAudit;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Hash;
 
 class EnrollmentController extends Controller
 {
@@ -30,23 +32,21 @@ class EnrollmentController extends Controller
             ." ELSE 999 END";
     }
 
-    public function index(Request $request)
+    private function authorizeAdmin(Request $request): void
     {
         $user = $request->user();
 
-        $can = false;
-        if ($user) {
-            if (method_exists($user, 'hasRole') && ($user->hasRole('admin') || $user->hasRole('staff'))) {
-                $can = true;
-            }
-            if (method_exists($user, 'hasPermissionTo') && $user->hasPermissionTo('enroll students')) {
-                $can = true;
-            }
-        }
+        $hasPermission = $user && method_exists($user, 'hasPermission') && $user->hasPermission('manage enrollments');
+        $hasRole = $user && method_exists($user, 'hasRole') && ($user->hasRole('admin') || $user->hasRole('principal') || $user->hasRole('registrar'));
 
-        if (! $can) {
+        if (! $user || (! $hasPermission && ! $hasRole)) {
             abort(403);
         }
+    }
+
+    public function index(Request $request)
+    {
+        $this->authorizeAdmin($request);
 
         $q = $request->query('q');
         $perPage = (int) $request->query('per_page', 25);
@@ -210,21 +210,7 @@ class EnrollmentController extends Controller
 
     public function create(Request $request)
     {
-        $user = $request->user();
-
-        $can = false;
-        if ($user) {
-            if (method_exists($user, 'hasRole') && ($user->hasRole('admin') || $user->hasRole('staff'))) {
-                $can = true;
-            }
-            if (method_exists($user, 'hasPermissionTo') && $user->hasPermissionTo('enroll students')) {
-                $can = true;
-            }
-        }
-
-        if (! $can) {
-            abort(403);
-        }
+        $this->authorizeAdmin($request);
 
         $classSections = ClassSection::query()
             ->with('subjects')
@@ -273,21 +259,7 @@ class EnrollmentController extends Controller
 
     public function store(Request $request)
     {
-        $user = $request->user();
-
-        $can = false;
-        if ($user) {
-            if (method_exists($user, 'hasRole') && ($user->hasRole('admin') || $user->hasRole('staff'))) {
-                $can = true;
-            }
-            if (method_exists($user, 'hasPermissionTo') && $user->hasPermissionTo('enroll students')) {
-                $can = true;
-            }
-        }
-
-        if (! $can) {
-            abort(403);
-        }
+        $this->authorizeAdmin($request);
 
         $data = $request->validate([
             'student_uuids' => 'nullable|array',
@@ -342,7 +314,7 @@ class EnrollmentController extends Controller
             return back()->with('error', 'Select at least one existing student or fill out the new student form.');
         }
 
-        $enrolledStudents = DB::transaction(function () use ($studentUuids, $newStudentData, $classSection, $user, $schoolYear, $request) {
+        $enrolledStudents = DB::transaction(function () use ($studentUuids, $newStudentData, $classSection, $request, $schoolYear) {
             $students = collect();
 
             if ($studentUuids && is_array($studentUuids) && count($studentUuids) > 0) {
@@ -350,10 +322,11 @@ class EnrollmentController extends Controller
             }
 
             if (is_array($newStudentData) && ! empty($newStudentData['name']) && ! empty($newStudentData['email'])) {
+                $password = $newStudentData['password'] ?? \Illuminate\Support\Str::random(10);
                 $newUser = User::create([
                     'name' => $newStudentData['name'],
                     'email' => $newStudentData['email'],
-                    'password' => $newStudentData['password'],
+                    'password' => Hash::make($password),
                 ]);
                 $newUser->assignRole('student');
 
@@ -362,8 +335,8 @@ class EnrollmentController extends Controller
                 $profilePicturePath = null;
                 if ($avatarFile) {
                     $destDir = base_path('resources/assets/profile_pictures/students');
-                    if (! \Illuminate\Support\Facades\File::exists($destDir)) {
-                        \Illuminate\Support\Facades\File::makeDirectory($destDir, 0755, true);
+                    if (! File::exists($destDir)) {
+                        File::makeDirectory($destDir, 0755, true);
                     }
                     $filename = ($newUser->uuid ?? uniqid()).'.'.$avatarFile->getClientOriginalExtension();
                     $avatarFile->move($destDir, $filename);
@@ -435,23 +408,6 @@ class EnrollmentController extends Controller
                             'school_year' => $schoolYear,
                             'section' => $classSection->name,
                         ]);
-
-                        try {
-                            EnrollmentAudit::create([
-                                'user_uuid' => $user->uuid ?? null,
-                                'student_uuid' => $student->uuid,
-                                'subject_uuid' => $subject->uuid,
-                                'school_year' => $schoolYear,
-                                'action' => 'enrolled',
-                                'metadata' => [
-                                    'enrolled_by' => $user->name ?? null,
-                                    'section' => $classSection->name,
-                                    'class_section_uuid' => $classSection->uuid,
-                                ],
-                            ]);
-                        } catch (\Throwable $e) {
-                            // swallow audit errors to avoid blocking enrollment
-                        }
                     }
                 }
             }

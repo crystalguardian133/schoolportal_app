@@ -52,11 +52,11 @@ trait HasRolesAndPermissions
         return $this->roles()->where('roles.name', (string) $role)->exists();
     }
 
-    /** Check if model has a permission via roles. */
+    /** Check if model has a permission via roles (case-insensitive). */
     public function hasPermission(string $permission): bool
     {
         return $this->roles()->whereHas('permissions', function ($q) use ($permission) {
-            $q->where('name', $permission);
+            $q->whereRaw('LOWER(name) = ?', [strtolower($permission)]);
         })->exists();
     }
 
