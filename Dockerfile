@@ -52,6 +52,13 @@ ENV VITE_REVERB_PORT=$VITE_REVERB_PORT
 ENV VITE_REVERB_SCHEME=$VITE_REVERB_SCHEME
 
 # TEMP DEBUG: run wayfinder directly to see the real error
+RUN php artisan config:clear && \
+    php artisan view:clear && \
+    php artisan cache:clear && \
+    echo "=== Checking view cache path ===" && \
+    php artisan tinker --execute="echo config('view.compiled');" && \
+    echo "=== Checking directory exists ===" && \
+    ls -la storage/framework/views
 RUN php artisan wayfinder:generate --with-form
 
 RUN npm run build
