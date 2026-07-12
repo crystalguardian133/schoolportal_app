@@ -26,6 +26,12 @@ RUN npm ci --legacy-peer-deps
 # Copy the rest of the app
 COPY . .
 
+# Ensure Laravel's required storage directories exist and are writable
+RUN mkdir -p storage/framework/{cache,sessions,views} \
+    storage/logs \
+    bootstrap/cache \
+    && chmod -R 775 storage bootstrap/cache
+
 RUN composer dump-autoload --optimize
 
 # Create .env for build-time artisan commands (wayfinder needs Laravel to boot)
