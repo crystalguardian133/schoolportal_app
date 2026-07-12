@@ -33,7 +33,7 @@ ARG APP_KEY
 RUN cp .env.example .env && \
     sed -i "s|^APP_KEY=.*|APP_KEY=${APP_KEY}|" .env
 
-# Build-time env vars for Vite (baked into JS bundle at build time)
+# Build-time env vars for Vite
 ARG VITE_APP_NAME
 ARG VITE_REVERB_APP_KEY
 ARG VITE_REVERB_HOST
@@ -44,6 +44,9 @@ ENV VITE_REVERB_APP_KEY=$VITE_REVERB_APP_KEY
 ENV VITE_REVERB_HOST=$VITE_REVERB_HOST
 ENV VITE_REVERB_PORT=$VITE_REVERB_PORT
 ENV VITE_REVERB_SCHEME=$VITE_REVERB_SCHEME
+
+# TEMP DEBUG: run wayfinder directly to see the real error
+RUN php artisan wayfinder:generate --with-form
 
 RUN npm run build
 
