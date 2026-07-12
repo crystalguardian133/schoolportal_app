@@ -23,25 +23,33 @@ RUN composer install --no-dev --no-scripts --optimize-autoloader
 COPY package.json package-lock.json ./
 RUN npm ci --legacy-peer-deps
 
-# Now copy the rest of the app (this invalidates cache less often)
+# Copy the rest of the app
 COPY . .
 
-# Re-run composer scripts now that full app is present (artisan needs the full app)
 RUN composer dump-autoload --optimize
 
-# Build-time env vars for Vite (VITE_* vars get baked into the JS bundle here)
+# Create .env for build-time artisan commands (wayfinder needs Laravel to boot)
+ARG APP_KEY
+RUN cp .env.example .env && \
+    sed -i "s|^APP_KEY=.*|APP_KEY=${APP_KEY}|" .env
+
+# Build-time env vars for Vite (baked into JS bundle at build time)
 ARG VITE_APP_NAME
-ARG VITE_PUSHER_APP_KEY
-ARG VITE_PUSHER_HOST
+ARG VITE_REVERB_APP_KEY
+ARG VITE_REVERB_HOST
+ARG VITE_REVERB_PORT
+ARG VITE_REVERB_SCHEME
 ENV VITE_APP_NAME=$VITE_APP_NAME
-ENV VITE_PUSHER_APP_KEY=$VITE_PUSHER_APP_KEY
-ENV VITE_PUSHER_HOST=$VITE_PUSHER_HOST
+ENV VITE_REVERB_APP_KEY=$VITE_REVERB_APP_KEY
+ENV VITE_REVERB_HOST=$VITE_REVERB_HOST
+ENV VITE_REVERB_PORT=$VITE_REVERB_PORT
+ENV VITE_REVERB_SCHEME=$VITE_REVERB_SCHEME
 
-# Laravel needs a temporary APP_KEY for artisan commands to run during build (wayfinder plugin calls artisan)
-RUN php artisan key:generate --show > /tmp/tempkey.txt || true
-
-# Build React/Vite assets — this is where wayfinder:generate runs via php artisan
 RUN npm run build
 
+# Make entrypoint executable
+RUN chmod +x /var/www/html/entrypoint.sh
+
 EXPOSE 8080
-CMD php artisan config:cache && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=8080
+
+ENTRYPOINT ["/var/www/html/entrypoint.sh"]
