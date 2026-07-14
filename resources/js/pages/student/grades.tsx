@@ -4,6 +4,15 @@ import { StudentPageShell } from '@/components/student-page-shell';
 
 const quarterLabels = ['Q1', 'Q2', 'Q3'];
 
+function roundToHundredth(n: number): number {
+    return Math.round(n * 100) / 100;
+}
+
+function formatGrade(n: number | null): string {
+    if (n === null || n === undefined) return '—';
+    return roundToHundredth(n).toFixed(2);
+}
+
 type GradeRow = {
     subjectCode: string | null;
     subjectName: string | null;
@@ -112,16 +121,30 @@ export default function Grades({ student, yearLevelGroups }: GradesPageProps) {
                                                             key={`${row.subjectCode}-${quarterLabels[index]}`}
                                                             className="px-4 py-3 text-center text-muted-foreground"
                                                         >
-                                                            {quarterGrade}
+                                                            {formatGrade(quarterGrade)}
                                                         </td>
                                                     ),
                                                 )}
                                                 <td className="px-4 py-3 text-center font-semibold text-sidebar-foreground">
-                                                    {row.total}
+                                                    {formatGrade(row.total)}
                                                 </td>
                                             </tr>
                                         ))}
                                     </tbody>
+                                    <tfoot>
+                                        <tr className="bg-sidebar/60">
+                                            <td colSpan={3 + quarterLabels.length} className="px-4 py-3 text-right text-sm font-semibold text-sidebar-foreground">
+                                                General Average
+                                            </td>
+                                            <td className="px-4 py-3 text-center text-sm font-bold text-sidebar-foreground">
+                                                {formatGrade(
+                                                    roundToHundredth(
+                                                        group.rows.reduce((sum, r) => sum + (r.total ?? 0), 0) / group.rows.filter((r) => r.total != null).length,
+                                                    ),
+                                                )}
+                                            </td>
+                                        </tr>
+                                    </tfoot>
                                 </table>
                             </div>
                         </section>

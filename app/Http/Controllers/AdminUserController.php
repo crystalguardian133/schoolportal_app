@@ -46,6 +46,15 @@ class AdminUserController extends Controller
             ->map(fn ($items) => $items->pluck('permission_name')->values()->all())
             ->all();
 
+        // Sections already assigned to an adviser
+        $takenAdviserSections = User::query()
+            ->where('is_adviser', true)
+            ->whereNotNull('adviser_section')
+            ->pluck('adviser_section')
+            ->filter()
+            ->values()
+            ->all();
+
         return inertia('admin/users', [
             'users' => $users,
             'roles' => $roles,
@@ -53,6 +62,7 @@ class AdminUserController extends Controller
             'permissions' => $permissions,
             'rolePermissions' => $rolePermissions,
             'sections' => ClassSection::query()->select(['uuid', 'name', 'grade_level'])->get()->sortBy('name')->map(fn ($s) => ['uuid' => $s->uuid, 'name' => $s->name, 'grade_level' => $s->grade_level])->values()->all(),
+            'takenAdviserSections' => $takenAdviserSections,
         ]);
     }
 
@@ -68,10 +78,58 @@ class AdminUserController extends Controller
         }
     }
 
+    private function authorizeCreateTeacher(Request $request): void
+    {
+        $user = $request->user();
+
+        $hasPermission = $user && method_exists($user, 'hasPermission') && $user->hasPermission('create teacher');
+
+        if (! $user || ! $hasPermission) {
+            abort(403);
+        }
+    }
+
     public function create(Request $request)
     {
         // create page removed; creation handled on combined users page
         abort(404);
+    }
+
+    public function createTeacher(Request $request)
+    {
+        $this->authorizeCreateTeacher($request);
+
+        $sections = ClassSection::query()
+            ->select(['uuid', 'name', 'grade_level'])
+            ->orderBy('name', 'asc')
+            ->get()
+            ->map(fn ($s) => [
+                'uuid' => $s->uuid,
+                'name' => $s->name,
+                'grade_level' => $s->grade_level,
+            ])
+            ->values()
+            ->all();
+
+        // Filter out roles that have "Access Admin" permission
+        $adminPermId = DB::table('permissions')->where('name', 'Access Admin')->value('id');
+        $adminRoleIds = $adminPermId
+            ? DB::table('permission_role')->where('permission_uuid', $adminPermId)->pluck('role_uuid')->toArray()
+            : [];
+
+        $roles = Role::query()
+            ->select(['id', 'name'])
+            ->whereNotIn('id', $adminRoleIds)
+            ->orderBy('name')
+            ->get()
+            ->map(fn ($r) => ['id' => $r->id, 'name' => $r->name])
+            ->values()
+            ->all();
+
+        return inertia('admin/create-teacher', [
+            'sections' => $sections,
+            'roles' => $roles,
+        ]);
     }
 
     public function store(Request $request)
@@ -84,7 +142,7 @@ class AdminUserController extends Controller
             'last_name' => 'required|string|max:50',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:6|confirmed',
-            'role' => 'required|string',
+            'role' => 'nullable|string',
             'is_adviser' => 'nullable|boolean',
             'adviser_section' => 'nullable|string',
         ]);
@@ -95,6 +153,18 @@ class AdminUserController extends Controller
 
         $middleInitial = $middle ? ' ' . strtoupper(substr($middle, 0, 1)) : '';
         $name = $last . ($first ? ', ' . $first . $middleInitial : '');
+
+        // Validate adviser section isn't already taken
+        if (! empty($data['is_adviser']) && ! empty($data['adviser_section'])) {
+            $taken = User::query()
+                ->where('is_adviser', true)
+                ->where('adviser_section', $data['adviser_section'])
+                ->exists();
+
+            if ($taken) {
+                return back()->with('error', 'This section already has an adviser assigned.');
+            }
+        }
 
         $user = User::create([
             'name' => $name,
@@ -109,6 +179,55 @@ class AdminUserController extends Controller
         }
 
         return redirect()->route('admin.users')->with('success', 'User created successfully.');
+    }
+
+    public function storeTeacher(Request $request)
+    {
+        $this->authorizeCreateTeacher($request);
+
+        $data = $request->validate([
+            'first_name' => 'nullable|string|max:50',
+            'middle_name' => 'nullable|string|max:50',
+            'last_name' => 'required|string|max:50',
+            'email' => 'required|email|unique:users,email',
+            'password' => 'required|string|min:6|confirmed',
+            'role' => 'nullable|string',
+            'is_adviser' => 'nullable|boolean',
+            'adviser_section' => 'nullable|string',
+        ]);
+
+        $first = trim($data['first_name'] ?? '');
+        $middle = trim($data['middle_name'] ?? '');
+        $last = trim($data['last_name']);
+
+        $middleInitial = $middle ? ' ' . strtoupper(substr($middle, 0, 1)) : '';
+        $name = $last . ($first ? ', ' . $first . $middleInitial : '');
+
+        // Validate adviser section isn't already taken
+        if (! empty($data['is_adviser']) && ! empty($data['adviser_section'])) {
+            $taken = User::query()
+                ->where('is_adviser', true)
+                ->where('adviser_section', $data['adviser_section'])
+                ->exists();
+
+            if ($taken) {
+                return back()->with('error', 'This section already has an adviser assigned.');
+            }
+        }
+
+        $user = User::create([
+            'name' => $name,
+            'email' => $data['email'],
+            'password' => Hash::make($data['password']),
+            'is_adviser' => ! empty($data['is_adviser']),
+            'adviser_section' => ! empty($data['is_adviser']) ? ($data['adviser_section'] ?? null) : null,
+        ]);
+
+        if (! empty($data['role'])) {
+            $user->assignRole($data['role']);
+        }
+
+        return redirect()->route('admin.users')->with('success', 'Teacher account created successfully.');
     }
 
     public function edit(Request $request, string $uuid)
@@ -193,6 +312,19 @@ class AdminUserController extends Controller
         $user->email = $data['email'];
         $user->is_adviser = ! empty($data['is_adviser']);
         $user->adviser_section = ! empty($data['is_adviser']) ? ($data['adviser_section'] ?? null) : null;
+
+        // Validate adviser section isn't already taken by another user
+        if (! empty($data['is_adviser']) && ! empty($data['adviser_section'])) {
+            $sectionTakenByOther = User::query()
+                ->where('is_adviser', true)
+                ->where('adviser_section', $data['adviser_section'])
+                ->where('uuid', '<>', $user->uuid)
+                ->exists();
+
+            if ($sectionTakenByOther) {
+                return back()->with('error', 'This section already has an adviser assigned.');
+            }
+        }
 
         if ($request->hasFile('avatar')) {
             $avatar = $request->file('avatar');

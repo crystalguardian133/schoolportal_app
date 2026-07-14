@@ -2,17 +2,31 @@ import { Head } from '@inertiajs/react';
 import { CalendarDays } from 'lucide-react';
 import { PortalPageShell } from '@/components/portal-page-shell';
 
-const schedule = [
-    { day: 'Monday', time: '8:00 AM - 10:00 AM', subject: 'Mathematics' },
-    { day: 'Wednesday', time: '8:00 AM - 10:00 AM', subject: 'Science' },
-    {
-        day: 'Friday',
-        time: '8:00 AM - 9:30 AM',
-        subject: 'English Communication',
-    },
-];
+type ScheduleEntry = {
+    day: string;
+    start_time: string;
+    end_time: string;
+    subject: string;
+    section: string;
+    room: string;
+};
 
-export default function TeacherSchedule() {
+type Props = {
+    schedules?: ScheduleEntry[];
+};
+
+export default function TeacherSchedule({ schedules = [] }: Props) {
+    const sorted = [...schedules].sort((a, b) => {
+        const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        const dayDiff = dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day);
+
+        if (dayDiff !== 0) {
+return dayDiff;
+}
+
+        return a.start_time.localeCompare(b.start_time);
+    });
+
     return (
         <>
             <Head title="Schedule" />
@@ -40,25 +54,49 @@ export default function TeacherSchedule() {
                                     <th className="px-4 py-3 font-medium">
                                         Subject
                                     </th>
+                                    <th className="px-4 py-3 font-medium">
+                                        Section
+                                    </th>
+                                    <th className="px-4 py-3 font-medium">
+                                        Room
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-sidebar-border/70 bg-white dark:bg-sidebar">
-                                {schedule.map((item) => (
-                                    <tr
-                                        key={`${item.day}-${item.time}`}
-                                        className="hover:bg-sidebar-accent/40"
-                                    >
-                                        <td className="px-4 py-3 font-medium text-sidebar-foreground">
-                                            {item.day}
-                                        </td>
-                                        <td className="px-4 py-3 text-muted-foreground">
-                                            {item.time}
-                                        </td>
-                                        <td className="px-4 py-3 text-sidebar-foreground">
-                                            {item.subject}
+                                {sorted.length > 0 ? (
+                                    sorted.map((item, index) => (
+                                        <tr
+                                            key={`${item.day}-${item.start_time}-${index}`}
+                                            className="hover:bg-sidebar-accent/40"
+                                        >
+                                            <td className="px-4 py-3 font-medium text-sidebar-foreground">
+                                                {item.day}
+                                            </td>
+                                            <td className="px-4 py-3 text-muted-foreground">
+                                                {item.start_time} - {item.end_time}
+                                            </td>
+                                            <td className="px-4 py-3 text-sidebar-foreground">
+                                                {item.subject}
+                                            </td>
+                                            <td className="px-4 py-3 text-muted-foreground">
+                                                {item.section}
+                                            </td>
+                                            <td className="px-4 py-3 text-muted-foreground">
+                                                {item.room || '—'}
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td
+                                            colSpan={5}
+                                            className="px-4 py-10 text-center text-sm text-muted-foreground"
+                                        >
+                                            No schedule entries found. Ask an
+                                            administrator to create your schedule.
                                         </td>
                                     </tr>
-                                ))}
+                                )}
                             </tbody>
                         </table>
                     </div>

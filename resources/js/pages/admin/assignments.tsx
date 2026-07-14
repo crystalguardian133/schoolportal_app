@@ -1,14 +1,15 @@
 import { Head, router } from '@inertiajs/react';
-import { ArrowRightLeft, Plus, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { ArrowRightLeft, Plus, Trash2, X } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import ReassignAssignmentModal from '@/components/admin/reassign-assignment-modal';
+import MultiSearchableSelect from '@/components/multi-searchable-select';
+import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogContent,
     DialogTitle,
     DialogClose,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 
 function toArray(value) {
     if (Array.isArray(value)) {
@@ -47,7 +48,9 @@ function TeachersListModal({ open, onOpenChange, subject, onRemoveTeacher }: {
     subject: Subject | null;
     onRemoveTeacher: (teacherUuid: string) => void;
 }) {
-    if (!subject) return null;
+    if (!subject) {
+return null;
+}
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -113,7 +116,7 @@ export default function Assignments({ subjects, teachers }) {
     const [selectedSubjectUuid, setSelectedSubjectUuid] = useState(
         subjectList[0]?.uuid ?? '',
     );
-    const [selectedTeacherUuid, setSelectedTeacherUuid] = useState<string | ''>('');
+    const [selectedTeacherUuids, setSelectedTeacherUuids] = useState<string[]>([]);
     const [isSubstitute, setIsSubstitute] = useState(false);
     const [teacherListModalOpen, setTeacherListModalOpen] = useState(false);
     const [reassignState, setReassignState] = useState({
@@ -121,6 +124,12 @@ export default function Assignments({ subjects, teachers }) {
         teacher: null,
         sourceSubject: null,
     });
+
+    function handleSubjectChange(uuid: string) {
+        setSelectedSubjectUuid(uuid);
+        setSelectedTeacherUuids([]);
+        setIsSubstitute(false);
+    }
 
     const selectedSubjectIndex = subjectList.findIndex(
         (subject) => subject.uuid === selectedSubjectUuid,
@@ -133,20 +142,38 @@ export default function Assignments({ subjects, teachers }) {
     ).length;
     const unassignedCount = subjectList.length - assignedCount;
 
-    function addTeacher() {
-        if (!selectedSubject || !selectedTeacherUuid) return;
+    const sortedTeacherList = useMemo(() => {
+        const assignedUuids = new Set(
+            (selectedSubject?.teachers ?? []).map((t: any) => t.uuid),
+        );
+
+        return teacherList.filter((t) => !assignedUuids.has(t.uuid));
+    }, [teacherList, selectedSubject]);
+
+    const selectedTeacherNames = useMemo(() => {
+        return selectedTeacherUuids.map((uuid) => {
+            const t = teacherList.find((tl: any) => tl.uuid === uuid);
+
+            return { uuid, name: t?.name ?? 'Unknown', email: t?.email ?? '' };
+        });
+    }, [selectedTeacherUuids, teacherList]);
+
+    function addTeachers() {
+        if (!selectedSubject || selectedTeacherUuids.length === 0) {
+            return;
+        }
 
         router.post(
             '/admin/assignments',
             {
                 subject_uuid: selectedSubject.uuid,
-                teacher_uuid: selectedTeacherUuid,
+                teacher_uuids: selectedTeacherUuids,
                 is_substitute: isSubstitute,
             },
             {
                 onSuccess: () => {
                     router.reload({ only: ['subjects'] });
-                    setSelectedTeacherUuid('');
+                    setSelectedTeacherUuids([]);
                     setIsSubstitute(false);
                 },
             },
@@ -154,14 +181,12 @@ export default function Assignments({ subjects, teachers }) {
     }
 
     function removeTeacher(teacherUuid: string) {
-        if (!selectedSubject) return;
+        if (!selectedSubject) {
+            return;
+        }
 
-        router.post(
-            '/admin/assignments',
-            {
-                subject_uuid: selectedSubject.uuid,
-                teacher_uuid: null,
-            },
+        router.delete(
+            `/admin/subjects/teachers/${teacherUuid}/${selectedSubject.uuid}`,
             {
                 preserveScroll: true,
                 onSuccess: () => {
@@ -279,7 +304,7 @@ export default function Assignments({ subjects, teachers }) {
                             <select
                                 value={selectedSubjectUuid}
                                 onChange={(e) =>
-                                    setSelectedSubjectUuid(e.target.value)
+                                    handleSubjectChange(e.target.value)
                                 }
                                 className="w-full rounded-2xl border border-input bg-background px-3 py-3 text-sm transition outline-none focus:border-ring focus:ring-4 focus:ring-ring/15"
                             >
@@ -298,26 +323,49 @@ export default function Assignments({ subjects, teachers }) {
                         <div className="mt-5 space-y-4 rounded-2xl border border-border bg-muted/50 p-4">
                             <div>
                                 <label className="block text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                                    Add Teacher
+                                    Add Teachers
                                 </label>
-                                <select
-                                    value={selectedTeacherUuid}
-                                    onChange={(e) =>
-                                        setSelectedTeacherUuid(e.target.value)
-                                    }
-                                    className="mt-1 w-full rounded-2xl border border-input bg-background px-3 py-3 text-sm transition outline-none focus:border-ring focus:ring-4 focus:ring-ring/15"
-                                >
-                                    <option value="">Select a teacher</option>
-                                    {teacherList.map((teacher) => (
-                                        <option
-                                            key={teacher.uuid}
-                                            value={teacher.uuid}
-                                        >
-                                            {teacher.name} — {teacher.email}
-                                        </option>
-                                    ))}
-                                </select>
+                                <MultiSearchableSelect
+                                    value={selectedTeacherUuids}
+                                    onChange={setSelectedTeacherUuids}
+                                    placeholder="Select teachers to assign"
+                                    className="mt-1"
+                                    options={sortedTeacherList.map((teacher: any) => ({
+                                        value: teacher.uuid,
+                                        label: teacher.name,
+                                        sublabel: teacher.email,
+                                    }))}
+                                />
                             </div>
+
+                            {selectedTeacherNames.length > 0 && (
+                                <div className="space-y-2">
+                                    <div className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                                        Selected ({selectedTeacherNames.length})
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        {selectedTeacherNames.map((t) => (
+                                            <span
+                                                key={t.uuid}
+                                                className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium"
+                                            >
+                                                {t.name}
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        setSelectedTeacherUuids((prev) =>
+                                                            prev.filter((u) => u !== t.uuid),
+                                                        )
+                                                    }
+                                                    className="text-muted-foreground hover:text-foreground"
+                                                >
+                                                    <X className="size-3" />
+                                                </button>
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
                             <label className="flex items-center gap-2 text-xs">
                                 <input
@@ -333,12 +381,12 @@ export default function Assignments({ subjects, teachers }) {
 
                             <button
                                 type="button"
-                                onClick={addTeacher}
-                                disabled={!selectedTeacherUuid}
+                                onClick={addTeachers}
+                                disabled={selectedTeacherUuids.length === 0}
                                 className="rounded-2xl bg-primary px-5 py-3 text-sm font-medium text-primary-foreground shadow-sm transition hover:opacity-90 focus:ring-4 focus:ring-ring/20 focus:outline-none disabled:opacity-50"
                             >
                                 <Plus className="mr-2 inline h-4 w-4" />
-                                Add Teacher
+                                Assign {selectedTeacherNames.length > 0 ? `${selectedTeacherNames.length} Teacher${selectedTeacherNames.length === 1 ? '' : 's'}` : 'Teachers'}
                             </button>
                         </div>
 

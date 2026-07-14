@@ -11,28 +11,34 @@ use Illuminate\Support\Facades\DB;
 
 class TeacherClassController extends Controller
 {
-    private function classLoad($user = null): array
+    private function classLoad($user = null, $schoolYear = null): array
     {
         // eager load enrollments and students so we can derive section(s)
         $subjects = Subject::with(['enrollments.student'])->get()->sortBy('name');
 
-        $rows = $subjects->map(function ($s) {
+        $rows = $subjects->map(function ($s) use ($schoolYear) {
             // derive section label: prefer code, otherwise list distinct student sections
             $sectionLabel = null;
             if (!empty($s->code)) {
                 $sectionLabel = strtoupper(str_replace('-', ' ', $s->code));
             } else {
-                $sections = $s->enrollments->pluck('student')->filter()->pluck('section')->unique()->filter()->values()->all();
+                $sections = $s->enrollments
+                    ->when($schoolYear, fn ($q) => $q->where('school_year', $schoolYear))
+                    ->pluck('student')->filter()->pluck('section')->unique()->filter()->values()->all();
                 if (!empty($sections)) {
                     $sectionLabel = implode(', ', $sections);
                 }
             }
 
+            $enrollmentCount = $s->enrollments()
+                ->when($schoolYear, fn ($q) => $q->where('school_year', $schoolYear))
+                ->count();
+
             return [
                 'id' => $s->uuid,
                 'section' => $sectionLabel ?? 'Section',
                 'subject' => $s->name,
-                'students' => $s->enrollments()->count(),
+                'students' => $enrollmentCount,
                 'timeSchedule' => $s->time_schedule ?? '',
                 'subject_teacher_uuid' => $s->subject_teacher ?? null,
             ];
@@ -101,8 +107,12 @@ class TeacherClassController extends Controller
     {
         $user = $request->user();
 
+        $schoolYear = DB::table('school_years')
+            ->where('status', 'active')
+            ->value('name');
+
         return Inertia::render('teacher/classes', [
-            'classes' => $this->classLoad($user),
+            'classes' => $this->classLoad($user, $schoolYear),
         ]);
     }
 
@@ -110,7 +120,11 @@ class TeacherClassController extends Controller
     {
         $user = $request->user();
 
-        $classes = $this->classLoad($user);
+        $schoolYear = DB::table('school_years')
+            ->where('status', 'active')
+            ->value('name');
+
+        $classes = $this->classLoad($user, $schoolYear);
 
         // Advisory class handling
         if (str_starts_with($classId, 'advisory-')) {
@@ -127,7 +141,10 @@ class TeacherClassController extends Controller
 
             // fetch students in that section
             $students = [];
-            $studentRows = \App\Models\Student::query()->where('section', $adviserSection)->get();
+            $studentRows = \App\Models\Student::query()
+                ->where('section', $adviserSection)
+                ->when($schoolYear, fn ($q) => $q->where('school_year', $schoolYear))
+                ->get();
 
             // fetch subjects that have enrollments for this section
             $subjects = Subject::query()
@@ -179,7 +196,10 @@ class TeacherClassController extends Controller
             // compute per-student averages across all subjects
             $studentAverages = [];
             foreach ($studentRows as $st) {
-                $enrs = StudentSubject::query()->where('student_uuid', $st->uuid)->get();
+                $enrs = StudentSubject::query()
+                    ->where('student_uuid', $st->uuid)
+                    ->when($schoolYear, fn ($q) => $q->where('school_year', $schoolYear))
+                    ->get();
                 $avgQ1 = $enrs->avg('q1') ?? null;
                 $avgQ2 = $enrs->avg('q2') ?? null;
                 $avgQ3 = $enrs->avg('q3') ?? null;
@@ -225,7 +245,18 @@ class TeacherClassController extends Controller
         }
 
         // Regular subject handling
-        $subject = Subject::query()->where('uuid', $classId)->first();
+        // classId may be "{subjectUuid}-{sectionUuid}" or just "{subjectUuid}"
+        $parts = explode('-', $classId);
+        $sectionUuid = null;
+        $subjectUuid = $classId;
+
+        // UUIDs are 36 chars; if we have 2 parts and the last part is a UUID, treat as subject+section
+        if (count($parts) === 2 && strlen($parts[1]) === 36) {
+            $subjectUuid = $parts[0];
+            $sectionUuid = $parts[1];
+        }
+
+        $subject = Subject::query()->where('uuid', $subjectUuid)->first();
 
         if (! $subject) {
             abort(404);
@@ -233,31 +264,61 @@ class TeacherClassController extends Controller
 
         // check permissions: admin or assigned teacher (including substitute)
         if (! $user->hasRole('admin')) {
-            $isAssignedTeacher = DB::table('subject_teacher')
+            $isGlobalTeacher = DB::table('subject_teacher')
                 ->where('subject_uuid', $subject->uuid)
                 ->where('teacher_uuid', $user->uuid)
                 ->exists();
 
-            if (! $isAssignedTeacher) {
+            $isSectionTeacher = DB::table('class_section_subject_teacher')
+                ->where('subject_uuid', $subject->uuid)
+                ->where('teacher_uuid', $user->uuid)
+                ->exists();
+
+            if (! $isGlobalTeacher && ! $isSectionTeacher) {
                 abort(403);
             }
         }
 
-        $selectedClass = collect($classes)->firstWhere('id', $subject->uuid) ?? [
-            'id' => $subject->uuid,
-            'section' => $subject->code ?? 'Section',
+        $sectionName = null;
+        if ($sectionUuid) {
+            $sectionModel = ClassSection::query()->where('uuid', $sectionUuid)->first();
+            $sectionName = $sectionModel?->name;
+        }
+
+        $selectedClass = collect($classes)->first(fn ($c) => ($c['id'] ?? '') === $classId) ?? [
+            'id' => $classId,
+            'section' => $sectionName ?? $subject->code ?? 'Section',
             'subject' => $subject->name,
-            'students' => $subject->enrollments()->count(),
+            'students' => $sectionName
+                ? $subject->enrollments()->when($schoolYear, fn ($q) => $q->where('school_year', $schoolYear))->whereHas('student', fn ($q) => $q->where('section', $sectionName))->count()
+                : $subject->enrollments()->count(),
             'timeSchedule' => $subject->time_schedule ?? '',
             'subject_teacher_uuid' => null,
         ];
 
         $canEdit = $user->hasRole('admin') || $user->hasRole('staff') || !empty($user->is_adviser);
 
+        $students = StudentSubject::query()->with('student')
+            ->where('subject_uuid', $subject->uuid)
+            ->when($schoolYear, fn ($q) => $q->where('school_year', $schoolYear))
+            ->when($sectionName, fn ($q) => $q->whereHas('student', fn ($sq) => $sq->where('section', $sectionName)))
+            ->get();
+
+        $studentRows = $students->map(function ($r) {
+            return [
+                'name' => $r->student?->name ?? 'Unknown',
+                'lrn' => $r->student?->lrn ?? null,
+                'studentId' => $r->student?->student_id ?? null,
+                'q1' => $r->q1 ?? 0,
+                'q2' => $r->q2 ?? 0,
+                'q3' => $r->q3 ?? 0,
+            ];
+        })->toArray();
+
         return Inertia::render('teacher/manage-class', [
             'classes' => $classes,
             'selectedClass' => $selectedClass,
-            'students' => $this->classStudents($subject->uuid),
+            'students' => $studentRows,
             'canEdit' => $canEdit,
         ]);
     }

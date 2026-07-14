@@ -1,11 +1,14 @@
 import { Head, router, usePage, Link } from '@inertiajs/react';
+import { Trash2, Plus, Clock, ShieldCheck, ShieldOff, Pencil, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { PortalPageShell } from '@/components/portal-page-shell';
+import SearchableSelect from '@/components/searchable-select';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ConfirmDialog } from '@/components/confirm-dialog';
-import { Trash2 } from 'lucide-react';
+import { formatDate } from '@/lib/dates';
 
 type RoleRow = {
     id: string;
@@ -18,6 +21,19 @@ type PermissionRow = {
     name: string;
 };
 
+type UserRoleAssignment = {
+    id: string;
+    name: string;
+    expires_at: string | null;
+};
+
+type UserRow = {
+    uuid: string;
+    name: string;
+    email: string;
+    roles: UserRoleAssignment[];
+};
+
 const protectedRoles = [
     'admin',
     'principal',
@@ -27,10 +43,39 @@ const protectedRoles = [
     'teacher',
 ];
 
+function isExpired(dateStr: string | null): boolean {
+    if (!dateStr) {
+return false;
+}
+
+    return new Date(dateStr) < new Date();
+}
+
+function isExpiringSoon(dateStr: string | null): boolean {
+    if (!dateStr) {
+return false;
+}
+
+    const d = new Date(dateStr);
+    const now = new Date();
+    const diff = d.getTime() - now.getTime();
+
+    return diff > 0 && diff < 7 * 24 * 60 * 60 * 1000;
+}
+
+function formatDateRole(dateStr: string | null): string {
+    if (!dateStr) return 'Permanent';
+    return formatDate(dateStr, 'MMM d, yyyy');
+}
+
 export default function AdminRoles() {
     const { props } = usePage();
     const roles: RoleRow[] = props.roles || [];
     const permissions: PermissionRow[] = props.permissions || [];
+    const users: UserRow[] = props.users || [];
+    const hasAccessAdmin: boolean = props.hasAccessAdmin || false;
+
+    /* ── Role editor state ── */
     const [selectedRoleId, setSelectedRoleId] = useState<string>(
         roles[0]?.id || '',
     );
@@ -42,7 +87,9 @@ export default function AdminRoles() {
     const selectedRole =
         roles.find((role) => role.id === selectedRoleId) || roles[0] || null;
     const isProtected =
-        selectedRole && protectedRoles.includes(selectedRole.name);
+        selectedRole &&
+        protectedRoles.includes(selectedRole.name) &&
+        !hasAccessAdmin;
     const [roleName, setRoleName] = useState(selectedRole?.name || '');
     const [selectedPermissions, setSelectedPermissions] = useState<string[]>(
         selectedRole?.permissions || [],
@@ -53,20 +100,47 @@ export default function AdminRoles() {
         setSelectedPermissions(selectedRole?.permissions || []);
     }, [selectedRole?.id]);
 
+    /* ── User role assignment state ── */
+    const [userSearch, setUserSearch] = useState('');
+    const [showAssignDialog, setShowAssignDialog] = useState(false);
+    const [assignUserUuid, setAssignUserUuid] = useState('');
+    const [assignRoleId, setAssignRoleId] = useState('');
+    const [assignExpiresAt, setAssignExpiresAt] = useState('');
+    const [assigning, setAssigning] = useState(false);
+    const [confirmRemove, setConfirmRemove] = useState(false);
+    const [removeTarget, setRemoveTarget] = useState<{
+        userUuid: string;
+        roleId: string;
+        roleName: string;
+        userName: string;
+    } | null>(null);
+    const [removing, setRemoving] = useState(false);
+    const [editingExpiry, setEditingExpiry] = useState<{
+        userUuid: string;
+        roleId: string;
+        currentExpiry: string | null;
+    } | null>(null);
+    const [editExpiryValue, setEditExpiryValue] = useState('');
+    const [savingExpiry, setSavingExpiry] = useState(false);
+
+    const filteredUsers = users.filter(
+        (u) =>
+            u.name.toLowerCase().includes(userSearch.toLowerCase()) ||
+            u.email.toLowerCase().includes(userSearch.toLowerCase()),
+    );
+
+    /* ── Role CRUD ── */
     function saveRole(e: React.FormEvent) {
         e.preventDefault();
 
         if (!selectedRole) {
-            return;
-        }
+return;
+}
 
         setSaving(true);
         router.patch(
             `/admin/roles/${selectedRole.id}`,
-            {
-                name: roleName,
-                permissions: selectedPermissions,
-            },
+            { name: roleName, permissions: selectedPermissions },
             {
                 onFinish: () => setSaving(false),
                 onSuccess: () => router.reload(),
@@ -78,8 +152,8 @@ export default function AdminRoles() {
         e.preventDefault();
 
         if (!newRoleName.trim()) {
-            return;
-        }
+return;
+}
 
         setSaving(true);
         router.post(
@@ -97,12 +171,12 @@ export default function AdminRoles() {
 
     function deleteRole() {
         if (!selectedRole || isProtected) {
-            return;
-        }
+return;
+}
 
         setDeleting(true);
         router.delete(`/admin/roles/${selectedRole.id}`, {
-            onFinish: () => setDeleting(false),
+            onFinish: () => setDeleting(true),
             onSuccess: () => {
                 setConfirmDelete(false);
                 router.reload();
@@ -110,12 +184,87 @@ export default function AdminRoles() {
         });
     }
 
+    /* ── Assign role to user ── */
+    function assignUserRole() {
+        if (!assignUserUuid || !assignRoleId) {
+return;
+}
+
+        setAssigning(true);
+        router.post(
+            '/admin/roles/assign-user-role',
+            {
+                user_uuid: assignUserUuid,
+                role_uuid: assignRoleId,
+                expires_at: assignExpiresAt || null,
+            },
+            {
+                onFinish: () => setAssigning(false),
+                onSuccess: () => {
+                    setShowAssignDialog(false);
+                    setAssignUserUuid('');
+                    setAssignRoleId('');
+                    setAssignExpiresAt('');
+                    router.reload();
+                },
+            },
+        );
+    }
+
+    /* ── Remove role from user ── */
+    function removeUserRole() {
+        if (!removeTarget) {
+return;
+}
+
+        setRemoving(true);
+        router.post(
+            '/admin/roles/remove-user-role',
+            {
+                user_uuid: removeTarget.userUuid,
+                role_uuid: removeTarget.roleId,
+            },
+            {
+                onFinish: () => setRemoving(false),
+                onSuccess: () => {
+                    setConfirmRemove(false);
+                    setRemoveTarget(null);
+                    router.reload();
+                },
+            },
+        );
+    }
+
+    /* ── Edit expiry ── */
+    function saveExpiry() {
+        if (!editingExpiry) {
+return;
+}
+
+        setSavingExpiry(true);
+        router.post(
+            '/admin/roles/update-user-role-expiry',
+            {
+                user_uuid: editingExpiry.userUuid,
+                role_uuid: editingExpiry.roleId,
+                expires_at: editExpiryValue || null,
+            },
+            {
+                onFinish: () => setSavingExpiry(false),
+                onSuccess: () => {
+                    setEditingExpiry(null);
+                    router.reload();
+                },
+            },
+        );
+    }
+
     return (
         <>
             <Head title="Roles & permissions" />
             <PortalPageShell
                 title="Roles & permissions"
-                description="Edit role names and the permissions attached to each role."
+                description="Manage roles, their permissions, and assign roles to users."
             >
                 <div className="mb-4 flex items-center gap-3">
                     <Link
@@ -126,6 +275,9 @@ export default function AdminRoles() {
                     </Link>
                 </div>
 
+                {/* ═══════════════════════════════════════════
+                    SECTION 1: Role CRUD
+                ═══════════════════════════════════════════ */}
                 <div className="grid gap-4 lg:grid-cols-3">
                     <form
                         onSubmit={createRole}
@@ -276,6 +428,345 @@ export default function AdminRoles() {
                         </div>
                     </div>
                 </div>
+
+                {/* ═══════════════════════════════════════════
+                    SECTION 2: User Role Assignments
+                ═══════════════════════════════════════════ */}
+                <div className="mt-8 rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm transition-colors dark:border-sidebar-border dark:bg-sidebar dark:shadow-none">
+                    <div className="mb-4 flex items-center justify-between">
+                        <div>
+                            <div className="text-sm font-semibold text-foreground dark:text-sidebar-foreground">
+                                User Role Assignments
+                            </div>
+                            <div className="mt-0.5 text-xs text-muted-foreground dark:text-sidebar-foreground/70">
+                                Assign multiple roles to users. Roles can be
+                                permanent or temporary.
+                            </div>
+                        </div>
+                        <Button
+                            size="sm"
+                            onClick={() => setShowAssignDialog(true)}
+                        >
+                            <Plus className="size-4" />
+                            Assign Role
+                        </Button>
+                    </div>
+
+                    {/* Search bar */}
+                    <div className="mb-4">
+                        <Input
+                            placeholder="Search users by name or email..."
+                            value={userSearch}
+                            onChange={(e) => setUserSearch(e.target.value)}
+                        />
+                    </div>
+
+                    {/* Users table */}
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left text-sm">
+                            <thead>
+                                <tr className="border-b border-sidebar-border/70 text-xs font-medium uppercase tracking-wider text-muted-foreground dark:text-sidebar-foreground/70">
+                                    <th className="px-3 py-2">User</th>
+                                    <th className="px-3 py-2">Assigned Roles</th>
+                                    <th className="px-3 py-2 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredUsers.length === 0 && (
+                                    <tr>
+                                        <td
+                                            colSpan={3}
+                                            className="px-3 py-8 text-center text-sm text-muted-foreground"
+                                        >
+                                            No users found.
+                                        </td>
+                                    </tr>
+                                )}
+                                {filteredUsers.map((user) => (
+                                    <tr
+                                        key={user.uuid}
+                                        className="border-b border-sidebar-border/40 last:border-0"
+                                    >
+                                        <td className="px-3 py-2.5">
+                                            <div className="font-medium text-foreground">
+                                                {user.name}
+                                            </div>
+                                            <div className="text-xs text-muted-foreground">
+                                                {user.email}
+                                            </div>
+                                        </td>
+                                        <td className="px-3 py-2.5">
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {user.roles.length === 0 && (
+                                                    <span className="text-xs italic text-muted-foreground">
+                                                        No roles
+                                                    </span>
+                                                )}
+                                                {user.roles.map((role) => {
+                                                    const expired = isExpired(
+                                                        role.expires_at,
+                                                    );
+                                                    const expiringSoon =
+                                                        isExpiringSoon(
+                                                            role.expires_at,
+                                                        );
+
+                                                    return (
+                                                        <div
+                                                            key={role.id}
+                                                            className="group/role inline-flex items-center gap-1"
+                                                        >
+                                                            <Badge
+                                                                variant={
+                                                                    expired
+                                                                        ? 'secondary'
+                                                                        : expiringSoon
+                                                                          ? 'outline'
+                                                                          : 'default'
+                                                                }
+                                                                className={`gap-1 ${
+                                                                    expired
+                                                                        ? 'opacity-50'
+                                                                        : expiringSoon
+                                                                          ? 'border-amber-400 text-amber-700 dark:text-amber-300'
+                                                                          : ''
+                                                                }`}
+                                                            >
+                                                                {expired ? (
+                                                                    <ShieldOff className="size-3" />
+                                                                ) : (
+                                                                    <ShieldCheck className="size-3" />
+                                                                )}
+                                                                {role.name}
+                                                                {role.expires_at && (
+                                                                    <span className="opacity-70">
+                                                                        ·{' '}
+                                                                        {formatDateRole(
+                                                                            role.expires_at,
+                                                                        )}
+                                                                    </span>
+                                                                )}
+                                                            </Badge>
+                                                            {/* Edit expiry */}
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setEditingExpiry(
+                                                                        {
+                                                                            userUuid:
+                                                                                user.uuid,
+                                                                            roleId:
+                                                                                role.id,
+                                                                            currentExpiry:
+                                                                                role.expires_at,
+                                                                        },
+                                                                    );
+                                                                    setEditExpiryValue(
+                                                                        role.expires_at
+                                                                            ? new Date(
+                                                                                  role.expires_at,
+                                                                              )
+                                                                                  .toISOString()
+                                                                                  .split(
+                                                                                      'T',
+                                                                                  )[0]
+                                                                            : '',
+                                                                    );
+                                                                }}
+                                                                className="rounded p-0.5 text-muted-foreground opacity-0 transition hover:bg-muted hover:text-foreground group-hover/role:opacity-100"
+                                                                title="Edit expiry"
+                                                            >
+                                                                <Pencil className="size-3" />
+                                                            </button>
+                                                            {/* Remove */}
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setRemoveTarget(
+                                                                        {
+                                                                            userUuid:
+                                                                                user.uuid,
+                                                                            roleId:
+                                                                                role.id,
+                                                                            roleName:
+                                                                                role.name,
+                                                                            userName:
+                                                                                user.name,
+                                                                        },
+                                                                    );
+                                                                    setConfirmRemove(
+                                                                        true,
+                                                                    );
+                                                                }}
+                                                                className="rounded p-0.5 text-muted-foreground opacity-0 transition hover:bg-destructive/10 hover:text-destructive group-hover/role:opacity-100"
+                                                                title="Remove role"
+                                                            >
+                                                                <X className="size-3" />
+                                                            </button>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </td>
+                                        <td className="px-3 py-2.5 text-right">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => {
+                                                    setAssignUserUuid(
+                                                        user.uuid,
+                                                    );
+                                                    setAssignRoleId('');
+                                                    setAssignExpiresAt('');
+                                                    setShowAssignDialog(true);
+                                                }}
+                                            >
+                                                <Plus className="size-3" />
+                                                Add Role
+                                            </Button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {/* ═══════════════════════════════════════════
+                    DIALOGS
+                ═══════════════════════════════════════════ */}
+
+                {/* Assign Role Dialog */}
+                {showAssignDialog && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                        <div className="mx-4 w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-sidebar">
+                            <div className="mb-4 text-sm font-semibold text-foreground dark:text-sidebar-foreground">
+                                Assign Role to User
+                            </div>
+
+                            <div className="space-y-3">
+                                <div>
+                                    <Label className="text-xs text-muted-foreground dark:text-sidebar-foreground/80">
+                                        User
+                                    </Label>
+                                    <SearchableSelect
+                                        options={users.map((u) => ({
+                                            value: u.uuid,
+                                            label: u.name,
+                                            sublabel: u.email,
+                                        }))}
+                                        value={assignUserUuid}
+                                        onChange={setAssignUserUuid}
+                                        placeholder="Select a user..."
+                                    />
+                                </div>
+
+                                <div>
+                                    <Label className="text-xs text-muted-foreground dark:text-sidebar-foreground/80">
+                                        Role
+                                    </Label>
+                                    <SearchableSelect
+                                        options={roles.map((r) => ({
+                                            value: r.id,
+                                            label: r.name,
+                                        }))}
+                                        value={assignRoleId}
+                                        onChange={setAssignRoleId}
+                                        placeholder="Select a role..."
+                                    />
+                                </div>
+
+                                <div>
+                                    <Label className="text-xs text-muted-foreground dark:text-sidebar-foreground/80">
+                                        Expiry date (optional — leave blank for
+                                        permanent)
+                                    </Label>
+                                    <Input
+                                        type="date"
+                                        value={assignExpiresAt}
+                                        onChange={(e) =>
+                                            setAssignExpiresAt(e.target.value)
+                                        }
+                                        min={new Date()
+                                            .toISOString()
+                                            .split('T')[0]}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="mt-5 flex justify-end gap-2">
+                                <Button
+                                    variant="secondary"
+                                    onClick={() => {
+                                        setShowAssignDialog(false);
+                                        setAssignUserUuid('');
+                                        setAssignRoleId('');
+                                        setAssignExpiresAt('');
+                                    }}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    onClick={assignUserRole}
+                                    disabled={
+                                        assigning ||
+                                        !assignUserUuid ||
+                                        !assignRoleId
+                                    }
+                                >
+                                    {assigning ? 'Assigning...' : 'Assign Role'}
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Remove Role Confirmation */}
+                <ConfirmDialog
+                    open={confirmRemove}
+                    onOpenChange={setConfirmRemove}
+                    title="Remove Role"
+                    description={`Remove "${removeTarget?.roleName}" from "${removeTarget?.userName}"?`}
+                    confirmLabel="Remove"
+                    onConfirm={removeUserRole}
+                />
+
+                {/* Edit Expiry Dialog */}
+                {editingExpiry && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                        <div className="mx-4 w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl dark:bg-sidebar">
+                            <div className="mb-4 text-sm font-semibold text-foreground dark:text-sidebar-foreground">
+                                Edit Role Expiry
+                            </div>
+                            <div>
+                                <Label className="text-xs text-muted-foreground dark:text-sidebar-foreground/80">
+                                    Expiry date (blank = permanent)
+                                </Label>
+                                <Input
+                                    type="date"
+                                    value={editExpiryValue}
+                                    onChange={(e) =>
+                                        setEditExpiryValue(e.target.value)
+                                    }
+                                />
+                            </div>
+                            <div className="mt-5 flex justify-end gap-2">
+                                <Button
+                                    variant="secondary"
+                                    onClick={() => setEditingExpiry(null)}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    onClick={saveExpiry}
+                                    disabled={savingExpiry}
+                                >
+                                    {savingExpiry ? 'Saving...' : 'Save'}
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </PortalPageShell>
         </>
     );

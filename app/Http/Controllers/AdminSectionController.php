@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ClassSection;
+use App\Models\SchoolYear;
 use App\Models\Subject;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -11,7 +12,8 @@ class AdminSectionController extends Controller
 {
     private function currentSchoolYear(): string
     {
-        return date('Y');
+        $active = SchoolYear::current();
+        return $active?->name ?? date('Y');
     }
 
     private function authorizeAdmin(Request $request): void
@@ -50,7 +52,7 @@ class AdminSectionController extends Controller
             ->withQueryString();
 
         $sections = ClassSection::query()
-            ->withCount('subjects')
+            ->with('subjects')
             ->get()
             ->sortBy('name')
             ->values()
@@ -63,7 +65,12 @@ class AdminSectionController extends Controller
                     'grade_level' => $section->grade_level,
                     'school_year' => $section->school_year,
                     'student_count' => $studentCount,
-                    'subject_count' => $section->subjects_count,
+                    'subject_count' => $section->subjects->count(),
+                    'subjects' => $section->subjects->map(fn (Subject $subject) => [
+                        'uuid' => $subject->uuid,
+                        'name' => $subject->name,
+                        'code' => $subject->code,
+                    ])->values()->all(),
                 ];
             })
             ->all();
@@ -152,7 +159,7 @@ class AdminSectionController extends Controller
             'school_year' => $this->currentSchoolYear(),
         ]);
 
-        $section->subjects()->sync($subjectUuids);
+        $section->subjects()->syncWithPivotValues($subjectUuids, ['school_year' => $this->currentSchoolYear()]);
 
         return back()->with('success', 'Class section created successfully.');
     }
@@ -185,8 +192,45 @@ class AdminSectionController extends Controller
             'school_year' => $section->school_year ?: $this->currentSchoolYear(),
         ]);
 
-        $section->subjects()->sync($subjectUuids);
+        $section->subjects()->syncWithPivotValues($subjectUuids, ['school_year' => $this->currentSchoolYear()]);
 
         return back()->with('success', 'Class section updated successfully.');
+    }
+
+    public function clearStudents(Request $request, string $uuid)
+    {
+        $this->authorizeAdmin($request);
+
+        $section = ClassSection::query()->where('uuid', $uuid)->first();
+
+        if (! $section) {
+            return back()->with('error', 'Section not found.');
+        }
+
+        DB::table('students')
+            ->where('section', $section->name)
+            ->update(['section' => null, 'section_uuid' => null]);
+
+        return back()->with('success', "All students cleared from {$section->name}.");
+    }
+
+    public function destroy(Request $request, string $uuid)
+    {
+        $this->authorizeAdmin($request);
+
+        $section = ClassSection::query()->where('uuid', $uuid)->first();
+
+        if (! $section) {
+            return back()->with('error', 'Section not found.');
+        }
+
+        DB::table('students')
+            ->where('section', $section->name)
+            ->update(['section' => null, 'section_uuid' => null]);
+
+        $section->subjects()->detach();
+        $section->delete();
+
+        return back()->with('success', "Section {$section->name} deleted.");
     }
 }

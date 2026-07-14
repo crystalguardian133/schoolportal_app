@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ClassSection;
 use App\Models\CommonAddress;
+use App\Models\SchoolYear;
 use App\Models\Student;
 use App\Models\StudentSubject;
 use App\Models\EnrollmentAudit;
@@ -12,12 +13,14 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 
 class EnrollmentController extends Controller
 {
     private function currentSchoolYear(): string
     {
-        return date('Y');
+        $active = SchoolYear::current();
+        return $active?->name ?? date('Y');
     }
 
     private function yearLevelSortExpression(string $column): string
@@ -53,9 +56,8 @@ class EnrollmentController extends Controller
 
         $sortBy = (string) $request->query('sort_by', 'name');
         $sortDirection = strtolower((string) $request->query('sort_direction', 'asc'));
-        $lastYearLevel = $request->query('last_year_level');
 
-        if (! in_array($sortBy, ['name', 'last_year_level', 'last_section'], true)) {
+        if (! in_array($sortBy, ['name', 'grade_level'], true)) {
             $sortBy = 'name';
         }
 
@@ -63,14 +65,7 @@ class EnrollmentController extends Controller
             $sortDirection = 'asc';
         }
 
-        $latestHistorySubquery = DB::table('student_subject as ss')
-            ->selectRaw('ss.student_uuid, ss.year_level as last_year_level, ss.section as last_section, ss.school_year as last_school_year, row_number() over (partition by ss.student_uuid order by ss.school_year desc, ss.created_at desc, ss.id desc) as rn');
-
         $studentsQuery = DB::table('students as s')
-            ->leftJoinSub($latestHistorySubquery, 'history', function ($join) {
-                $join->on('s.uuid', '=', 'history.student_uuid')
-                    ->where('history.rn', '=', 1);
-            })
             ->leftJoin('users as u', 'u.uuid', '=', 's.user_uuid')
             ->select([
                 's.uuid',
@@ -78,16 +73,12 @@ class EnrollmentController extends Controller
                 's.student_id',
                 's.section',
                 's.grade_level',
+                's.last_grade_level',
+                's.previous_section',
                 's.first_name',
                 's.middle_name',
                 's.last_name',
                 'u.email as email',
-                'history.last_year_level',
-                'history.last_section',
-                'history.last_school_year',
-                DB::raw("COALESCE(NULLIF(history.last_year_level, ''), NULLIF(s.last_grade_level, ''), NULLIF(s.grade_level, '')) as last_year_level"),
-                DB::raw("COALESCE(NULLIF(history.last_section, ''), NULLIF(s.previous_section, ''), NULLIF(s.section, '')) as last_section"),
-                DB::raw("COALESCE(NULLIF(history.last_school_year, ''), NULLIF(s.last_school_year, ''), NULLIF(s.school_year, '')) as last_school_year"),
             ]);
 
         if (! empty($q)) {
@@ -98,50 +89,16 @@ class EnrollmentController extends Controller
             });
         }
 
-        if (! empty($lastYearLevel)) {
-            $studentsQuery->whereRaw("COALESCE(NULLIF(history.last_year_level, ''), NULLIF(s.last_grade_level, ''), NULLIF(s.grade_level, '')) = ?", [$lastYearLevel]);
-        }
-
         match ($sortBy) {
             'name' => $studentsQuery->orderBy('s.name', $sortDirection)->orderBy('s.student_id'),
-            'last_section' => $studentsQuery->orderByRaw("COALESCE(NULLIF(history.last_section, ''), NULLIF(s.previous_section, ''), NULLIF(s.section, '')) ".$sortDirection)->orderBy('s.name'),
-            'last_year_level' => $studentsQuery
-                ->orderByRaw("CASE WHEN COALESCE(NULLIF(history.last_year_level, ''), NULLIF(s.last_grade_level, ''), NULLIF(s.grade_level, '')) IS NULL THEN 1 ELSE 0 END")
-                ->orderByRaw($this->yearLevelSortExpression("COALESCE(NULLIF(history.last_year_level, ''), NULLIF(s.last_grade_level, ''), NULLIF(s.grade_level, ''))").' '.$sortDirection)
+            'grade_level' => $studentsQuery
+                ->orderByRaw("CASE WHEN s.grade_level IS NULL THEN 1 ELSE 0 END")
+                ->orderByRaw($this->yearLevelSortExpression('s.grade_level').' '.$sortDirection)
                 ->orderBy('s.name'),
             default => $studentsQuery->orderBy('s.name', $sortDirection)->orderBy('s.student_id'),
         };
 
         $students = $studentsQuery->paginate($perPage)->withQueryString();
-        $studentHistory = collect($students->items())
-            ->mapWithKeys(function ($student) {
-                return [
-                    $student->uuid => [
-                        'last_year_level' => $student->last_year_level ?? null,
-                        'last_section' => $student->last_section ?? null,
-                        'last_school_year' => $student->last_school_year ?? null,
-                    ],
-                ];
-            })
-            ->all();
-
-        $yearLevelOptions = DB::table('student_subject')
-            ->whereNotNull('year_level')
-            ->distinct()
-            ->pluck('year_level')
-            ->sort(function ($left, $right) {
-                $extract = function ($value) {
-                    if (preg_match('/(\d+)/', (string) $value, $matches)) {
-                        return (int) $matches[1];
-                    }
-
-                    return PHP_INT_MAX;
-                };
-
-                return $extract($left) <=> $extract($right) ?: strcmp((string) $left, (string) $right);
-            })
-            ->values()
-            ->all();
 
         $classSections = ClassSection::query()
             ->with('subjects')
@@ -182,8 +139,6 @@ class EnrollmentController extends Controller
 
         return inertia('admin/enrollments', [
             'students' => $students,
-            'studentHistory' => $studentHistory,
-            'yearLevelOptions' => $yearLevelOptions,
             'classSections' => $classSections,
             'commonAddresses' => $commonAddresses,
             'selectedSection' => $selectedSection ? [
@@ -203,7 +158,6 @@ class EnrollmentController extends Controller
                 'section_uuid' => $selectedSectionUuid,
                 'sort_by' => $sortBy,
                 'sort_direction' => $sortDirection,
-                'last_year_level' => $lastYearLevel,
             ],
         ]);
     }
@@ -229,13 +183,6 @@ class EnrollmentController extends Controller
                 ])->values()->all(),
             ])->all();
 
-        $yearLevelOptions = DB::table('student_subject')
-            ->whereNotNull('year_level')
-            ->distinct()
-            ->pluck('year_level')
-            ->values()
-            ->all();
-
         $commonAddresses = CommonAddress::query()
             ->orderBy('label')
             ->get()
@@ -252,7 +199,6 @@ class EnrollmentController extends Controller
 
         return inertia('admin/create-student-enroll', [
             'classSections' => $classSections,
-            'yearLevelOptions' => $yearLevelOptions,
             'commonAddresses' => $commonAddresses,
         ]);
     }
@@ -261,32 +207,64 @@ class EnrollmentController extends Controller
     {
         $this->authorizeAdmin($request);
 
-        $data = $request->validate([
-            'student_uuids' => 'nullable|array',
-            'student_uuids.*' => 'string',
-            'class_section_uuid' => 'nullable|string',
-            'new_student' => 'nullable|array',
-            'new_student.name' => 'required_with:new_student|string|max:255',
-            'new_student.email' => 'required_with:new_student|email|max:255|unique:users,email',
-            'new_student.password' => 'required_with:new_student|string|min:8|confirmed',
-            'new_student.student_id' => 'nullable|string|max:100|unique:students,student_id',
-            'new_student.lrn' => 'nullable|string|max:100|unique:students,lrn',
-            'new_student.grade_level' => 'nullable|string|max:100',
-            'new_student.first_name' => 'nullable|string|max:255',
-            'new_student.middle_name' => 'nullable|string|max:255',
-            'new_student.last_name' => 'nullable|string|max:255',
-            'new_student.birthday' => 'nullable|date',
-            'new_student.contact_number' => ['nullable', 'string', 'max:50', 'regex:/^\d*$/'],
-            'new_student.address_zone_street' => 'nullable|string|max:255',
-            'new_student.address_barangay' => 'required|string|max:255',
-            'new_student.address_municipality' => 'required|string|max:255',
-            'new_student.address_province' => 'required|string|max:255',
-            'new_student.previous_school' => 'required|string|max:255',
-            'new_student.last_school_year' => ['required', 'string', 'max:50', 'regex:/^\d*(?:-\d+)*$/'],
-            'new_student.last_grade_level' => ['required', 'string', 'max:100', 'regex:/^\d*$/'],
-            'new_student.previous_section' => 'nullable|string|max:255',
-            'new_student.avatar' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+        $user = $request->user();
+        $canBypassDate = $user && method_exists($user, 'hasPermission') && $user->hasPermission('bypass enrollment date');
+
+        if (! $canBypassDate) {
+            $activeYear = SchoolYear::current();
+            if ($activeYear) {
+                $today = now()->toDateString();
+                if ($activeYear->enrollment_start && $today < $activeYear->enrollment_start) {
+                    return back()->with('error', 'Enrollment is not yet open. Enrollment period starts on '.$activeYear->enrollment_start.'.');
+                }
+                if ($activeYear->enrollment_end && $today > $activeYear->enrollment_end) {
+                    return back()->with('error', 'Enrollment period has ended. It closed on '.$activeYear->enrollment_end.'.');
+                }
+            }
+        }
+
+        Log::info('[ENROLLMENT] store() reached', [
+            'method' => $request->method(),
+            'content_type' => $request->header('Content-Type'),
+            'inertia' => $request->header('X-Inertia'),
+            'all_input' => $request->all(),
         ]);
+
+        try {
+            $data = $request->validate([
+                'student_uuids' => 'nullable|array',
+                'student_uuids.*' => 'string',
+                'class_section_uuid' => 'nullable|string',
+                'new_student' => 'nullable|array',
+                'new_student.name' => 'required_with:new_student|string|max:255',
+                'new_student.email' => 'required_with:new_student|email|max:255|unique:users,email',
+                'new_student.password' => 'required_with:new_student|string|min:8|confirmed',
+                'new_student.student_id' => 'nullable|string|max:100|unique:students,student_id',
+                'new_student.lrn' => 'nullable|string|max:100|unique:students,lrn',
+                'new_student.grade_level' => 'nullable|string|max:100',
+                'new_student.first_name' => 'nullable|string|max:255',
+                'new_student.middle_name' => 'nullable|string|max:255',
+                'new_student.last_name' => 'nullable|string|max:255',
+                'new_student.birthday' => 'nullable|date',
+                'new_student.contact_number' => ['nullable', 'string', 'max:50', 'regex:/^\d*$/'],
+                'new_student.address_zone_street' => 'nullable|string|max:255',
+                'new_student.address_barangay' => 'required_with:new_student|string|max:255',
+                'new_student.address_municipality' => 'required_with:new_student|string|max:255',
+                'new_student.address_province' => 'required_with:new_student|string|max:255',
+                'new_student.previous_school' => 'required_with:new_student|string|max:255',
+                'new_student.last_school_year' => ['required_with:new_student', 'string', 'max:50', 'regex:/^\d*(?:-\d+)*$/'],
+                'new_student.last_grade_level' => ['required_with:new_student', 'string', 'max:100', 'regex:/^\d*$/'],
+                'new_student.previous_section' => 'nullable|string|max:255',
+                'new_student.avatar' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('[ENROLLMENT] validation failed', [
+                'errors' => $e->errors(),
+                'input' => $request->except('new_student.password', 'new_student.password_confirmation'),
+            ]);
+
+            throw $e;
+        }
 
         $studentUuids = $data['student_uuids'] ?? null;
         $classSectionUuid = $data['class_section_uuid'] ?? null;
@@ -294,25 +272,56 @@ class EnrollmentController extends Controller
 
         $schoolYear = $this->currentSchoolYear();
 
+        Log::info('[ENROLLMENT] after validation', [
+            'student_uuids' => $studentUuids,
+            'class_section_uuid' => $classSectionUuid,
+            'has_new_student' => ! empty($newStudentData),
+            'school_year' => $schoolYear,
+        ]);
+
         $classSection = null;
         if (! empty($classSectionUuid)) {
             $classSection = ClassSection::query()->with('subjects')->where('uuid', $classSectionUuid)->first();
 
             if (! $classSection) {
+                Log::warning('[ENROLLMENT] class section not found', ['uuid' => $classSectionUuid]);
+
                 return back()->with('error', 'Class section not found.');
             }
 
             if ($classSection->subjects->isEmpty()) {
+                Log::warning('[ENROLLMENT] class section has no subjects', ['uuid' => $classSectionUuid]);
+
                 return back()->with('error', 'This class section has no subjects assigned yet.');
             }
 
             $classSection->school_year = $schoolYear;
             $classSection->save();
+
+            // Assign school year to all subjects in this section
+            DB::table('class_section_subjects')
+                ->where('class_section_uuid', $classSection->uuid)
+                ->update(['school_year' => $schoolYear]);
+
+            Log::info('[ENROLLMENT] class section loaded', [
+                'uuid' => $classSection->uuid,
+                'name' => $classSection->name,
+                'grade_level' => $classSection->grade_level,
+                'subjects_count' => $classSection->subjects->count(),
+                'subject_uuids' => $classSection->subjects->pluck('uuid')->toArray(),
+            ]);
         }
 
         if ((! $studentUuids || count($studentUuids) === 0) && empty($newStudentData)) {
+            Log::warning('[ENROLLMENT] no students and no new student data');
+
             return back()->with('error', 'Select at least one existing student or fill out the new student form.');
         }
+
+        Log::info('[ENROLLMENT] entering transaction', [
+            'student_uuids_count' => is_array($studentUuids) ? count($studentUuids) : 0,
+            'class_section_null' => $classSection === null,
+        ]);
 
         $enrolledStudents = DB::transaction(function () use ($studentUuids, $newStudentData, $classSection, $request, $schoolYear) {
             $students = collect();
@@ -320,6 +329,8 @@ class EnrollmentController extends Controller
             if ($studentUuids && is_array($studentUuids) && count($studentUuids) > 0) {
                 $students = $students->merge(DB::table('students')->whereIn('uuid', $studentUuids)->get());
             }
+
+            Log::info('[ENROLLMENT] inside transaction - found students', ['count' => $students->count()]);
 
             if (is_array($newStudentData) && ! empty($newStudentData['name']) && ! empty($newStudentData['email'])) {
                 $password = $newStudentData['password'] ?? \Illuminate\Support\Str::random(10);
@@ -372,6 +383,7 @@ class EnrollmentController extends Controller
                     'previous_section' => $newStudentData['previous_section'] ?? null,
                     'school_year' => $classSection ? $schoolYear : null,
                     'section' => $classSection ? $classSection->name : null,
+                    'section_uuid' => $classSection ? $classSection->uuid : null,
                     'profile_picture' => $profilePicturePath ?? null,
                 ]);
 
@@ -379,18 +391,30 @@ class EnrollmentController extends Controller
             }
 
             if ($students->isEmpty()) {
+                Log::warning('[ENROLLMENT] no students to enroll after all checks');
+
                 return collect();
             }
 
             foreach ($students as $student) {
                 if (! $classSection) {
                     // No class section provided: skip enrollment steps for this student
+                    Log::info('[ENROLLMENT] skipping student (no class section)', ['uuid' => $student->uuid]);
+
                     continue;
                 }
 
-                DB::table('students')->where('uuid', $student->uuid)->update([
+                $updated = DB::table('students')->where('uuid', $student->uuid)->update([
                     'section' => $classSection->name,
+                    'section_uuid' => $classSection->uuid,
                     'school_year' => $schoolYear,
+                    'grade_level' => $classSection->grade_level ?? $student->grade_level,
+                ]);
+
+                Log::info('[ENROLLMENT] updated student', [
+                    'uuid' => $student->uuid,
+                    'rows_affected' => $updated,
+                    'section' => $classSection->name,
                 ]);
 
                 foreach ($classSection->subjects as $subject) {
@@ -400,23 +424,80 @@ class EnrollmentController extends Controller
                         ->where('school_year', $schoolYear)
                         ->exists();
 
+                    Log::info('[ENROLLMENT] subject check', [
+                        'student_uuid' => $student->uuid,
+                        'subject_uuid' => $subject->uuid,
+                        'subject_name' => $subject->name,
+                        'exists' => $exists,
+                    ]);
+
                     if (! $exists) {
-                        StudentSubject::create([
+                        $created = StudentSubject::create([
                             'student_uuid' => $student->uuid,
                             'subject_uuid' => $subject->uuid,
                             'year_level' => $classSection->grade_level ?? ($student->grade_level ?? null),
                             'school_year' => $schoolYear,
                             'section' => $classSection->name,
                         ]);
+
+                        Log::info('[ENROLLMENT] created student_subject', [
+                            'id' => $created->id,
+                            'student_uuid' => $student->uuid,
+                            'subject_uuid' => $subject->uuid,
+                        ]);
                     }
                 }
             }
+
+            return $students;
         });
 
         $enrolledCount = is_countable($enrolledStudents) ? count($enrolledStudents) : 0;
 
+        Log::info('[ENROLLMENT] completed', [
+            'enrolled_count' => $enrolledCount,
+            'has_new_student' => ! empty($newStudentData),
+        ]);
+
         return redirect()->back()->with('success', $enrolledCount > 0
             ? ($newStudentData ? 'Student account created and enrolled successfully.' : 'Students enrolled successfully.')
             : 'No students were enrolled.');
+    }
+
+    public function promote(Request $request, string $uuid)
+    {
+        $this->authorizeAdmin($request);
+
+        $student = Student::where('uuid', $uuid)->first();
+
+        if (! $student) {
+            return back()->with('error', 'Student not found.');
+        }
+
+        $currentLevel = $student->grade_level;
+
+        if (empty($currentLevel)) {
+            return back()->with('error', 'Cannot promote student: no current grade level set.');
+        }
+
+        $nextLevel = match ($currentLevel) {
+            'Grade 7' => 'Grade 8',
+            'Grade 8' => 'Grade 9',
+            'Grade 9' => 'Grade 10',
+            'Grade 10' => 'Grade 11',
+            'Grade 11' => 'Grade 12',
+            default => null,
+        };
+
+        if ($nextLevel === null) {
+            return back()->with('error', "Cannot promote student from \"{$currentLevel}\": no next level defined.");
+        }
+
+        DB::table('students')->where('uuid', $uuid)->update([
+            'last_grade_level' => $currentLevel,
+            'grade_level' => $nextLevel,
+        ]);
+
+        return redirect()->back()->with('success', "Student promoted from {$currentLevel} to {$nextLevel}.");
     }
 }

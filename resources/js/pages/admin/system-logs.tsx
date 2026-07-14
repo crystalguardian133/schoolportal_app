@@ -20,9 +20,11 @@ function toArray(value) {
     if (Array.isArray(value)) {
         return value;
     }
+
     if (value && Array.isArray(value.data)) {
         return value.data;
     }
+
     return [];
 }
 
@@ -30,6 +32,7 @@ function formatMetadata(metadata) {
     if (!metadata) {
         return null;
     }
+
     if (typeof metadata === 'string') {
         try {
             return JSON.parse(metadata);
@@ -37,6 +40,7 @@ function formatMetadata(metadata) {
             return metadata;
         }
     }
+
     return metadata;
 }
 
@@ -44,12 +48,15 @@ function statusTone(statusCode) {
     if (!statusCode) {
         return 'bg-muted text-muted-foreground';
     }
+
     if (statusCode >= 500) {
         return 'bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300';
     }
+
     if (statusCode >= 400) {
         return 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300';
     }
+
     return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300';
 }
 
@@ -90,6 +97,7 @@ function SortIcon({
     if (sortBy !== column) {
         return <ArrowUpDown className="size-3.5 opacity-40" />;
     }
+
     return sortDir === 'asc' ? (
         <ArrowUp className="size-3.5" />
     ) : (

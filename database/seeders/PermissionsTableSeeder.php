@@ -19,12 +19,22 @@ class PermissionsTableSeeder extends Seeder
             'Manage Roles',
             'Manage Subjects',
             'Assign Subject Teacher',
+            'Assign Subjects',
             'Manage Sections',
             'Manage Assignments',
             'Manage Enrollments',
+            'Bypass Enrollment Date',
+            'School Year Bypass',
             'View Announcements',
             'Manage Announcements',
             'View Logs',
+            'Create Teacher',
+            'Access Teacher Dashboard',
+            'Access Staff Dashboard',
+            'Access Admin Dashboard',
+            'Access Department Head Dashboard',
+            'Access School Head Dashboard',
+            'Manage Schedules',
         ];
 
         foreach ($perms as $permission) {

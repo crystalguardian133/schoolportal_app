@@ -1,9 +1,9 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
+import { QrCode } from 'lucide-react';
 import { useState } from 'react';
 import { PortalPageShell } from '@/components/portal-page-shell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { QrCode } from 'lucide-react';
 
 type UserRow = {
     uuid: string;
@@ -41,10 +41,16 @@ export default function AdminIdCards() {
 
     function printCards() {
         const printContent = document.getElementById('id-cards-print');
-        if (!printContent) return;
+
+        if (!printContent) {
+return;
+}
 
         const printWindow = window.open('', '_blank');
-        if (!printWindow) return;
+
+        if (!printWindow) {
+return;
+}
 
         printWindow.document.write(`
             <!DOCTYPE html>

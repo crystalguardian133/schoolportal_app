@@ -62,7 +62,9 @@ class User extends Authenticatable implements PasskeyUser
       */
     public function roles(): BelongsToMany
     {
-        return $this->belongsToMany(Role::class, 'role_user', 'user_uuid', 'role_uuid', 'uuid', 'id');
+        return $this->belongsToMany(Role::class, 'role_user', 'user_uuid', 'role_uuid', 'uuid', 'id')
+            ->withPivot('expires_at')
+            ->withTimestamps();
     }
 
     public function student(): HasOne
@@ -74,19 +76,50 @@ class User extends Authenticatable implements PasskeyUser
     {
         $this->loadMissing('roles');
 
-        foreach (['admin', 'principal', 'registrar', 'staff', 'student'] as $role) {
-            if ($this->roles->contains('name', $role)) {
-                return $role;
+        $roleMap = [
+            'admin' => 'admin',
+            'principal' => 'principal',
+            'registrar' => 'registrar',
+            'staff' => 'staff',
+            'student' => 'student',
+            'teacher' => 'teacher',
+            'department-head' => 'department-head',
+            'school-head' => 'school-head',
+            'ADMINISTRATOR' => 'admin',
+            'TEACHER' => 'teacher',
+        ];
+
+        $activeRoles = $this->roles->filter(fn ($role) => ! $this->isRoleExpired($role));
+
+        foreach ($activeRoles as $role) {
+            $mapped = $roleMap[$role->name] ?? strtolower($role->name);
+            if ($mapped) {
+                return $mapped;
             }
         }
 
-        return $this->roles->first()?->name;
+        return $activeRoles->first()?->name;
     }
 
     public function getAllPermissions(): \Illuminate\Support\Collection
     {
         $this->loadMissing('roles.permissions');
-        return $this->roles->pluck('permissions')->flatten()->unique('id')->values();
+        return $this->roles
+            ->filter(fn ($role) => ! $this->isRoleExpired($role))
+            ->pluck('permissions')
+            ->flatten()
+            ->unique('id')
+            ->values();
+    }
+
+    private function isRoleExpired($role): bool
+    {
+        $expiresAt = $role->pivot->expires_at ?? null;
+        if (! $expiresAt) {
+            return false;
+        }
+
+        return \Carbon\Carbon::parse($expiresAt)->isPast();
     }
 
     public function subjects(): BelongsToMany

@@ -13,6 +13,11 @@ import {
     Clock3,
     Book,
     CreditCard,
+    Pencil,
+    UserCheck,
+    UserPlus,
+    CalendarClock,
+    CalendarCheck,
 } from 'lucide-react';
 import { Sun, Moon } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -81,6 +86,11 @@ const staffNavItems: NavItem[] = [
         icon: Users,
     },
     {
+        title: 'Edit Grades',
+        href: '/teacher/grades',
+        icon: Pencil,
+    },
+    {
         title: 'Schedule',
         href: '/teacher/schedule',
         icon: CalendarDays,
@@ -102,51 +112,251 @@ const adminNavItems: NavItem[] = [
         title: 'Enroll Students',
         href: '/admin/enrollments',
         icon: ClipboardList,
+        permission: 'manage enrollments',
     },
     {
         title: 'Create Student',
         href: '/admin/create-student',
         icon: Users,
+        permission: 'manage enrollments',
     },
     {
         title: 'Class Sections',
         href: '/admin/sections',
         icon: Users,
+        permission: 'manage sections',
     },
     {
         title: 'Subjects',
         href: '/admin/subjects',
         icon: Book,
+        permission: 'manage subjects',
     },
     {
         title: 'Assignments',
         href: '/admin/assignments',
         icon: Shield,
+        permission: 'manage assignments',
+    },
+    {
+        title: 'Assign Subjects',
+        href: '/adviser/assign-subjects',
+        icon: UserCheck,
+        permission: 'assign subjects',
+    },
+    {
+        title: 'Manage Schedules',
+        href: '/admin/schedules',
+        icon: CalendarDays,
+        permission: 'manage schedules',
     },
     {
         title: 'Enrollment Audits',
         href: '/admin/enrollment-audits',
         icon: FileText,
+        permission: 'manage enrollments',
+    },
+    {
+        title: 'School Year',
+        href: '/admin/school-years',
+        icon: CalendarClock,
+        permission: 'access admin',
     },
     {
         title: 'System Logs',
         href: '/admin/system-logs',
         icon: Clock3,
+        permission: 'view logs',
     },
     {
         title: 'Announcements',
         href: '/admin/announcements',
         icon: Bell,
+        permission: 'manage announcements',
     },
     {
         title: 'Manage Users',
         href: '/admin/users',
         icon: UserCog,
+        permission: 'manage users',
+    },
+    {
+        title: 'Create Teacher',
+        href: '/admin/create-teacher',
+        icon: UserPlus,
+        permission: 'create teacher',
     },
     {
         title: 'Roles & Permissions',
         href: '/admin/roles',
         icon: Shield,
+        permission: 'manage roles',
+    },
+    {
+        title: 'ID Cards',
+        href: '/admin/id-cards',
+        icon: CreditCard,
+    },
+];
+
+const teacherNavItems: NavItem[] = [
+    {
+        title: 'Dashboard',
+        href: dashboard(),
+        icon: LayoutGrid,
+    },
+    {
+        title: 'My Classes',
+        href: '/teacher/classes',
+        icon: Users,
+    },
+    {
+        title: 'Edit Grades',
+        href: '/teacher/grades',
+        icon: Pencil,
+    },
+    {
+        title: 'Schedule',
+        href: '/teacher/schedule',
+        icon: CalendarDays,
+    },
+    {
+        title: 'Assign Subjects',
+        href: '/adviser/assign-subjects',
+        icon: UserCheck,
+        permission: 'assign subjects',
+    },
+    {
+        title: 'Manage Schedules',
+        href: '/admin/schedules',
+        icon: CalendarDays,
+        permission: 'manage schedules',
+    },
+    {
+        title: 'Attendance',
+        href: '/teacher/attendance',
+        icon: CalendarCheck,
+    },
+    {
+        title: 'Announcements',
+        href: '/teacher/announcements',
+        icon: Bell,
+    },
+];
+
+const deptHeadNavItems: NavItem[] = [
+    {
+        title: 'Dashboard',
+        href: dashboard(),
+        icon: LayoutGrid,
+    },
+    {
+        title: 'Subjects',
+        href: '/admin/subjects',
+        icon: Book,
+        permission: 'manage subjects',
+    },
+    {
+        title: 'Class Sections',
+        href: '/admin/sections',
+        icon: Users,
+        permission: 'manage sections',
+    },
+    {
+        title: 'Assign Subjects',
+        href: '/adviser/assign-subjects',
+        icon: UserCheck,
+        permission: 'assign subjects',
+    },
+    {
+        title: 'Manage Schedules',
+        href: '/admin/schedules',
+        icon: CalendarDays,
+        permission: 'manage schedules',
+    },
+    {
+        title: 'Edit Grades',
+        href: '/teacher/grades',
+        icon: Pencil,
+    },
+    {
+        title: 'Announcements',
+        href: '/admin/announcements',
+        icon: Bell,
+        permission: 'manage announcements',
+    },
+];
+
+const schoolHeadNavItems: NavItem[] = [
+    {
+        title: 'Dashboard',
+        href: dashboard(),
+        icon: LayoutGrid,
+    },
+    {
+        title: 'Enroll Students',
+        href: '/admin/enrollments',
+        icon: ClipboardList,
+        permission: 'manage enrollments',
+    },
+    {
+        title: 'Class Sections',
+        href: '/admin/sections',
+        icon: Users,
+        permission: 'manage sections',
+    },
+    {
+        title: 'Subjects',
+        href: '/admin/subjects',
+        icon: Book,
+        permission: 'manage subjects',
+    },
+    {
+        title: 'Assignments',
+        href: '/admin/assignments',
+        icon: Shield,
+        permission: 'manage assignments',
+    },
+    {
+        title: 'Manage Schedules',
+        href: '/admin/schedules',
+        icon: CalendarDays,
+        permission: 'manage schedules',
+    },
+    {
+        title: 'School Year',
+        href: '/admin/school-years',
+        icon: CalendarClock,
+    },
+    {
+        title: 'Manage Users',
+        href: '/admin/users',
+        icon: UserCog,
+        permission: 'manage users',
+    },
+    {
+        title: 'Roles & Permissions',
+        href: '/admin/roles',
+        icon: Shield,
+        permission: 'manage roles',
+    },
+    {
+        title: 'Enrollment Audits',
+        href: '/admin/enrollment-audits',
+        icon: FileText,
+        permission: 'manage enrollments',
+    },
+    {
+        title: 'System Logs',
+        href: '/admin/system-logs',
+        icon: Clock3,
+        permission: 'view logs',
+    },
+    {
+        title: 'Announcements',
+        href: '/admin/announcements',
+        icon: Bell,
+        permission: 'manage announcements',
     },
     {
         title: 'ID Cards',
@@ -158,30 +368,56 @@ const adminNavItems: NavItem[] = [
 export function AppSidebar() {
     const { auth } = usePage<{ auth: Auth }>().props;
     const isStudent = auth.user?.role === 'student';
-    const isStaff = auth.user?.role === 'staff';
     const permissions = auth.permissions || [];
-    const isAdmin =
-        auth.user?.role === 'admin' ||
-        auth.user?.role === 'principal' ||
-        auth.user?.role === 'registrar' ||
-        permissions.some((p: string) =>
-            [
-                'manage users',
-                'manage roles',
-                'manage subjects',
-                'manage sections',
-                'manage assignments',
-                'manage enrollments',
-                'manage announcements',
-                'view logs',
-            ].includes(p.toLowerCase()),
-        );
 
-    const navItems = isAdmin
-        ? adminNavItems
-        : isStaff
-          ? staffNavItems
-          : studentNavItems;
+    const isTeacher = permissions.includes('access teacher dashboard');
+    const isStaff = auth.user?.role === 'staff' || permissions.includes('access staff dashboard');
+    const isDeptHead = permissions.includes('access department head dashboard');
+    const isSchoolHead = permissions.includes('access school head dashboard');
+    const isAdmin = permissions.includes('access admin dashboard');
+
+    const hasPermission = (permission?: string) => {
+        if (!permission) {
+return true;
+}
+
+        const noAccessAdminBypass = ['manage assignments', 'manage subjects'];
+
+        if (permissions.includes('access admin') && !noAccessAdminBypass.includes(permission)) {
+return true;
+}
+
+        if (auth.user?.is_adviser && ['assign subjects', 'manage schedules'].includes(permission)) {
+return true;
+}
+
+        return permissions.includes(permission);
+    };
+
+    let navItems: NavItem[];
+    let sectionLabel: string | null;
+
+    if (isSchoolHead) {
+        navItems = schoolHeadNavItems;
+        sectionLabel = 'School Administration';
+    } else if (isAdmin) {
+        navItems = adminNavItems;
+        sectionLabel = 'Administrative Tools';
+    } else if (isDeptHead) {
+        navItems = deptHeadNavItems;
+        sectionLabel = 'Department Management';
+    } else if (isTeacher) {
+        navItems = teacherNavItems;
+        sectionLabel = 'Teaching Tools';
+    } else if (isStaff) {
+        navItems = staffNavItems;
+        sectionLabel = 'Staff Portal';
+    } else {
+        navItems = studentNavItems;
+        sectionLabel = isStudent ? null : 'Platform';
+    }
+
+    navItems = navItems.filter((item) => hasPermission(item.permission));
 
     return (
         <Sidebar collapsible="icon" variant="inset">
@@ -204,13 +440,7 @@ export function AppSidebar() {
             <SidebarContent className={isStudent ? 'pt-3' : ''}>
                 <NavMain
                     items={navItems}
-                    label={
-                        isStudent
-                            ? null
-                            : isAdmin
-                              ? 'Administrative Tools'
-                              : 'Platform'
-                    }
+                    label={sectionLabel}
                 />
             </SidebarContent>
 

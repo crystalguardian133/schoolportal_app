@@ -48,4 +48,11 @@ class Subject extends Model
             ->withPivot('is_substitute')
             ->withTimestamps();
     }
+
+    public function sectionTeachers(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'class_section_subject_teacher', 'subject_uuid', 'teacher_uuid', 'uuid', 'uuid')
+            ->withPivot('class_section_uuid', 'is_substitute')
+            ->withTimestamps();
+    }
 }

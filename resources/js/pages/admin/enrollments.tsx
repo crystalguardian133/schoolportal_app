@@ -7,15 +7,13 @@ type Student = {
     uuid: string;
     name: string;
     student_id: string;
+    grade_level?: string | null;
+    last_grade_level?: string | null;
+    previous_section?: string | null;
     first_name?: string | null;
     middle_name?: string | null;
     last_name?: string | null;
     email?: string | null;
-};
-type StudentHistory = {
-    last_year_level?: string | null;
-    last_section?: string | null;
-    last_school_year?: string | null;
 };
 type StudentPage = {
     data: Student[];
@@ -36,14 +34,11 @@ type EnrollmentsFilters = {
     q?: string | null;
     per_page?: number | string;
     section_uuid?: string | null;
-    sort_by?: 'name' | 'last_year_level' | 'last_section';
+    sort_by?: 'name' | 'grade_level';
     sort_direction?: 'asc' | 'desc';
-    last_year_level?: string | null;
 };
 type EnrollmentsPageProps = PageProps & {
     students?: StudentPage;
-    studentHistory?: Record<string, StudentHistory>;
-    yearLevelOptions?: string[];
     classSections?: ClassSection[];
     selectedSection?: ClassSection | null;
     filters?: EnrollmentsFilters;
@@ -58,9 +53,6 @@ export default function AdminEnrollments() {
         total: 0,
     };
     const students: Student[] = studentsProp.data || [];
-    const studentHistory: Record<string, StudentHistory> =
-        props.studentHistory || {};
-    const yearLevelOptions: string[] = props.yearLevelOptions || [];
     const classSections: ClassSection[] = props.classSections || [];
     const selectedSection: ClassSection | null = props.selectedSection || null;
     const filters = props.filters || {
@@ -69,7 +61,6 @@ export default function AdminEnrollments() {
         section_uuid: '',
         sort_by: 'name',
         sort_direction: 'asc',
-        last_year_level: '',
     };
     const selectedSectionGrade = selectedSection?.grade_level ?? null;
 
@@ -81,14 +72,11 @@ export default function AdminEnrollments() {
     const [classSectionUuid, setClassSectionUuid] = useState<string>(
         filters.section_uuid ?? classSections[0]?.uuid ?? '',
     );
-    const [sortBy, setSortBy] = useState<
-        'name' | 'last_year_level' | 'last_section'
-    >(filters.sort_by ?? 'name');
+    const [sortBy, setSortBy] = useState<'name' | 'grade_level'>(
+        filters.sort_by ?? 'name',
+    );
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>(
         filters.sort_direction ?? 'asc',
-    );
-    const [lastYearLevel, setLastYearLevel] = useState<string>(
-        filters.last_year_level ?? '',
     );
     const [submitting, setSubmitting] = useState(false);
     const initialRender = useRef(true);
@@ -108,19 +96,11 @@ export default function AdminEnrollments() {
                 section_uuid: classSectionUuid || undefined,
                 sort_by: sortBy,
                 sort_direction: sortDirection,
-                last_year_level: lastYearLevel || undefined,
             });
         }, 250);
 
         return () => window.clearTimeout(timer);
-    }, [
-        query,
-        perPage,
-        classSectionUuid,
-        sortBy,
-        sortDirection,
-        lastYearLevel,
-    ]);
+    }, [query, perPage, classSectionUuid, sortBy, sortDirection]);
 
     function toggleStudent(uuid: string) {
         setSelectedStudents((prev) =>
@@ -169,7 +149,32 @@ export default function AdminEnrollments() {
                         section_uuid: classSectionUuid,
                         sort_by: sortBy,
                         sort_direction: sortDirection,
-                        last_year_level: lastYearLevel || undefined,
+                    });
+                },
+            },
+        );
+    }
+
+    function promoteStudent(uuid: string) {
+        router.post(
+            `/admin/students/${uuid}/promote`,
+            {},
+            {
+                onSuccess: () => {
+                    window.dispatchEvent(
+                        new CustomEvent('local-toast', {
+                            detail: {
+                                message: 'Student promoted successfully',
+                                type: 'success',
+                            },
+                        }),
+                    );
+                    reload({
+                        q: query,
+                        per_page: perPage,
+                        section_uuid: classSectionUuid || undefined,
+                        sort_by: sortBy,
+                        sort_direction: sortDirection,
                     });
                 },
             },
@@ -180,7 +185,7 @@ export default function AdminEnrollments() {
         router.get('/admin/create-student');
     }
 
-    function toggleSort(column: 'name' | 'last_year_level' | 'last_section') {
+    function toggleSort(column: 'name' | 'grade_level') {
         if (sortBy === column) {
             setSortDirection((current) => (current === 'asc' ? 'desc' : 'asc'));
 
@@ -188,7 +193,7 @@ export default function AdminEnrollments() {
         }
 
         setSortBy(column);
-        setSortDirection(column === 'last_year_level' ? 'desc' : 'asc');
+        setSortDirection(column === 'grade_level' ? 'desc' : 'asc');
     }
 
     function sortLabel(column: string, label: string) {
@@ -261,25 +266,6 @@ export default function AdminEnrollments() {
                                         <option value={50}>50</option>
                                     </select>
                                 </label>
-                                <label className="space-y-1 text-sm">
-                                    <span className="block text-muted-foreground">
-                                        Last year level
-                                    </span>
-                                    <select
-                                        value={lastYearLevel}
-                                        onChange={(e) =>
-                                            setLastYearLevel(e.target.value)
-                                        }
-                                        className="rounded border px-2 py-1"
-                                    >
-                                        <option value="">All</option>
-                                        {yearLevelOptions.map((level) => (
-                                            <option key={level} value={level}>
-                                                {level}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </label>
                                 <button
                                     type="button"
                                     onClick={selectAllPage}
@@ -328,93 +314,96 @@ export default function AdminEnrollments() {
                                             <button
                                                 type="button"
                                                 onClick={() =>
-                                                    toggleSort(
-                                                        'last_year_level',
-                                                    )
+                                                    toggleSort('grade_level')
                                                 }
                                                 className="flex items-center gap-1 text-left hover:text-foreground"
                                             >
                                                 {sortLabel(
-                                                    'last_year_level',
-                                                    'Last Year Level',
+                                                    'grade_level',
+                                                    'Grade Level',
                                                 )}
                                             </button>
                                         </th>
                                         <th className="px-4 py-3 font-medium">
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    toggleSort('last_section')
-                                                }
-                                                className="flex items-center gap-1 text-left hover:text-foreground"
-                                            >
-                                                {sortLabel(
-                                                    'last_section',
-                                                    'Last Section',
-                                                )}
-                                            </button>
+                                            Last Grade Level
+                                        </th>
+                                        <th className="px-4 py-3 font-medium">
+                                            Last Section
                                         </th>
                                         <th className="px-4 py-3 font-medium">
                                             Placement Check
                                         </th>
+                                        <th className="px-4 py-3 font-medium"></th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-sidebar-border/70 bg-white dark:bg-sidebar">
-                                    {students.map((student) =>
-                                        (() => {
-                                            const history =
-                                                studentHistory[student.uuid] ||
-                                                {};
-                                            const placementCheck =
-                                                !selectedSectionGrade ||
-                                                !history.last_year_level
-                                                    ? 'Review'
-                                                    : history.last_year_level ===
-                                                        selectedSectionGrade
-                                                      ? 'OK'
-                                                      : 'Check';
+                                    {students.map((student) => {
+                                        const placementCheck =
+                                            !selectedSectionGrade ||
+                                            !student.grade_level
+                                                ? 'Review'
+                                                : student.grade_level ===
+                                                    selectedSectionGrade
+                                                  ? 'OK'
+                                                  : 'Check';
 
-                                            return (
-                                                <tr
-                                                    key={student.uuid}
-                                                    className="hover:bg-sidebar-accent/40"
-                                                >
-                                                    <td className="px-4 py-3">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={selectedStudents.includes(
-                                                                student.uuid,
-                                                            )}
-                                                            onChange={() =>
-                                                                toggleStudent(
-                                                                    student.uuid,
-                                                                )
-                                                            }
-                                                        />
-                                                    </td>
-                                                    <td className="px-4 py-3 font-medium text-sidebar-foreground">
-                                                        {formatStudentName(
-                                                            student,
+                                        return (
+                                            <tr
+                                                key={student.uuid}
+                                                className="hover:bg-sidebar-accent/40"
+                                            >
+                                                <td className="px-4 py-3">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedStudents.includes(
+                                                            student.uuid,
                                                         )}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-muted-foreground">
-                                                        {student.student_id}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-muted-foreground">
-                                                        {history.last_year_level ??
-                                                            'N/A'}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-muted-foreground">
-                                                        {history.last_section ??
-                                                            'N/A'}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-muted-foreground">
-                                                        {placementCheck}
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })(),
-                                    )}
+                                                        onChange={() =>
+                                                            toggleStudent(
+                                                                student.uuid,
+                                                            )
+                                                        }
+                                                    />
+                                                </td>
+                                                <td className="px-4 py-3 font-medium text-sidebar-foreground">
+                                                    {formatStudentName(
+                                                        student,
+                                                    )}
+                                                </td>
+                                                <td className="px-4 py-3 text-muted-foreground">
+                                                    {student.student_id}
+                                                </td>
+                                                <td className="px-4 py-3 text-muted-foreground">
+                                                    {student.grade_level ??
+                                                        'N/A'}
+                                                </td>
+                                                <td className="px-4 py-3 text-muted-foreground">
+                                                    {student.last_grade_level ??
+                                                        'N/A'}
+                                                </td>
+                                                <td className="px-4 py-3 text-muted-foreground">
+                                                    {student.previous_section ??
+                                                        'N/A'}
+                                                </td>
+                                                <td className="px-4 py-3 text-muted-foreground">
+                                                    {placementCheck}
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            promoteStudent(
+                                                                student.uuid,
+                                                            )
+                                                        }
+                                                        className="rounded bg-amber-500 px-3 py-1 text-xs text-white hover:bg-amber-600"
+                                                    >
+                                                        Promote
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>
@@ -433,8 +422,6 @@ export default function AdminEnrollments() {
                                             classSectionUuid || undefined,
                                         sort_by: sortBy,
                                         sort_direction: sortDirection,
-                                        last_year_level:
-                                            lastYearLevel || undefined,
                                     })
                                 }
                                 className="rounded border px-3 py-1 disabled:opacity-50"
@@ -461,8 +448,6 @@ export default function AdminEnrollments() {
                                             classSectionUuid || undefined,
                                         sort_by: sortBy,
                                         sort_direction: sortDirection,
-                                        last_year_level:
-                                            lastYearLevel || undefined,
                                     })
                                 }
                                 className="rounded border px-3 py-1 disabled:opacity-50"

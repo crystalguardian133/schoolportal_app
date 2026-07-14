@@ -13,7 +13,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-export default function EditUserModal({ user, roles, sections }: any) {
+export default function EditUserModal({ user, roles, sections, takenAdviserSections = [] }: any) {
     const [open, setOpen] = useState(false);
     const currentAvatarUrl = user.profile_picture
         ? `/assets/${user.profile_picture}`
@@ -353,7 +353,10 @@ export default function EditUserModal({ user, roles, sections }: any) {
                                         className="w-full rounded-md border bg-transparent px-3 py-2 text-sm"
                                     >
                                         <option value="">Select section</option>
-                                        {sections.map((section: any) => (
+                                        {sections.filter((section: any) =>
+                                            section.name === user.adviser_section ||
+                                            !takenAdviserSections.includes(section.name),
+                                        ).map((section: any) => (
                                             <option
                                                 key={section.uuid}
                                                 value={section.name}

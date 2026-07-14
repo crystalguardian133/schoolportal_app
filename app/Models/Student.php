@@ -37,6 +37,8 @@ class Student extends Model
         'last_name',
         'name',
         'section',
+        'section_uuid',
+        'qr_token',
         'age',
         'grade_level',
         'school_year',
@@ -52,6 +54,9 @@ class Student extends Model
         static::creating(function ($model) {
             if (empty($model->uuid)) {
                 $model->uuid = (string) Uuid::v7();
+            }
+            if (empty($model->qr_token)) {
+                $model->qr_token = bin2hex(random_bytes(32));
             }
             if (empty($model->name)) {
                 $model->name = self::composeName($model->first_name ?? null, $model->middle_name ?? null, $model->last_name ?? null);
@@ -94,6 +99,11 @@ class Student extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_uuid', 'uuid');
+    }
+
+    public function classSection(): BelongsTo
+    {
+        return $this->belongsTo(ClassSection::class, 'section_uuid', 'uuid');
     }
 
     public function enrollments(): HasMany

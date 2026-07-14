@@ -1,8 +1,9 @@
 import { Head, router, usePage } from '@inertiajs/react';
 import { BookPlus, Pencil, Plus, Trash2, UserPlus } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { PortalPageShell } from '@/components/portal-page-shell';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     Dialog,
     DialogTrigger,
@@ -21,13 +22,13 @@ import {
     SelectContent,
     SelectItem,
 } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
 
 type SubjectRow = {
     uuid: string;
     name: string;
     code?: string | null;
     description?: string | null;
+    time_schedule?: string | null;
     teachers: Teacher[];
 };
 
@@ -59,6 +60,7 @@ export default function AdminSubjects() {
         name: '',
         code: '',
         description: '',
+        time_schedule: '',
     });
 
     const [editSubject, setEditSubject] = useState<SubjectRow | null>(null);
@@ -66,6 +68,7 @@ export default function AdminSubjects() {
         name: '',
         code: '',
         description: '',
+        time_schedule: '',
     });
 
     const [submitting, setSubmitting] = useState(false);
@@ -74,6 +77,24 @@ export default function AdminSubjects() {
         useState<SubjectRow | null>(null);
     const [selectedTeacher, setSelectedTeacher] = useState<string | null>(null);
     const [isSubstitute, setIsSubstitute] = useState(false);
+
+    const sortedAssignableTeachers = useMemo(() => {
+        if (!teacherAssignTarget) {
+return assignableTeachers;
+}
+
+        const assignedUuids = new Set(
+            teacherAssignTarget.teachers.map((t: any) => t.uuid),
+        );
+        const assigned = assignableTeachers.filter((t) =>
+            assignedUuids.has(t.uuid),
+        );
+        const unassigned = assignableTeachers.filter(
+            (t) => !assignedUuids.has(t.uuid),
+        );
+
+        return [...assigned, ...unassigned];
+    }, [assignableTeachers, teacherAssignTarget]);
 
     function showToast(message: string, type: 'success' | 'error' = 'success') {
         window.dispatchEvent(
@@ -90,12 +111,13 @@ export default function AdminSubjects() {
                 name: form.name,
                 code: form.code || null,
                 description: form.description || null,
+                time_schedule: form.time_schedule || null,
             },
             {
                 onFinish: () => setSubmitting(false),
                 onSuccess: () => {
                     showToast('Subject created successfully.', 'success');
-                    setForm({ name: '', code: '', description: '' });
+                    setForm({ name: '', code: '', description: '', time_schedule: '' });
                     router.reload({ only: ['subjects'] });
                 },
                 onError: (errors) => {
@@ -115,6 +137,7 @@ export default function AdminSubjects() {
             name: subject.name,
             code: subject.code ?? '',
             description: subject.description ?? '',
+            time_schedule: subject.time_schedule ?? '',
         });
     }
 
@@ -131,7 +154,9 @@ export default function AdminSubjects() {
     }
 
     function assignTeacher() {
-        if (!teacherAssignTarget || !selectedTeacher) return;
+        if (!teacherAssignTarget || !selectedTeacher) {
+return;
+}
 
         router.post(
             '/admin/subjects/assign-teacher',
@@ -175,6 +200,7 @@ export default function AdminSubjects() {
                 name: editForm.name,
                 code: editForm.code || null,
                 description: editForm.description || null,
+                time_schedule: editForm.time_schedule || null,
             },
             {
                 onFinish: () => setSubmitting(false),
@@ -259,6 +285,15 @@ export default function AdminSubjects() {
                                 className="w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs transition outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50"
                             />
 
+                            <Label className="mt-3 text-xs">Time Schedule</Label>
+                            <Input
+                                value={form.time_schedule}
+                                onChange={(e) =>
+                                    setForm({ ...form, time_schedule: e.target.value })
+                                }
+                                placeholder="e.g. Mon-Fri 8:00AM - 10:00AM"
+                            />
+
                             <div className="mt-4 text-right">
                                 <Button
                                     type="submit"
@@ -291,6 +326,9 @@ export default function AdminSubjects() {
                                             Description
                                         </th>
                                         <th className="px-4 py-3 font-medium">
+                                            Schedule
+                                        </th>
+                                        <th className="px-4 py-3 font-medium">
                                             Teachers
                                         </th>
                                         <th className="px-4 py-3 font-medium">
@@ -312,6 +350,9 @@ export default function AdminSubjects() {
                                             </td>
                                             <td className="max-w-xs truncate px-4 py-3 text-muted-foreground">
                                                 {subject.description || '-'}
+                                            </td>
+                                            <td className="px-4 py-3 text-muted-foreground text-xs">
+                                                {subject.time_schedule || '-'}
                                             </td>
                                             <td className="px-4 py-3 text-muted-foreground">
                                                 <div className="flex flex-col gap-1">
@@ -453,6 +494,7 @@ export default function AdminSubjects() {
                                                                             deleteTarget.uuid,
                                                                         );
                                                                     }
+
                                                                     setDeleteTarget(
                                                                         null,
                                                                     );
@@ -518,6 +560,19 @@ export default function AdminSubjects() {
                                 className="w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs transition outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50"
                             />
                         </div>
+                        <div className="grid gap-2">
+                            <Label className="text-xs">Time Schedule</Label>
+                            <Input
+                                value={editForm.time_schedule}
+                                onChange={(e) =>
+                                    setEditForm({
+                                        ...editForm,
+                                        time_schedule: e.target.value,
+                                    })
+                                }
+                                placeholder="e.g. Mon-Fri 8:00AM - 10:00AM"
+                            />
+                        </div>
                         <DialogFooter>
                             <DialogClose asChild>
                                 <Button variant="secondary" type="button">
@@ -556,7 +611,7 @@ export default function AdminSubjects() {
                                 subject teacher" permission)
                             </Label>
                             <Select
-                                value={selectedTeacher ?? ''}
+                                value={selectedTeacher ?? undefined}
                                 onValueChange={(value) =>
                                     setSelectedTeacher(value || null)
                                 }
@@ -565,13 +620,13 @@ export default function AdminSubjects() {
                                     <SelectValue placeholder="Select a teacher" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="">None</SelectItem>
-                                    {assignableTeachers.map((teacher) => (
+                                    {sortedAssignableTeachers.map((teacher) => (
                                         <SelectItem
                                             key={teacher.uuid}
                                             value={teacher.uuid}
                                         >
                                             {teacher.name} ({teacher.email})
+                                            {teacherAssignTarget?.teachers.some((t: any) => t.uuid === teacher.uuid) ? ' — Assigned' : ''}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>

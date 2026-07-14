@@ -690,6 +690,22 @@ export default function CreateStudentEnroll() {
                         </label>
 
                         <label className="space-y-2 text-sm">
+                            <span className={labelClass}>LRN</span>
+                            <input
+                                inputMode="numeric"
+                                pattern="[0-9]*"
+                                value={form.lrn}
+                                onChange={(e) =>
+                                    setForm({
+                                        ...form,
+                                        lrn: keepDigits(e.target.value),
+                                    })
+                                }
+                                className={inputClass}
+                            />
+                        </label>
+
+                        <label className="space-y-2 text-sm">
                             <span className={labelClass}>
                                 Student ID Preview
                             </span>

@@ -1,5 +1,6 @@
 import { Head, router, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { PortalPageShell } from '@/components/portal-page-shell';
 
 type Subject = {
@@ -17,6 +18,7 @@ type ClassSection = {
     school_year?: string | null;
     student_count: number;
     subject_count: number;
+    subjects?: { uuid: string; name: string; code?: string | null }[];
 };
 
 type SectionStudent = {
@@ -33,6 +35,15 @@ type SectionSubject = {
     code?: string | null;
     teachers?: string[];
 };
+
+const YEAR_LEVEL_OPTIONS = [
+    'Grade 7',
+    'Grade 8',
+    'Grade 9',
+    'Grade 10',
+    'Grade 11',
+    'Grade 12',
+];
 
 export default function AdminSections() {
     const { props } = usePage();
@@ -77,7 +88,10 @@ export default function AdminSections() {
     const [editSubjectUuids, setEditSubjectUuids] = useState<string[]>(
         selectedSubjectDefaults,
     );
+    const [filterGradeLevel, setFilterGradeLevel] = useState<string>('');
     const [submitting, setSubmitting] = useState(false);
+    const [showClearDialog, setShowClearDialog] = useState(false);
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
     useEffect(() => {
         setEditName(selectedSection?.name ?? '');
@@ -207,14 +221,20 @@ export default function AdminSections() {
                                 placeholder="Section name (e.g. 7-A)"
                                 className="rounded border px-3 py-2"
                             />
-                            <input
+                            <select
                                 value={createGradeLevel}
                                 onChange={(e) =>
                                     setCreateGradeLevel(e.target.value)
                                 }
-                                placeholder="Grade level"
                                 className="rounded border px-3 py-2"
-                            />
+                            >
+                                <option value="">-- Year Level --</option>
+                                {YEAR_LEVEL_OPTIONS.map((level) => (
+                                    <option key={level} value={level}>
+                                        {level}
+                                    </option>
+                                ))}
+                            </select>
                         </div>
 
                         <div className="mt-4 rounded-xl border border-sidebar-border/70 p-4">
@@ -273,6 +293,36 @@ export default function AdminSections() {
                             </div>
                         </div>
 
+                        <div className="mt-4 flex items-end gap-2">
+                            <label className="space-y-1 text-sm">
+                                <span className="block text-muted-foreground">
+                                    Filter by year level
+                                </span>
+                                <select
+                                    value={filterGradeLevel}
+                                    onChange={(e) =>
+                                        setFilterGradeLevel(e.target.value)
+                                    }
+                                    className="rounded border px-2 py-1"
+                                >
+                                    <option value="">All</option>
+                                    {YEAR_LEVEL_OPTIONS.map((level) => (
+                                        <option key={level} value={level}>
+                                            {level}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+                            <div className="text-sm text-muted-foreground">
+                                {classSections.filter(
+                                    (s) =>
+                                        !filterGradeLevel ||
+                                        s.grade_level === filterGradeLevel,
+                                ).length}{' '}
+                                section(s)
+                            </div>
+                        </div>
+
                         <div className="table-scroll-container table-scroll-small mt-5 rounded-xl border border-sidebar-border/70">
                             <table className="min-w-full divide-y divide-sidebar-border/70 text-sm">
                                 <thead className="bg-sidebar/60 text-left text-muted-foreground">
@@ -296,7 +346,14 @@ export default function AdminSections() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-sidebar-border/70 bg-white dark:bg-sidebar">
-                                    {classSections.map((section) => (
+                                    {classSections
+                                        .filter(
+                                            (s) =>
+                                                !filterGradeLevel ||
+                                                s.grade_level ===
+                                                    filterGradeLevel,
+                                        )
+                                        .map((section) => (
                                         <tr
                                             key={section.uuid}
                                             className={`hover:bg-sidebar-accent/40 ${filters.section_uuid === section.uuid ? 'bg-sky-50 dark:bg-sky-950/40' : ''}`}
@@ -314,7 +371,20 @@ export default function AdminSections() {
                                                 {section.student_count}
                                             </td>
                                             <td className="px-4 py-3 text-muted-foreground">
-                                                {section.subject_count}
+                                                {section.subjects && section.subjects.length > 0 ? (
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {section.subjects.map((subject) => (
+                                                            <span
+                                                                key={subject.uuid}
+                                                                className="inline-block rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700 dark:bg-sky-950 dark:text-sky-300"
+                                                            >
+                                                                {subject.name}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-xs italic">None</span>
+                                                )}
                                             </td>
                                             <td className="px-4 py-3 text-right">
                                                 <button
@@ -356,13 +426,20 @@ export default function AdminSections() {
                                         }
                                         className="rounded border px-3 py-2"
                                     />
-                                    <input
+                                    <select
                                         value={editGradeLevel}
                                         onChange={(e) =>
                                             setEditGradeLevel(e.target.value)
                                         }
                                         className="rounded border px-3 py-2"
-                                    />
+                                    >
+                                        <option value="">-- Year Level --</option>
+                                        {YEAR_LEVEL_OPTIONS.map((level) => (
+                                            <option key={level} value={level}>
+                                                {level}
+                                            </option>
+                                        ))}
+                                    </select>
                                 </div>
                                 <div className="text-sm text-muted-foreground">
                                     School year is auto-assigned when a block is
@@ -430,7 +507,7 @@ export default function AdminSections() {
                                     </div>
                                 </div>
 
-                                <div className="flex items-center gap-3">
+                                <div className="flex flex-wrap items-center gap-3">
                                     <button
                                         disabled={submitting || !editName}
                                         onClick={updateSection}
@@ -438,10 +515,20 @@ export default function AdminSections() {
                                     >
                                         Save Changes
                                     </button>
-                                    <div className="text-sm text-muted-foreground">
-                                        {selectedSectionSubjects.length}{' '}
-                                        subject(s) currently attached
-                                    </div>
+                                    <button
+                                        disabled={submitting || selectedSectionStudents.length === 0}
+                                        onClick={() => setShowClearDialog(true)}
+                                        className="rounded border border-amber-500 bg-amber-50 px-4 py-2 text-amber-700 disabled:opacity-50 dark:bg-amber-950 dark:text-amber-300"
+                                    >
+                                        Clear Students ({selectedSectionStudents.length})
+                                    </button>
+                                    <button
+                                        disabled={submitting}
+                                        onClick={() => setShowDeleteDialog(true)}
+                                        className="rounded border border-red-500 bg-red-50 px-4 py-2 text-red-700 disabled:opacity-50 dark:bg-red-950 dark:text-red-300"
+                                    >
+                                        Delete Section
+                                    </button>
                                 </div>
 
                                 <div className="rounded-xl border border-sidebar-border/70 p-4">
@@ -483,6 +570,54 @@ export default function AdminSections() {
                     </section>
                 </div>
             </PortalPageShell>
+
+            <ConfirmDialog
+                open={showClearDialog}
+                onOpenChange={setShowClearDialog}
+                title="Clear Students"
+                description={`Remove all ${selectedSectionStudents.length} student(s) from ${selectedSection?.name ?? ''}? They will not be deleted, only unassigned from this section.`}
+                confirmLabel="Clear Students"
+                variant="default"
+                onConfirm={() => {
+                    if (!selectedSection) {
+return;
+}
+
+                    setSubmitting(true);
+                    setShowClearDialog(false);
+                    router.delete(`/admin/sections/${selectedSection.uuid}/clear-students`, {
+                        onFinish: () => setSubmitting(false),
+                        onSuccess: () => {
+                            window.dispatchEvent(new CustomEvent('local-toast', { detail: { message: `Students cleared from ${selectedSection.name}`, type: 'success' } }));
+                            router.reload({ only: ['sectionStudents', 'sections'] });
+                        },
+                    });
+                }}
+            />
+
+            <ConfirmDialog
+                open={showDeleteDialog}
+                onOpenChange={setShowDeleteDialog}
+                title="Delete Section"
+                description={`Delete section "${selectedSection?.name ?? ''}"? This will also remove all ${selectedSectionStudents.length} student(s) from this section and detach all subjects. This cannot be undone.`}
+                confirmLabel="Delete Section"
+                variant="destructive"
+                onConfirm={() => {
+                    if (!selectedSection) {
+return;
+}
+
+                    setSubmitting(true);
+                    setShowDeleteDialog(false);
+                    router.delete(`/admin/sections/${selectedSection.uuid}`, {
+                        onFinish: () => setSubmitting(false),
+                        onSuccess: () => {
+                            window.dispatchEvent(new CustomEvent('local-toast', { detail: { message: `Section ${selectedSection.name} deleted`, type: 'success' } }));
+                            router.get('/admin/sections', {}, { only: ['sections', 'selectedSection', 'sectionStudents', 'sectionSubjects'] });
+                        },
+                    });
+                }}
+            />
         </>
     );
 }

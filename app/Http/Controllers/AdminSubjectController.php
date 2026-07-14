@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Subject;
+use App\Models\ClassSection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -13,13 +14,8 @@ class AdminSubjectController extends Controller
         $user = $request->user();
 
         $hasPermission = $user && method_exists($user, 'hasPermission') && $user->hasPermission('manage subjects');
-        $canAssignTeacher = $user && (
-            $user->is_adviser
-            || (method_exists($user, 'hasPermission') && $user->hasPermission('assign subject teacher'))
-        );
-        $hasRole = $user && method_exists($user, 'hasRole') && ($user->hasRole('admin') || $user->hasRole('principal') || $user->hasRole('registrar'));
 
-        if (! $user || (! $hasPermission && ! $canAssignTeacher && ! $hasRole)) {
+        if (! $user || ! $hasPermission) {
             abort(403);
         }
     }
@@ -28,17 +24,36 @@ class AdminSubjectController extends Controller
     {
         $this->authorizeAdmin($request);
 
+        $user = $request->user();
         $q = $request->query('q');
         $perPage = (int) $request->query('per_page', 25);
 
-        $subjects = Subject::query()
-            ->select(['uuid', 'name', 'code', 'description'])
+        $subjectsQuery = Subject::query()
+            ->select(['uuid', 'name', 'code', 'description', 'time_schedule'])
             ->with('teachers')
             ->when($q, fn ($query, $search) => $query->where(function ($query) use ($search) {
                 $query->where('name', 'like', "%{$search}%")
                     ->orWhere('code', 'like', "%{$search}%")
                     ->orWhere('description', 'like', "%{$search}%");
-            }))
+            }));
+
+        // Advisers only see subjects linked to their section
+        $hasManageSubjects = $user && method_exists($user, 'hasPermission') && $user->hasPermission('manage subjects');
+        $isAdviser = $user && ! empty($user->is_adviser);
+
+        if ($isAdviser && ! $hasManageSubjects && ! empty($user->adviser_section)) {
+            $sectionUuids = ClassSection::query()
+                ->where('name', $user->adviser_section)
+                ->pluck('uuid');
+
+            $subjectUuids = DB::table('class_section_subjects')
+                ->whereIn('class_section_uuid', $sectionUuids)
+                ->pluck('subject_uuid');
+
+            $subjectsQuery->whereIn('uuid', $subjectUuids);
+        }
+
+        $subjects = $subjectsQuery
             ->orderBy('name')
             ->paginate($perPage)
             ->withQueryString()
@@ -47,6 +62,7 @@ class AdminSubjectController extends Controller
                 'name' => $subject->name,
                 'code' => $subject->code,
                 'description' => $subject->description,
+                'time_schedule' => $subject->time_schedule,
                 'teachers' => $subject->teachers->map(fn ($teacher) => [
                     'uuid' => $teacher->uuid,
                     'name' => $teacher->name,
@@ -64,6 +80,9 @@ class AdminSubjectController extends Controller
                 })
                 ->orWhereHas('roles.permissions', function ($q) {
                     $q->whereRaw('LOWER(name) = ?', ['assign subject teacher']);
+                })
+                ->orWhereHas('roles.permissions', function ($q) {
+                    $q->whereRaw('LOWER(name) = ?', ['access admin']);
                 })
                 ->orWhere('is_adviser', true);
             })
@@ -87,12 +106,14 @@ class AdminSubjectController extends Controller
             'name' => 'required|string|max:100',
             'code' => 'nullable|string|max:50',
             'description' => 'nullable|string',
+            'time_schedule' => 'nullable|string|max:255',
         ]);
 
         $subject = Subject::query()->create([
             'name' => trim($data['name']),
             'code' => $data['code'] ? strtoupper(trim($data['code'])) : null,
             'description' => $data['description'] ?? null,
+            'time_schedule' => $data['time_schedule'] ?? null,
         ]);
 
         return back()->with('success', 'Subject created successfully.');
@@ -114,6 +135,7 @@ class AdminSubjectController extends Controller
             'name' => 'required|string|max:100',
             'code' => 'nullable|string|max:50',
             'description' => 'nullable|string',
+            'time_schedule' => 'nullable|string|max:255',
         ]);
 
         $subject = Subject::query()->where('uuid', $data['subject_uuid'])->first();
@@ -126,6 +148,7 @@ class AdminSubjectController extends Controller
             'name' => trim($data['name']),
             'code' => $data['code'] ? strtoupper(trim($data['code'])) : null,
             'description' => $data['description'] ?? null,
+            'time_schedule' => $data['time_schedule'] ?? null,
         ]);
 
         return back()->with('success', 'Subject updated successfully.');

@@ -38,6 +38,49 @@ class RolePermissionSeeder extends Seeder
             }
         }
 
+        // Teacher role: teacher dashboard access + teacher-specific perms
+        $teacherRoleId = $roleIds['teacher'] ?? $roleIds['TEACHER'] ?? null;
+        if ($teacherRoleId) {
+            $teacherPerms = DB::table('permissions')->whereIn('name', [
+                'Access Teacher Dashboard',
+                'View Grades',
+                'Edit Grades',
+                'View Schedules',
+                'View Announcements',
+                'Manage Announcements',
+            ])->pluck('id')->toArray();
+            foreach ($teacherPerms as $pid) {
+                $rows[] = ['permission_uuid' => $pid, 'role_uuid' => $teacherRoleId];
+            }
+        }
+
+        // Department Head role: department head dashboard + manage subjects/sections
+        if (isset($roleIds['department-head'])) {
+            $deptHeadPerms = DB::table('permissions')->whereIn('name', [
+                'Access Department Head Dashboard',
+                'Manage Subjects',
+                'Manage Sections',
+                'Assign Subjects',
+                'Manage Schedules',
+                'View Grades',
+                'Edit Grades',
+                'View Schedules',
+                'View Announcements',
+                'Manage Announcements',
+            ])->pluck('id')->toArray();
+            foreach ($deptHeadPerms as $pid) {
+                $rows[] = ['permission_uuid' => $pid, 'role_uuid' => $roleIds['department-head']];
+            }
+        }
+
+        // School Head role: school head dashboard + all admin perms
+        if (isset($roleIds['school-head'])) {
+            $schoolHeadPerms = DB::table('permissions')->pluck('id')->toArray();
+            foreach ($schoolHeadPerms as $pid) {
+                $rows[] = ['permission_uuid' => $pid, 'role_uuid' => $roleIds['school-head']];
+            }
+        }
+
         if (!empty($rows)) {
             // Use insertOrIgnore to avoid duplicate key errors when seeding into an existing DB
             DB::table('permission_role')->insertOrIgnore($rows);

@@ -36,6 +36,7 @@ export default function AdminUsers() {
     const users: UserRow[] = usersProp.data || [];
     const rolesMap: Record<string, string[]> = props.roles || {};
     const roleOptions: { id: string; name: string }[] = props.roleOptions || [];
+    const takenAdviserSections: string[] = props.takenAdviserSections || [];
 
     const [form, setForm] = useState({
         first_name: '',
@@ -248,7 +249,12 @@ export default function AdminUsers() {
                                         className="w-full rounded-md border bg-transparent px-3 py-2 text-sm"
                                     >
                                         <option value="">Select section</option>
-                                        {(props.sections || []).map(
+                                        {(props.sections || []).filter(
+                                            (section: any) =>
+                                                !takenAdviserSections.includes(
+                                                    section.name,
+                                                ),
+                                        ).map(
                                             (section: any) => (
                                                 <option
                                                     key={section.uuid}
@@ -395,6 +401,9 @@ export default function AdminUsers() {
                                                     roles={roleOptions}
                                                     sections={
                                                         props.sections || []
+                                                    }
+                                                    takenAdviserSections={
+                                                        takenAdviserSections
                                                     }
                                                 />
                                                 <Dialog>
