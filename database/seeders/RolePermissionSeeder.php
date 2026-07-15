@@ -11,7 +11,7 @@ class RolePermissionSeeder extends Seeder
     {
         $studentPerms = DB::table('permissions')->whereIn('name', ['View Grades', 'View Schedules', 'View Announcements'])->pluck('id')->toArray();
         $staffPerms = DB::table('permissions')->whereIn('name', ['View Grades', 'Edit Grades', 'View Schedules', 'View Announcements'])->pluck('id')->toArray();
-        $adminPerms = DB::table('permissions')->pluck('id')->toArray();
+        $adminPerms = DB::table('permissions')->where('name', '!=', 'Access Developer Dashboard')->pluck('id')->toArray();
 
         $roleIds = DB::table('roles')->pluck('id', 'name');
 
@@ -73,11 +73,19 @@ class RolePermissionSeeder extends Seeder
             }
         }
 
-        // School Head role: school head dashboard + all admin perms
+        // School Head role: school head dashboard + all admin perms (excluding developer)
         if (isset($roleIds['school-head'])) {
-            $schoolHeadPerms = DB::table('permissions')->pluck('id')->toArray();
+            $schoolHeadPerms = DB::table('permissions')->where('name', '!=', 'Access Developer Dashboard')->pluck('id')->toArray();
             foreach ($schoolHeadPerms as $pid) {
                 $rows[] = ['permission_uuid' => $pid, 'role_uuid' => $roleIds['school-head']];
+            }
+        }
+
+        // Developer role: only developer dashboard access
+        if (isset($roleIds['developer'])) {
+            $developerPermId = DB::table('permissions')->where('name', 'Access Developer Dashboard')->value('id');
+            if ($developerPermId) {
+                $rows[] = ['permission_uuid' => $developerPermId, 'role_uuid' => $roleIds['developer']];
             }
         }
 

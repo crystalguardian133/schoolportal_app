@@ -18,6 +18,8 @@ import {
     UserPlus,
     CalendarClock,
     CalendarCheck,
+    MessageSquare,
+    Bug,
 } from 'lucide-react';
 import { Sun, Moon } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -72,6 +74,11 @@ const studentNavItems: NavItem[] = [
         href: '/student/announcements',
         icon: Bell,
     },
+    {
+        title: 'Reports & Feedback',
+        href: '/feedback',
+        icon: MessageSquare,
+    },
 ];
 
 const staffNavItems: NavItem[] = [
@@ -99,6 +106,11 @@ const staffNavItems: NavItem[] = [
         title: 'Announcements',
         href: '/teacher/announcements',
         icon: Bell,
+    },
+    {
+        title: 'Reports & Feedback',
+        href: '/feedback',
+        icon: MessageSquare,
     },
 ];
 
@@ -197,6 +209,17 @@ const adminNavItems: NavItem[] = [
         href: '/admin/id-cards',
         icon: CreditCard,
     },
+    {
+        title: 'Reports & Feedback',
+        href: '/feedback',
+        icon: MessageSquare,
+    },
+    {
+        title: 'Developer Reports',
+        href: '/developer/reports',
+        icon: Bug,
+        permission: 'access developer dashboard',
+    },
 ];
 
 const teacherNavItems: NavItem[] = [
@@ -242,6 +265,11 @@ const teacherNavItems: NavItem[] = [
         href: '/teacher/announcements',
         icon: Bell,
     },
+    {
+        title: 'Reports & Feedback',
+        href: '/feedback',
+        icon: MessageSquare,
+    },
 ];
 
 const deptHeadNavItems: NavItem[] = [
@@ -284,6 +312,11 @@ const deptHeadNavItems: NavItem[] = [
         href: '/admin/announcements',
         icon: Bell,
         permission: 'manage announcements',
+    },
+    {
+        title: 'Reports & Feedback',
+        href: '/feedback',
+        icon: MessageSquare,
     },
 ];
 
@@ -363,6 +396,35 @@ const schoolHeadNavItems: NavItem[] = [
         href: '/admin/id-cards',
         icon: CreditCard,
     },
+    {
+        title: 'Reports & Feedback',
+        href: '/feedback',
+        icon: MessageSquare,
+    },
+    {
+        title: 'Developer Reports',
+        href: '/developer/reports',
+        icon: Bug,
+        permission: 'access developer dashboard',
+    },
+];
+
+const developerNavItems: NavItem[] = [
+    {
+        title: 'Dashboard',
+        href: dashboard(),
+        icon: LayoutGrid,
+    },
+    {
+        title: 'Reports & Feedback',
+        href: '/feedback',
+        icon: MessageSquare,
+    },
+    {
+        title: 'Developer Reports',
+        href: '/developer/reports',
+        icon: Bug,
+    },
 ];
 
 export function AppSidebar() {
@@ -375,13 +437,14 @@ export function AppSidebar() {
     const isDeptHead = permissions.includes('access department head dashboard');
     const isSchoolHead = permissions.includes('access school head dashboard');
     const isAdmin = permissions.includes('access admin dashboard');
+    const isDeveloper = permissions.includes('access developer dashboard');
 
     const hasPermission = (permission?: string) => {
         if (!permission) {
 return true;
 }
 
-        const noAccessAdminBypass = ['manage assignments', 'manage subjects'];
+        const noAccessAdminBypass = ['manage assignments', 'manage subjects', 'access developer dashboard'];
 
         if (permissions.includes('access admin') && !noAccessAdminBypass.includes(permission)) {
 return true;
@@ -412,6 +475,9 @@ return true;
     } else if (isStaff) {
         navItems = staffNavItems;
         sectionLabel = 'Staff Portal';
+    } else if (isDeveloper) {
+        navItems = developerNavItems;
+        sectionLabel = 'Developer';
     } else {
         navItems = studentNavItems;
         sectionLabel = isStudent ? null : 'Platform';

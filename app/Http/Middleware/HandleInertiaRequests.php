@@ -40,18 +40,34 @@ class HandleInertiaRequests extends Middleware
         $adminRoles = ['admin', 'principal', 'registrar', 'ADMINISTRATOR', 'school-head'];
         $userRoles = $user->roles->pluck('name')->map(fn ($name) => strtolower($name))->toArray();
         $hasAdminRole = !empty(array_intersect($userRoles, array_map('strtolower', $adminRoles)));
+        $isDeveloper = in_array('developer', $userRoles);
 
         if ($hasAdminRole) {
-            return ['manage users', 'manage roles', 'manage subjects', 'manage sections', 'manage assignments', 'manage enrollments', 'manage announcements', 'manage schedules', 'view logs', 'view announcements', 'access admin', 'assign subjects', 'access admin dashboard', 'access school head dashboard'];
+            $perms = ['manage users', 'manage roles', 'manage subjects', 'manage sections', 'manage assignments', 'manage enrollments', 'manage announcements', 'manage schedules', 'view logs', 'view announcements', 'access admin', 'assign subjects', 'access admin dashboard', 'access school head dashboard'];
+            if ($isDeveloper) {
+                $perms[] = 'access developer dashboard';
+            }
+            return $perms;
         }
 
         $permissions = $user->getAllPermissions()->pluck('name')->map(fn ($name) => strtolower($name))->unique()->values();
 
         // "Access Admin" permission grants all permissions
         if ($permissions->contains('access admin')) {
-            return ['manage users', 'manage roles', 'manage subjects', 'manage sections', 'manage assignments', 'manage enrollments', 'manage announcements', 'manage schedules', 'view logs', 'view announcements', 'access admin', 'assign subjects', 'access admin dashboard', 'access school head dashboard'];
+            $perms = ['manage users', 'manage roles', 'manage subjects', 'manage sections', 'manage assignments', 'manage enrollments', 'manage announcements', 'manage schedules', 'view logs', 'view announcements', 'access admin', 'assign subjects', 'access admin dashboard', 'access school head dashboard'];
+            if ($isDeveloper) {
+                $perms[] = 'access developer dashboard';
+            }
+            return $perms;
         }
 
-        return $permissions->toArray();
+        $result = $permissions->toArray();
+
+        // Developer permission is only returned for users with the developer role
+        if (!$isDeveloper) {
+            $result = array_diff($result, ['access developer dashboard']);
+        }
+
+        return $result;
     }
 }

@@ -35,6 +35,7 @@ class PermissionsTableSeeder extends Seeder
             'Access Department Head Dashboard',
             'Access School Head Dashboard',
             'Manage Schedules',
+            'Access Developer Dashboard',
         ];
 
         foreach ($perms as $permission) {

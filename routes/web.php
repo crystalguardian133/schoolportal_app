@@ -96,6 +96,23 @@ Route::delete('admin/subjects/teachers/{teacherUuid}/{subjectUuid}', [AdminSubje
     Route::get('teacher/attendance/sessions/{sessionId}/search-students', [\App\Http\Controllers\AttendanceController::class, 'searchStudents'])->name('teacher.attendance.search');
     Route::get('attendance/scan/{token}', [\App\Http\Controllers\AttendanceController::class, 'scanPage'])->name('attendance.scan');
     Route::post('attendance/submit', [\App\Http\Controllers\AttendanceController::class, 'submitScan'])->name('attendance.submit');
+
+    // Reports / Feedback
+    Route::get('feedback', [\App\Http\Controllers\ReportController::class, 'index'])->name('feedback.index');
+    Route::get('feedback/{report}', [\App\Http\Controllers\ReportController::class, 'show'])->name('feedback.show');
+    Route::post('feedback', [\App\Http\Controllers\ReportController::class, 'store'])->name('feedback.store');
+    Route::post('feedback/{report}/reply', [\App\Http\Controllers\ReportController::class, 'reply'])->name('feedback.reply');
+    Route::post('feedback/{report}/close', [\App\Http\Controllers\ReportController::class, 'close'])->name('feedback.close');
+    Route::post('feedback/{report}/reopen', [\App\Http\Controllers\ReportController::class, 'reopen'])->name('feedback.reopen');
+    Route::delete('feedback/{report}', [\App\Http\Controllers\ReportController::class, 'destroy'])->name('feedback.destroy');
+
+    // Developer Reports Dashboard
+    Route::get('developer/reports', [\App\Http\Controllers\ReportController::class, 'developerIndex'])
+        ->middleware('permission:access developer dashboard')
+        ->name('developer.reports');
+    Route::patch('developer/reports/{report}/status', [\App\Http\Controllers\ReportController::class, 'updateStatus'])
+        ->middleware('permission:access developer dashboard')
+        ->name('developer.reports.update-status');
 });
 
 require __DIR__.'/settings.php';

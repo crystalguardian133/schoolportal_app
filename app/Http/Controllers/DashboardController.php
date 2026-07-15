@@ -7,6 +7,8 @@ use App\Models\Student;
 use App\Models\Subject;
 use App\Models\Announcement;
 use App\Models\SchoolYear;
+use App\Models\Report;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -36,6 +38,10 @@ class DashboardController extends Controller
 
         if ($permissions->contains('access staff dashboard')) {
             return $this->staffDashboard($request);
+        }
+
+        if ($permissions->contains('access developer dashboard')) {
+            return $this->developerDashboard($request);
         }
 
         return $this->fallbackDashboard($request);
@@ -195,6 +201,53 @@ class DashboardController extends Controller
         return Inertia::render('staff/dashboard', [
             'user' => ['name' => $user->name, 'email' => $user->email],
             'recentAnnouncements' => $recentAnnouncements,
+        ]);
+    }
+
+    private function developerDashboard(Request $request): Response
+    {
+        $user = $request->user();
+
+        $totalReports = Report::count();
+        $pendingReports = Report::where('status', 'pending')->count();
+        $underReviewReports = Report::where('status', 'under_review')->count();
+        $acceptedReports = Report::where('status', 'accepted')->count();
+        $rejectedReports = Report::where('status', 'rejected')->count();
+        $totalUsers = User::count();
+
+        $bugReports = Report::where('type', 'bug')->count();
+        $suggestionReports = Report::where('type', 'suggestion')->count();
+        $feedbackReports = Report::where('type', 'feedback')->count();
+
+        $recentReports = Report::with('user')
+            ->latest()
+            ->take(5)
+            ->get()
+            ->map(fn ($r) => [
+                'id' => $r->id,
+                'type' => $r->type,
+                'subject' => $r->subject,
+                'status' => $r->status,
+                'user_name' => $r->user->name,
+                'created_at' => $r->created_at->diffForHumans(),
+            ]);
+
+        return Inertia::render('developer/dashboard', [
+            'user' => ['name' => $user->name, 'email' => $user->email],
+            'stats' => [
+                'totalReports' => $totalReports,
+                'pendingReports' => $pendingReports,
+                'underReviewReports' => $underReviewReports,
+                'acceptedReports' => $acceptedReports,
+                'rejectedReports' => $rejectedReports,
+                'totalUsers' => $totalUsers,
+            ],
+            'typeBreakdown' => [
+                'bugs' => $bugReports,
+                'suggestions' => $suggestionReports,
+                'feedback' => $feedbackReports,
+            ],
+            'recentReports' => $recentReports,
         ]);
     }
 
