@@ -26,6 +26,7 @@ export default function TeacherDashboard({ user, stats, recentAnnouncements }: P
                 title={`Welcome, ${firstName}`}
                 description="Your teaching overview at a glance."
                 showBackLink={false}
+                showHero
             >
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <StatCard

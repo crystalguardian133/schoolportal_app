@@ -11,7 +11,7 @@ class Role extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['id', 'name', 'guard_name'];
+    protected $fillable = ['id', 'name', 'icon', 'guard_name'];
 
     public $incrementing = false;
 

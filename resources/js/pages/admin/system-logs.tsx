@@ -15,6 +15,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import { PageLoader } from '@/components/page-loader';
 
 function toArray(value) {
     if (Array.isArray(value)) {
@@ -234,6 +235,7 @@ export default function SystemLogs() {
         <>
             <Head title="System Logs" />
             <div className="min-h-screen bg-background px-4 py-6 text-foreground">
+                <PageLoader skeleton="table">
                 <div className="mx-auto max-w-7xl space-y-6">
                     <section className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
                         <div className="relative px-6 py-8 sm:px-8">
@@ -468,6 +470,7 @@ export default function SystemLogs() {
                         </div>
                     </section>
                 </div>
+                </PageLoader>
             </div>
 
             <Dialog

@@ -16,6 +16,7 @@ import {
 import { formatDate } from '@/lib/dates';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PageLoader } from '@/components/page-loader';
 
 type SchoolYearRow = {
     id: number;
@@ -150,6 +151,7 @@ return (
                 title="School Years"
                 description="Manage school year periods and student promotions."
             >
+                <PageLoader skeleton="table">
                 <div className="flex flex-col gap-6">
                     {/* Current Year Card */}
                     {currentYear && (
@@ -390,6 +392,7 @@ return (
                         </div>
                     </div>
                 </div>
+                </PageLoader>
             </PortalPageShell>
 
             <ConfirmDialog

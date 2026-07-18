@@ -17,9 +17,20 @@ class AdminUserController extends Controller
     {
         $this->authorizeAdmin($request);
 
-        $users = User::query()
-            ->select(['uuid', 'name', 'email', 'profile_picture', 'is_adviser', 'adviser_section'])
-            ->paginate((int) $request->query('per_page', 25))
+        $query = User::query()
+            ->select(['uuid', 'name', 'email', 'profile_picture', 'is_adviser', 'adviser_section']);
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        $users = $query
+            ->orderBy('name')
+            ->paginate((int) $request->query('per_page', 10))
             ->withQueryString();
 
         $roles = DB::table('role_user')
@@ -57,6 +68,7 @@ class AdminUserController extends Controller
 
         return inertia('admin/users', [
             'users' => $users,
+            'filters' => $request->only(['search', 'per_page']),
             'roles' => $roles,
             'roleOptions' => Role::query()->select(['id', 'name'])->get()->sortBy('name')->map(fn ($r) => ['id' => $r->id, 'name' => $r->name])->values()->all(),
             'permissions' => $permissions,

@@ -70,7 +70,6 @@ class StudentPortalController extends Controller
                 'tools' => [
                     ['label' => 'Assignments', 'href' => '/admin/assignments'],
                     ['label' => 'Enrollments', 'href' => '/admin/enrollments'],
-                    ['label' => 'Audit Logs', 'href' => '/admin/enrollment-audits'],
                     ['label' => 'Manage Users', 'href' => '/admin/users'],
                 ],
             ]);

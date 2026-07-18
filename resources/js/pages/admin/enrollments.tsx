@@ -2,11 +2,13 @@ import type { PageProps } from '@inertiajs/core';
 import { Head, router, usePage } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
 import { PortalPageShell } from '@/components/portal-page-shell';
+import { PageLoader } from '@/components/page-loader';
 
 type Student = {
     uuid: string;
     name: string;
     student_id: string;
+    section?: string | null;
     grade_level?: string | null;
     last_grade_level?: string | null;
     previous_section?: string | null;
@@ -172,7 +174,6 @@ export default function AdminEnrollments() {
                     reload({
                         q: query,
                         per_page: perPage,
-                        section_uuid: classSectionUuid || undefined,
                         sort_by: sortBy,
                         sort_direction: sortDirection,
                     });
@@ -232,6 +233,7 @@ export default function AdminEnrollments() {
                 title="Enroll Students"
                 description="Pick a class section, then enroll a block of students into all of its pre-assigned subjects."
             >
+                <PageLoader skeleton="table">
                 <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
                     <section className="rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
                         <div className="flex flex-wrap items-end gap-2">
@@ -342,10 +344,12 @@ export default function AdminEnrollments() {
                                             !selectedSectionGrade ||
                                             !student.grade_level
                                                 ? 'Review'
-                                                : student.grade_level ===
-                                                    selectedSectionGrade
-                                                  ? 'OK'
-                                                  : 'Check';
+                                                : !student.section
+                                                  ? 'Review'
+                                                  : student.grade_level ===
+                                                      selectedSectionGrade
+                                                    ? 'OK'
+                                                    : 'Check';
 
                                         return (
                                             <tr
@@ -389,17 +393,35 @@ export default function AdminEnrollments() {
                                                     {placementCheck}
                                                 </td>
                                                 <td className="px-4 py-3">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                            promoteStudent(
-                                                                student.uuid,
-                                                            )
-                                                        }
-                                                        className="rounded bg-amber-500 px-3 py-1 text-xs text-white hover:bg-amber-600"
-                                                    >
-                                                        Promote
-                                                    </button>
+                                                    {(() => {
+                                                        const alreadyPromoted =
+                                                            student.last_grade_level !=
+                                                                null &&
+                                                            student.grade_level !==
+                                                                student.last_grade_level;
+
+                                                        return (
+                                                            <button
+                                                                type="button"
+                                                                disabled={alreadyPromoted}
+                                                                onClick={() =>
+                                                                    promoteStudent(
+                                                                        student.uuid,
+                                                                    )
+                                                                }
+                                                                className="rounded px-3 py-1 text-xs text-white disabled:cursor-not-allowed disabled:opacity-50 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300"
+                                                                title={
+                                                                    alreadyPromoted
+                                                                        ? 'Student has already been promoted'
+                                                                        : undefined
+                                                                }
+                                                            >
+                                                                {alreadyPromoted
+                                                                    ? 'Promoted'
+                                                                    : 'Promote'}
+                                                            </button>
+                                                        );
+                                                    })()}
                                                 </td>
                                             </tr>
                                         );
@@ -608,6 +630,7 @@ export default function AdminEnrollments() {
                         </button>
                     </section>
                 </div>
+                </PageLoader>
             </PortalPageShell>
         </>
     );

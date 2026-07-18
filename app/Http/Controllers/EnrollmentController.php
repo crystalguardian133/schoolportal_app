@@ -480,6 +480,10 @@ class EnrollmentController extends Controller
             return back()->with('error', 'Cannot promote student: no current grade level set.');
         }
 
+        if (! empty($student->last_grade_level) && $currentLevel !== $student->last_grade_level) {
+            return back()->with('error', 'Student has already been promoted.');
+        }
+
         $nextLevel = match ($currentLevel) {
             'Grade 7' => 'Grade 8',
             'Grade 8' => 'Grade 9',
@@ -495,7 +499,11 @@ class EnrollmentController extends Controller
 
         DB::table('students')->where('uuid', $uuid)->update([
             'last_grade_level' => $currentLevel,
+            'previous_section' => $student->section,
             'grade_level' => $nextLevel,
+            'section' => null,
+            'section_uuid' => null,
+            'school_year' => null,
         ]);
 
         return redirect()->back()->with('success', "Student promoted from {$currentLevel} to {$nextLevel}.");

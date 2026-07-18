@@ -37,6 +37,7 @@ export function NavMain({
                                     : isCurrentUrl(item.href)
                             }
                             tooltip={item.title}
+                            className="sidebar-glint transition-all duration-300 ease-out hover:bg-white/10 hover:backdrop-blur-md hover:shadow-[0_2px_12px_rgba(255,255,255,0.08)] hover:border hover:border-white/10 active:scale-[0.98]"
                         >
                             {typeof item.href === 'string' &&
                             item.href.startsWith('#') ? (

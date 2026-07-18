@@ -15,6 +15,10 @@ trait HasRolesAndPermissions
             return true;
         }
 
+        if ($this->hasPermission('access developer dashboard')) {
+            return true;
+        }
+
         return match ($portal) {
             'student' => $this->hasRole('student'),
             'staff' => $this->hasRole('staff')

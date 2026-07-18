@@ -53,6 +53,10 @@ class AdviserAssignmentController extends Controller
             $section = $this->getAdviserSection($user);
         }
 
+        if (! $section && $canSwitchSections) {
+            $section = ClassSection::query()->orderBy('name')->first();
+        }
+
         if (! $section) {
             abort(404);
         }
@@ -173,6 +177,10 @@ class AdviserAssignmentController extends Controller
             $section = $this->getAdviserSection($user);
         }
 
+        if (! $section && $canSwitchSections) {
+            $section = ClassSection::query()->orderBy('name')->first();
+        }
+
         if (! $section) {
             return back()->with('error', 'Section not found.');
         }
@@ -217,6 +225,10 @@ class AdviserAssignmentController extends Controller
             $section = ClassSection::query()->where('uuid', $request->query('section_uuid'))->first();
         } else {
             $section = $this->getAdviserSection($user);
+        }
+
+        if (! $section && $canSwitchSections) {
+            $section = ClassSection::query()->orderBy('name')->first();
         }
 
         if (! $section) {

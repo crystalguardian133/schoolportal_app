@@ -36,6 +36,7 @@ class PermissionsTableSeeder extends Seeder
             'Access School Head Dashboard',
             'Manage Schedules',
             'Access Developer Dashboard',
+            'Access Music Player',
         ];
 
         foreach ($perms as $permission) {

@@ -5,6 +5,7 @@ import { PortalPageShell } from '@/components/portal-page-shell';
 import { CommandPalette, type CommandItem } from '@/components/command-palette';
 import { SimpleBarChart } from '@/components/charts';
 import { useCommandPalette } from '@/hooks/use-command-palette';
+import { PageLoader } from '@/components/page-loader';
 
 type Props = {
     user: { name: string; email: string; roles?: string[] };
@@ -48,7 +49,9 @@ export default function AdminDashboard({ user, tools, stats, recentAnnouncements
                 title={`Welcome, ${firstName}`}
                 description="Administrative tools and quick actions."
                 showBackLink={false}
+                showHero
             >
+                <PageLoader skeleton="dashboard">
                 {stats && (
                     <>
                         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -112,6 +115,7 @@ export default function AdminDashboard({ user, tools, stats, recentAnnouncements
                         )}
                     </div>
                 </div>
+                </PageLoader>
             </PortalPageShell>
 
             <CommandPalette

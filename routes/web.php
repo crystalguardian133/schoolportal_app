@@ -2,7 +2,6 @@
 
 use App\Http\Controllers\StudentPortalController;
 use App\Http\Controllers\TeacherClassController;
-use App\Http\Controllers\AdminEnrollmentAuditController;
 use App\Http\Controllers\AdminSystemLogController;
 use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\AdminSectionController;
@@ -34,7 +33,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('admin/enrollments', [\App\Http\Controllers\EnrollmentController::class, 'store'])->name('admin.enrollments.store');
     Route::post('admin/students/{uuid}/promote', [\App\Http\Controllers\EnrollmentController::class, 'promote'])->name('admin.students.promote');
     Route::get('admin/create-student', [\App\Http\Controllers\EnrollmentController::class, 'create'])->name('admin.enroll.create');
-    Route::get('admin/enrollment-audits', [AdminEnrollmentAuditController::class, 'index'])->name('admin.enrollment-audits');
+
     Route::get('admin/system-logs', [AdminSystemLogController::class, 'index'])->name('admin.system-logs');
     Route::get('admin/users', [AdminUserController::class, 'index'])->name('admin.users');
     Route::post('admin/users', [AdminUserController::class, 'store'])->name('admin.users.store');
@@ -113,6 +112,23 @@ Route::delete('admin/subjects/teachers/{teacherUuid}/{subjectUuid}', [AdminSubje
     Route::patch('developer/reports/{report}/status', [\App\Http\Controllers\ReportController::class, 'updateStatus'])
         ->middleware('permission:access developer dashboard')
         ->name('developer.reports.update-status');
+
+    // Developer Music Player
+    Route::get('developer/music', [\App\Http\Controllers\MusicController::class, 'index'])
+        ->middleware('permission:access music player')
+        ->name('developer.music');
+    Route::post('developer/music/search', [\App\Http\Controllers\MusicController::class, 'search'])
+        ->middleware('permission:access music player')
+        ->name('developer.music.search');
+    Route::get('developer/music/stream', [\App\Http\Controllers\MusicController::class, 'stream'])
+        ->middleware('permission:access music player')
+        ->name('developer.music.stream');
+    Route::post('developer/music/pre-cache', [\App\Http\Controllers\MusicController::class, 'preCache'])
+        ->middleware('permission:access music player')
+        ->name('developer.music.pre-cache');
+    Route::post('developer/music/check-cached', [\App\Http\Controllers\MusicController::class, 'checkCached'])
+        ->middleware('permission:access music player')
+        ->name('developer.music.check-cached');
 });
 
 require __DIR__.'/settings.php';

@@ -22,6 +22,7 @@ export default function StaffDashboard({ user, recentAnnouncements }: Props) {
                 title={`Welcome, ${firstName}`}
                 description="Non-teaching staff portal overview."
                 showBackLink={false}
+                showHero
             >
                 <div className="grid gap-4 lg:grid-cols-2">
                     <div className="rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm dark:border-sidebar-border dark:bg-sidebar">

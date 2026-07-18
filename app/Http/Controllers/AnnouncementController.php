@@ -33,15 +33,26 @@ class AnnouncementController extends Controller
             return false;
         }
 
-        if ($user->hasRole('admin') || $user->hasRole('principal') || $user->hasRole('registrar') || $user->hasRole('staff')) {
-            return true;
-        }
-
-        if (method_exists($user, 'hasPermission') && ($user->hasPermission('manage announcements') || $user->hasPermission('view announcements'))) {
-            return true;
-        }
-
         return $announcement->created_by_user_uuid === $user->uuid;
+    }
+
+    private function canDelete(Request $request, Announcement $announcement): bool
+    {
+        $user = $request->user();
+
+        if (! $user) {
+            return false;
+        }
+
+        if ($announcement->created_by_user_uuid === $user->uuid) {
+            return true;
+        }
+
+        if (method_exists($user, 'hasPermission') && $user->hasPermission('access admin')) {
+            return true;
+        }
+
+        return false;
     }
 
     private function visibleAnnouncementsFor(Request $request, bool $includeAll = false)
@@ -213,7 +224,7 @@ class AnnouncementController extends Controller
             'created_at' => $announcement->created_at?->toDateTimeString(),
             'image_url' => $announcement->image_path ? url('/assets/announcements/'.basename($announcement->image_path)) : null,
             'can_edit' => $this->canEdit($request, $announcement),
-            'can_delete' => $this->canEdit($request, $announcement),
+            'can_delete' => $this->canDelete($request, $announcement),
         ])->values()->all();
 
         $classSections = ClassSection::query()
@@ -400,7 +411,7 @@ class AnnouncementController extends Controller
     {
         $announcement = Announcement::query()->findOrFail($uuid);
 
-        if (! $this->canEdit($request, $announcement)) {
+        if (! $this->canDelete($request, $announcement)) {
             abort(403);
         }
 
@@ -497,7 +508,7 @@ class AnnouncementController extends Controller
             'created_at' => $announcement->created_at?->toDateTimeString(),
             'image_url' => $announcement->image_path ? url('/assets/announcements/'.basename($announcement->image_path)) : null,
             'can_edit' => $this->canEdit($request, $announcement),
-            'can_delete' => $this->canEdit($request, $announcement),
+            'can_delete' => $this->canDelete($request, $announcement),
         ])
             ->values()
             ->all();

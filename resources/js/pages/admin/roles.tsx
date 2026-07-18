@@ -1,7 +1,8 @@
 import { Head, router, usePage, Link } from '@inertiajs/react';
-import { Trash2, Plus, Clock, ShieldCheck, ShieldOff, Pencil, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Trash2, Plus, Clock, ShieldCheck, ShieldOff, Pencil, X, ChevronLeft, ChevronRight, Search, Shield } from 'lucide-react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import IconPicker from '@/components/icon-picker';
 import { PortalPageShell } from '@/components/portal-page-shell';
 import SearchableSelect from '@/components/searchable-select';
 import { Badge } from '@/components/ui/badge';
@@ -9,10 +10,30 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { formatDate } from '@/lib/dates';
+import { usePrefetchedPagination } from '@/hooks/use-prefetched-pagination';
+import { PageLoader } from '@/components/page-loader';
+
+const iconCache = new Map<string, React.LazyExoticComponent<React.ComponentType<{ className?: string }>>>();
+
+function resolveIcon(name: string | null): React.ComponentType<{ className?: string }> | null {
+    if (!name) return null;
+    if (!iconCache.has(name)) {
+        iconCache.set(
+            name,
+            lazy(() =>
+                import('lucide-react').then((mod) => ({
+                    default: (mod as Record<string, unknown>)[name] as React.ComponentType<{ className?: string }>,
+                })),
+            ),
+        );
+    }
+    return iconCache.get(name)!;
+}
 
 type RoleRow = {
     id: string;
     name: string;
+    icon: string | null;
     permissions: string[];
 };
 
@@ -24,6 +45,7 @@ type PermissionRow = {
 type UserRoleAssignment = {
     id: string;
     name: string;
+    icon: string | null;
     expires_at: string | null;
 };
 
@@ -82,6 +104,7 @@ export default function AdminRoles() {
     const [deleting, setDeleting] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(false);
     const [newRoleName, setNewRoleName] = useState('');
+    const [newRoleIcon, setNewRoleIcon] = useState('');
     const [saving, setSaving] = useState(false);
 
     const selectedRole =
@@ -91,17 +114,22 @@ export default function AdminRoles() {
         protectedRoles.includes(selectedRole.name) &&
         !hasAccessAdmin;
     const [roleName, setRoleName] = useState(selectedRole?.name || '');
+    const [selectedIcon, setSelectedIcon] = useState(selectedRole?.icon || '');
     const [selectedPermissions, setSelectedPermissions] = useState<string[]>(
         selectedRole?.permissions || [],
     );
 
     useEffect(() => {
         setRoleName(selectedRole?.name || '');
+        setSelectedIcon(selectedRole?.icon || '');
         setSelectedPermissions(selectedRole?.permissions || []);
     }, [selectedRole?.id]);
 
     /* ── User role assignment state ── */
-    const [userSearch, setUserSearch] = useState('');
+    const filtersProp = (props as any).filters || {};
+    const [userSearch, setUserSearch] = useState(filtersProp.search || '');
+    const [perPage, setPerPage] = useState(String(filtersProp.per_page || 10));
+    const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [showAssignDialog, setShowAssignDialog] = useState(false);
     const [assignUserUuid, setAssignUserUuid] = useState('');
     const [assignRoleId, setAssignRoleId] = useState('');
@@ -123,11 +151,29 @@ export default function AdminRoles() {
     const [editExpiryValue, setEditExpiryValue] = useState('');
     const [savingExpiry, setSavingExpiry] = useState(false);
 
-    const filteredUsers = users.filter(
-        (u) =>
-            u.name.toLowerCase().includes(userSearch.toLowerCase()) ||
-            u.email.toLowerCase().includes(userSearch.toLowerCase()),
-    );
+    const extraParams = { search: userSearch || undefined, per_page: perPage };
+    const userPagination = usePrefetchedPagination({ baseUrl: '/admin/roles', paramName: 'users_page', only: ['users', 'usersPagination', 'roles', 'permissions', 'hasAccessAdmin', 'filters'], extraParams });
+
+    function handleUserSearch(value: string) {
+        setUserSearch(value);
+        if (searchTimeout.current) clearTimeout(searchTimeout.current);
+        searchTimeout.current = setTimeout(() => {
+            router.get(
+                '/admin/roles',
+                { search: value || undefined, per_page: perPage, users_page: 1 },
+                { preserveState: true, replace: true, preserveScroll: true, showProgress: false, only: ['users', 'usersPagination', 'filters'] },
+            );
+        }, 300);
+    }
+
+    function handlePerPage(value: string) {
+        setPerPage(value);
+        router.get(
+            '/admin/roles',
+            { search: userSearch || undefined, per_page: value, users_page: 1 },
+            { preserveState: true, replace: true, preserveScroll: true, showProgress: false, only: ['users', 'usersPagination', 'filters'] },
+        );
+    }
 
     /* ── Role CRUD ── */
     function saveRole(e: React.FormEvent) {
@@ -140,7 +186,7 @@ return;
         setSaving(true);
         router.patch(
             `/admin/roles/${selectedRole.id}`,
-            { name: roleName, permissions: selectedPermissions },
+            { name: roleName, icon: selectedIcon || null, permissions: selectedPermissions },
             {
                 onFinish: () => setSaving(false),
                 onSuccess: () => router.reload(),
@@ -158,11 +204,12 @@ return;
         setSaving(true);
         router.post(
             '/admin/roles',
-            { name: newRoleName },
+            { name: newRoleName, icon: newRoleIcon || null },
             {
                 onFinish: () => setSaving(false),
                 onSuccess: () => {
                     setNewRoleName('');
+                    setNewRoleIcon('');
                     router.reload();
                 },
             },
@@ -266,6 +313,7 @@ return;
                 title="Roles & permissions"
                 description="Manage roles, their permissions, and assign roles to users."
             >
+                <PageLoader skeleton="list">
                 <div className="mb-4 flex items-center gap-3">
                     <Link
                         href="/admin/users"
@@ -295,6 +343,13 @@ return;
                                 onChange={(e) => setNewRoleName(e.target.value)}
                                 placeholder="e.g. counselor"
                             />
+                            <Label className="mt-1 text-xs text-muted-foreground dark:text-sidebar-foreground/80">
+                                Icon
+                            </Label>
+                            <IconPicker
+                                value={newRoleIcon}
+                                onChange={setNewRoleIcon}
+                            />
                             <Button
                                 type="submit"
                                 disabled={saving || !newRoleName.trim()}
@@ -311,18 +366,24 @@ return;
                                     Roles
                                 </div>
                                 <div className="space-y-2">
-                                    {roles.map((role) => (
-                                        <button
-                                            key={role.id}
-                                            type="button"
-                                            onClick={() =>
-                                                setSelectedRoleId(role.id)
-                                            }
-                                            className={`w-full rounded-xl border px-3 py-2 text-left text-sm transition ${selectedRole?.id === role.id ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:border-indigo-400 dark:bg-indigo-500/15 dark:text-indigo-200' : 'border-sidebar-border/70 bg-white text-foreground hover:bg-sidebar/50 dark:border-sidebar-border/70 dark:bg-sidebar/90 dark:text-sidebar-foreground dark:hover:bg-sidebar-accent/60'}`}
-                                        >
-                                            {role.name}
-                                        </button>
-                                    ))}
+                                    <Suspense fallback={<div className="space-y-2">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-9 animate-pulse rounded-xl bg-muted" />)}</div>}>
+                                    {roles.map((role) => {
+                                        const RoleIcon = resolveIcon(role.icon) || ShieldCheck;
+                                        return (
+                                            <button
+                                                key={role.id}
+                                                type="button"
+                                                onClick={() =>
+                                                    setSelectedRoleId(role.id)
+                                                }
+                                                className={`flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-left text-sm transition ${selectedRole?.id === role.id ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:border-indigo-400 dark:bg-indigo-500/15 dark:text-indigo-200' : 'border-sidebar-border/70 bg-white text-foreground hover:bg-sidebar/50 dark:border-sidebar-border/70 dark:bg-sidebar/90 dark:text-sidebar-foreground dark:hover:bg-sidebar-accent/60'}`}
+                                            >
+                                                <RoleIcon className="size-4 shrink-0 opacity-60" />
+                                                {role.name}
+                                            </button>
+                                        );
+                                    })}
+                                    </Suspense>
                                 </div>
                             </div>
 
@@ -345,11 +406,23 @@ return;
                                     )}
                                 </div>
 
+                                {selectedRole && (
+                                    <div>
+                                        <div className="mb-2 text-sm font-semibold text-foreground dark:text-sidebar-foreground">
+                                            Icon
+                                        </div>
+                                        <IconPicker
+                                            value={selectedIcon}
+                                            onChange={setSelectedIcon}
+                                        />
+                                    </div>
+                                )}
+
                                 <div>
                                     <div className="mb-2 text-sm font-semibold text-foreground dark:text-sidebar-foreground">
                                         Permissions
                                     </div>
-                                    <div className="grid gap-2 sm:grid-cols-2">
+                                    <div className="grid max-h-64 gap-2 overflow-y-auto rounded-xl border border-sidebar-border/70 p-2 sm:grid-cols-2 dark:border-sidebar-border">
                                         {permissions.map((permission) => {
                                             const checked =
                                                 selectedPermissions.includes(
@@ -452,13 +525,27 @@ return;
                         </Button>
                     </div>
 
-                    {/* Search bar */}
-                    <div className="mb-4">
-                        <Input
-                            placeholder="Search users by name or email..."
-                            value={userSearch}
-                            onChange={(e) => setUserSearch(e.target.value)}
-                        />
+                    {/* Search bar + per page */}
+                    <div className="mb-4 flex items-center gap-3">
+                        <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                            <Input
+                                placeholder="Search users by name or email..."
+                                value={userSearch}
+                                onChange={(e) => handleUserSearch(e.target.value)}
+                                className="pl-9"
+                            />
+                        </div>
+                        <select
+                            value={perPage}
+                            onChange={(e) => handlePerPage(e.target.value)}
+                            className="rounded-xl border border-border bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20 dark:bg-sidebar"
+                        >
+                            <option value="10">10 / page</option>
+                            <option value="25">25 / page</option>
+                            <option value="50">50 / page</option>
+                            <option value="100">100 / page</option>
+                        </select>
                     </div>
 
                     {/* Users table */}
@@ -472,7 +559,7 @@ return;
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredUsers.length === 0 && (
+                                {users.length === 0 && (
                                     <tr>
                                         <td
                                             colSpan={3}
@@ -482,7 +569,7 @@ return;
                                         </td>
                                     </tr>
                                 )}
-                                {filteredUsers.map((user) => (
+                                {users.map((user) => (
                                     <tr
                                         key={user.uuid}
                                         className="border-b border-sidebar-border/40 last:border-0"
@@ -511,6 +598,10 @@ return;
                                                             role.expires_at,
                                                         );
 
+                                                    const RoleIcon = expired
+                                                        ? ShieldOff
+                                                        : (resolveIcon(role.icon) || ShieldCheck);
+
                                                     return (
                                                         <div
                                                             key={role.id}
@@ -532,11 +623,7 @@ return;
                                                                           : ''
                                                                 }`}
                                                             >
-                                                                {expired ? (
-                                                                    <ShieldOff className="size-3" />
-                                                                ) : (
-                                                                    <ShieldCheck className="size-3" />
-                                                                )}
+                                                                <Suspense fallback={<ShieldCheck className="size-3" />}><RoleIcon className="size-3" /></Suspense>
                                                                 {role.name}
                                                                 {role.expires_at && (
                                                                     <span className="opacity-70">
@@ -630,6 +717,32 @@ return;
                             </tbody>
                         </table>
                     </div>
+
+                    {userPagination.lastPage > 1 && (
+                        <div className="mt-4 flex items-center justify-between">
+                            <p className="text-sm text-muted-foreground">
+                                Page {userPagination.currentPage} of {userPagination.lastPage} ({userPagination.total} users)
+                            </p>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => userPagination.goToPage(userPagination.currentPage - 1)}
+                                    disabled={!userPagination.hasPrev}
+                                    className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground transition hover:bg-muted disabled:pointer-events-none disabled:opacity-40"
+                                >
+                                    <ChevronLeft className="size-4" />
+                                    Previous
+                                </button>
+                                <button
+                                    onClick={() => userPagination.goToPage(userPagination.currentPage + 1)}
+                                    disabled={!userPagination.hasNext}
+                                    className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground transition hover:bg-muted disabled:pointer-events-none disabled:opacity-40"
+                                >
+                                    Next
+                                    <ChevronRight className="size-4" />
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* ═══════════════════════════════════════════
@@ -767,6 +880,7 @@ return;
                         </div>
                     </div>
                 )}
+                </PageLoader>
             </PortalPageShell>
         </>
     );

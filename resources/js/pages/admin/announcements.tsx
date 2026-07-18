@@ -24,6 +24,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAnnouncementRealtime } from '@/hooks/use-announcement-realtime';
+import { PageLoader } from '@/components/page-loader';
 
 type AnnouncementRow = {
     uuid: string;
@@ -248,6 +249,7 @@ export default function AdminAnnouncements({
                 title="Announcements"
                 description="Create system-wide, class-wide, or section-wide announcements."
             >
+                <PageLoader skeleton="cards">
                 <div className="grid gap-4 lg:grid-cols-[380px_minmax(0,1fr)]">
                     <form
                         onSubmit={submit}
@@ -570,6 +572,7 @@ export default function AdminAnnouncements({
                         </div>
                     </div>
                 </div>
+                </PageLoader>
             </PortalPageShell>
 
             {selectedAnnouncement && (

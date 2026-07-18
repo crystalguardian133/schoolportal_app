@@ -212,3 +212,116 @@ input[type='number'] {
 .dark .table-scroll-container:hover {
     scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
 }
+
+/* Sliding glint effect for sidebar items */
+@keyframes glint-slide {
+    0% {
+        transform: translateX(-100%) skewX(-15deg);
+    }
+    100% {
+        transform: translateX(300%) skewX(-15deg);
+    }
+}
+
+.sidebar-glint {
+    position: relative;
+    overflow: hidden;
+}
+
+.sidebar-glint::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        105deg,
+        transparent 40%,
+        rgba(255, 255, 255, 0.12) 45%,
+        rgba(255, 255, 255, 0.25) 50%,
+        rgba(255, 255, 255, 0.12) 55%,
+        transparent 60%
+    );
+    transform: translateX(-100%) skewX(-15deg);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.sidebar-glint:hover::after {
+    opacity: 1;
+    animation: glint-slide 0.8s ease-in-out;
+}
+
+/* Marquee scroll for now-playing title */
+@keyframes marquee-scroll {
+    0%,
+    10% {
+        transform: translateX(0);
+    }
+    90%,
+    100% {
+        transform: translateX(var(--marquee-distance, -50%));
+    }
+}
+
+.marquee-wrap {
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.marquee-text {
+    display: inline-block;
+    animation: marquee-scroll var(--marquee-duration, 8s) linear infinite;
+}
+
+.marquee-wrap:hover .marquee-text {
+    animation-play-state: paused;
+}
+
+/* Skeleton glint effect for table loading */
+@keyframes skeleton-glint {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+.skeleton-glint {
+    position: relative;
+    overflow: hidden;
+}
+
+.skeleton-glint > td {
+    position: relative;
+}
+
+.skeleton-glint > td > div {
+    background: linear-gradient(
+        90deg,
+        hsl(var(--muted)) 0%,
+        hsl(var(--muted)) 40%,
+        rgba(255, 255, 255, 0.15) 50%,
+        hsl(var(--muted)) 60%,
+        hsl(var(--muted)) 100%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-glint 1.5s ease-in-out infinite;
+}
+
+.skeleton-glint::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        105deg,
+        transparent 35%,
+        rgba(255, 255, 255, 0.08) 42%,
+        rgba(255, 255, 255, 0.18) 50%,
+        rgba(255, 255, 255, 0.08) 58%,
+        transparent 65%
+    );
+    transform: translateX(-100%) skewX(-15deg);
+    pointer-events: none;
+    animation: glint-slide 1.2s ease-in-out infinite;
+}

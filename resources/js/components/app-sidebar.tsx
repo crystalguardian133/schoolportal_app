@@ -20,6 +20,7 @@ import {
     CalendarCheck,
     MessageSquare,
     Bug,
+    Music,
 } from 'lucide-react';
 import { Sun, Moon } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -43,7 +44,7 @@ import type { Auth } from '@/types/auth';
 const mainNavItems: NavItem[] = [
     {
         title: 'Dashboard',
-        href: dashboard(),
+        href: dashboard().url,
         icon: LayoutGrid,
     },
 ];
@@ -51,7 +52,7 @@ const mainNavItems: NavItem[] = [
 const studentNavItems: NavItem[] = [
     {
         title: 'Dashboard',
-        href: dashboard(),
+        href: dashboard().url,
         icon: LayoutGrid,
     },
     {
@@ -84,7 +85,7 @@ const studentNavItems: NavItem[] = [
 const staffNavItems: NavItem[] = [
     {
         title: 'Dashboard',
-        href: dashboard(),
+        href: dashboard().url,
         icon: LayoutGrid,
     },
     {
@@ -117,7 +118,7 @@ const staffNavItems: NavItem[] = [
 const adminNavItems: NavItem[] = [
     {
         title: 'Dashboard',
-        href: dashboard(),
+        href: dashboard().url,
         icon: LayoutGrid,
     },
     {
@@ -161,12 +162,6 @@ const adminNavItems: NavItem[] = [
         href: '/admin/schedules',
         icon: CalendarDays,
         permission: 'manage schedules',
-    },
-    {
-        title: 'Enrollment Audits',
-        href: '/admin/enrollment-audits',
-        icon: FileText,
-        permission: 'manage enrollments',
     },
     {
         title: 'School Year',
@@ -225,7 +220,7 @@ const adminNavItems: NavItem[] = [
 const teacherNavItems: NavItem[] = [
     {
         title: 'Dashboard',
-        href: dashboard(),
+        href: dashboard().url,
         icon: LayoutGrid,
     },
     {
@@ -275,7 +270,7 @@ const teacherNavItems: NavItem[] = [
 const deptHeadNavItems: NavItem[] = [
     {
         title: 'Dashboard',
-        href: dashboard(),
+        href: dashboard().url,
         icon: LayoutGrid,
     },
     {
@@ -323,7 +318,7 @@ const deptHeadNavItems: NavItem[] = [
 const schoolHeadNavItems: NavItem[] = [
     {
         title: 'Dashboard',
-        href: dashboard(),
+        href: dashboard().url,
         icon: LayoutGrid,
     },
     {
@@ -374,12 +369,6 @@ const schoolHeadNavItems: NavItem[] = [
         permission: 'manage roles',
     },
     {
-        title: 'Enrollment Audits',
-        href: '/admin/enrollment-audits',
-        icon: FileText,
-        permission: 'manage enrollments',
-    },
-    {
         title: 'System Logs',
         href: '/admin/system-logs',
         icon: Clock3,
@@ -412,7 +401,7 @@ const schoolHeadNavItems: NavItem[] = [
 const developerNavItems: NavItem[] = [
     {
         title: 'Dashboard',
-        href: dashboard(),
+        href: dashboard().url,
         icon: LayoutGrid,
     },
     {
@@ -424,6 +413,12 @@ const developerNavItems: NavItem[] = [
         title: 'Developer Reports',
         href: '/developer/reports',
         icon: Bug,
+    },
+    {
+        title: 'Music Player',
+        href: '/developer/music',
+        icon: Music,
+        permission: 'access music player',
     },
 ];
 
@@ -444,7 +439,7 @@ export function AppSidebar() {
 return true;
 }
 
-        const noAccessAdminBypass = ['manage assignments', 'manage subjects', 'access developer dashboard'];
+        const noAccessAdminBypass = ['manage assignments', 'manage subjects', 'access developer dashboard', 'access music player'];
 
         if (permissions.includes('access admin') && !noAccessAdminBypass.includes(permission)) {
 return true;
@@ -457,30 +452,42 @@ return true;
         return permissions.includes(permission);
     };
 
-    let navItems: NavItem[];
     let sectionLabel: string | null;
 
-    if (isSchoolHead) {
-        navItems = schoolHeadNavItems;
+    if (isDeveloper) {
+        sectionLabel = 'Developer';
+    } else if (isSchoolHead) {
         sectionLabel = 'School Administration';
     } else if (isAdmin) {
-        navItems = adminNavItems;
         sectionLabel = 'Administrative Tools';
     } else if (isDeptHead) {
-        navItems = deptHeadNavItems;
         sectionLabel = 'Department Management';
     } else if (isTeacher) {
-        navItems = teacherNavItems;
         sectionLabel = 'Teaching Tools';
     } else if (isStaff) {
-        navItems = staffNavItems;
         sectionLabel = 'Staff Portal';
-    } else if (isDeveloper) {
-        navItems = developerNavItems;
-        sectionLabel = 'Developer';
     } else {
-        navItems = studentNavItems;
         sectionLabel = isStudent ? null : 'Platform';
+    }
+
+    const allNavArrays: NavItem[][] = [];
+    if (isDeveloper) allNavArrays.push(developerNavItems);
+    if (isSchoolHead) allNavArrays.push(schoolHeadNavItems);
+    if (isAdmin) allNavArrays.push(adminNavItems);
+    if (isDeptHead) allNavArrays.push(deptHeadNavItems);
+    if (isTeacher) allNavArrays.push(teacherNavItems);
+    if (isStaff) allNavArrays.push(staffNavItems);
+    if (isStudent) allNavArrays.push(studentNavItems);
+
+    const seen = new Set<string>();
+    let navItems: NavItem[] = [];
+    for (const arr of allNavArrays) {
+        for (const item of arr) {
+            if (!seen.has(item.href)) {
+                seen.add(item.href);
+                navItems.push(item);
+            }
+        }
     }
 
     navItems = navItems.filter((item) => hasPermission(item.permission));

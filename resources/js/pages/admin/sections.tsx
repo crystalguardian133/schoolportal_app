@@ -2,6 +2,7 @@ import { Head, router, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { PortalPageShell } from '@/components/portal-page-shell';
+import { PageLoader } from '@/components/page-loader';
 
 type Subject = {
     uuid: string;
@@ -199,6 +200,7 @@ export default function AdminSections() {
                 title="Class Sections"
                 description="Create sections and pre-assign their subjects before enrolling whole blocks of students."
             >
+                <PageLoader skeleton="table">
                 <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
                     <section className="rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
                         <div className="flex items-center justify-between gap-3">
@@ -569,6 +571,7 @@ export default function AdminSections() {
                         )}
                     </section>
                 </div>
+                </PageLoader>
             </PortalPageShell>
 
             <ConfirmDialog

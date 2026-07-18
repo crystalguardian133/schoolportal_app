@@ -81,11 +81,15 @@ class RolePermissionSeeder extends Seeder
             }
         }
 
-        // Developer role: only developer dashboard access
-        if (isset($roleIds['developer'])) {
-            $developerPermId = DB::table('permissions')->where('name', 'Access Developer Dashboard')->value('id');
-            if ($developerPermId) {
-                $rows[] = ['permission_uuid' => $developerPermId, 'role_uuid' => $roleIds['developer']];
+        // Developer role: developer dashboard access + music player
+        $developerRoleId = $roleIds['developer'] ?? $roleIds['DEV'] ?? null;
+        if ($developerRoleId) {
+            $developerPermIds = DB::table('permissions')->whereIn('name', [
+                'Access Developer Dashboard',
+                'Access Music Player',
+            ])->pluck('id')->toArray();
+            foreach ($developerPermIds as $pid) {
+                $rows[] = ['permission_uuid' => $pid, 'role_uuid' => $developerRoleId];
             }
         }
 

@@ -1,6 +1,6 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { Eye, EyeOff, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { Eye, EyeOff, Trash2, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import EditUserModal from '@/components/admin/edit-user-modal';
 import { PortalPageShell } from '@/components/portal-page-shell';
 import { Button } from '@/components/ui/button';
@@ -34,6 +34,9 @@ export default function AdminUsers() {
         total: 0,
     };
     const users: UserRow[] = usersProp.data || [];
+    const currentPage = usersProp.current_page || 1;
+    const lastPage = usersProp.last_page || 1;
+    const totalUsers = usersProp.total || 0;
     const rolesMap: Record<string, string[]> = props.roles || {};
     const roleOptions: { id: string; name: string }[] = props.roleOptions || [];
     const takenAdviserSections: string[] = props.takenAdviserSections || [];
@@ -53,6 +56,36 @@ export default function AdminUsers() {
     const [submitting, setSubmitting] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+    const [search, setSearch] = useState((props as any).filters?.search || '');
+    const [perPage, setPerPage] = useState(String((props as any).filters?.per_page || 10));
+    const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const [tableLoading, setTableLoading] = useState(false);
+    const [displayUsers, setDisplayUsers] = useState(users);
+
+    useEffect(() => {
+        setDisplayUsers(users);
+    }, [users]);
+
+    useEffect(() => {
+        const removeStart = router.on('start', (event) => {
+            if (event.detail.visit.only?.includes('users')) {
+                setDisplayUsers([]);
+                setTableLoading(true);
+            }
+        });
+        const removeFinish = router.on('finish', () => setTableLoading(false));
+        return () => { removeStart(); removeFinish(); };
+    }, []);
+
+    function goToPage(page: number) {
+        if (page < 1 || page > lastPage) return;
+        router.get(
+            '/admin/users',
+            { page, search: search || undefined, per_page: perPage },
+            { preserveState: true, replace: true, preserveScroll: true, showProgress: false, only: ['users', 'filters'] },
+        );
+    }
 
     function showToast(message: string, type: 'success' | 'error' = 'success') {
         window.dispatchEvent(
@@ -128,6 +161,27 @@ export default function AdminUsers() {
                 );
             },
         });
+    }
+
+    function handleSearch(value: string) {
+        setSearch(value);
+        if (searchTimeout.current) clearTimeout(searchTimeout.current);
+        searchTimeout.current = setTimeout(() => {
+            router.get(
+                '/admin/users',
+                { search: value || undefined, per_page: perPage, page: 1 },
+                { preserveState: true, replace: true, preserveScroll: true, showProgress: false, only: ['users', 'filters'] },
+            );
+        }, 300);
+    }
+
+    function handlePerPage(value: string) {
+        setPerPage(value);
+        router.get(
+            '/admin/users',
+            { search: search || undefined, per_page: value, page: 1 },
+            { preserveState: true, replace: true, preserveScroll: true, showProgress: false, only: ['users', 'filters'] },
+        );
     }
 
     return (
@@ -343,10 +397,60 @@ export default function AdminUsers() {
                     </form>
 
                     <div className="rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm md:col-span-2 dark:border-sidebar-border dark:bg-sidebar">
-                        <div className="mb-3 text-sm text-muted-foreground">
-                            Total users: {usersProp.total ?? 0}
+                        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                            <div className="text-sm text-muted-foreground">
+                                {search ? `${totalUsers} result${totalUsers === 1 ? '' : 's'} for "${search}"` : `Total users: ${totalUsers}`}
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                                    <input
+                                        type="text"
+                                        value={search}
+                                        onChange={(e) => handleSearch(e.target.value)}
+                                        placeholder="Search by name or email..."
+                                        className="rounded-xl border border-border bg-white pl-9 pr-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20 dark:bg-sidebar"
+                                    />
+                                </div>
+                                <select
+                                    value={perPage}
+                                    onChange={(e) => handlePerPage(e.target.value)}
+                                    className="rounded-xl border border-border bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20 dark:bg-sidebar"
+                                >
+                                    <option value="10">10 / page</option>
+                                    <option value="25">25 / page</option>
+                                    <option value="50">50 / page</option>
+                                    <option value="100">100 / page</option>
+                                </select>
+                            </div>
                         </div>
-                        <div className="overflow-auto rounded border border-sidebar-border/70">
+                        <div className="relative overflow-auto rounded border border-sidebar-border/70">
+                            {tableLoading && (
+                                <div className="absolute inset-0 z-10 rounded bg-white/70 backdrop-blur-sm dark:bg-sidebar/70">
+                                    <table className="min-w-full divide-y divide-sidebar-border/70 text-sm">
+                                        <thead className="bg-sidebar/60 text-left text-muted-foreground">
+                                            <tr>
+                                                <th className="px-4 py-3 font-medium">Name</th>
+                                                <th className="px-4 py-3 font-medium">Email</th>
+                                                <th className="px-4 py-3 font-medium">Roles</th>
+                                                <th className="px-4 py-3 font-medium">Adviser</th>
+                                                <th className="px-4 py-3 font-medium">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-sidebar-border/70 bg-white dark:bg-sidebar">
+                                            {Array.from({ length: Number(perPage) || 10 }).map((_, i) => (
+                                                <tr key={i} className="skeleton-glint">
+                                                    <td className="px-4 py-3"><div className="h-4 w-32 rounded bg-muted" /></td>
+                                                    <td className="px-4 py-3"><div className="h-4 w-44 rounded bg-muted" /></td>
+                                                    <td className="px-4 py-3"><div className="h-4 w-24 rounded bg-muted" /></td>
+                                                    <td className="px-4 py-3"><div className="h-4 w-16 rounded bg-muted" /></td>
+                                                    <td className="px-4 py-3"><div className="h-4 w-20 rounded bg-muted" /></td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
                             <table className="min-w-full divide-y divide-sidebar-border/70 text-sm">
                                 <thead className="bg-sidebar/60 text-left text-muted-foreground">
                                     <tr>
@@ -368,7 +472,7 @@ export default function AdminUsers() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-sidebar-border/70 bg-white dark:bg-sidebar">
-                                    {users.map((user) => (
+                                    {displayUsers.map((user) => (
                                         <tr
                                             key={user.uuid}
                                             className="hover:bg-sidebar-accent/40"
@@ -457,6 +561,32 @@ export default function AdminUsers() {
                                 </tbody>
                             </table>
                         </div>
+
+                        {lastPage > 1 && (
+                            <div className="mt-4 flex items-center justify-between">
+                                <p className="text-sm text-muted-foreground">
+                                    Page {currentPage} of {lastPage} ({totalUsers} total)
+                                </p>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => goToPage(currentPage - 1)}
+                                        disabled={currentPage <= 1}
+                                        className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground transition hover:bg-muted disabled:pointer-events-none disabled:opacity-40"
+                                    >
+                                        <ChevronLeft className="size-4" />
+                                        Previous
+                                    </button>
+                                    <button
+                                        onClick={() => goToPage(currentPage + 1)}
+                                        disabled={currentPage >= lastPage}
+                                        className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground transition hover:bg-muted disabled:pointer-events-none disabled:opacity-40"
+                                    >
+                                        Next
+                                        <ChevronRight className="size-4" />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </PortalPageShell>

@@ -33,6 +33,7 @@ export default function SchoolHeadDashboard({ user, stats, activeSchoolYear, rec
                 title={`Welcome, ${firstName}`}
                 description="School-wide overview and administration."
                 showBackLink={false}
+                showHero
             >
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <StatCard

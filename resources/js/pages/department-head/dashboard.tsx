@@ -27,6 +27,7 @@ export default function DepartmentHeadDashboard({ user, stats, recentAnnouncemen
                 title={`Welcome, ${firstName}`}
                 description="Department oversight and subject management."
                 showBackLink={false}
+                showHero
             >
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     <StatCard

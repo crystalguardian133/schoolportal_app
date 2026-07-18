@@ -22,6 +22,7 @@ import {
     SelectContent,
     SelectItem,
 } from '@/components/ui/select';
+import { PageLoader } from '@/components/page-loader';
 
 type SubjectRow = {
     uuid: string;
@@ -244,6 +245,7 @@ return;
                 title="Subjects"
                 description="Create and manage academic subjects."
             >
+                <PageLoader skeleton="table">
                 <div className="grid gap-4 md:grid-cols-3">
                     <form
                         onSubmit={submit}
@@ -513,6 +515,7 @@ return;
                         </div>
                     </div>
                 </div>
+                </PageLoader>
             </PortalPageShell>
 
             <Dialog

@@ -11,6 +11,7 @@
 /resources/js/routes
 /resources/js/wayfinder
 /vendor
+README.md
 supabase.txt
 .DS_Store
 .env
@@ -28,3 +29,4 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+music-cache

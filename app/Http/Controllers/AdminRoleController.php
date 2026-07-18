@@ -32,6 +32,7 @@ class AdminRoleController extends Controller
             ->map(fn (Role $role) => [
                 'id' => $role->id,
                 'name' => $role->name,
+                'icon' => $role->icon,
                 'permissions' => $role->permissions->pluck('id')->values()->all(),
             ])
             ->values()
@@ -46,12 +47,29 @@ class AdminRoleController extends Controller
             ->values()
             ->all();
 
-        $users = User::query()
+        $usersQuery = User::query()
             ->with(['roles' => function ($q) {
                 $q->withPivot('expires_at');
-            }])
+            }]);
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $usersQuery->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        $perPage = (int) $request->query('per_page', 10);
+        $pageName = 'users_page';
+
+        $usersPaginator = $usersQuery
             ->orderBy('name')
-            ->get()
+            ->paginate($perPage, ['*'], $pageName)
+            ->withQueryString();
+
+        $users = $usersPaginator
+            ->getCollection()
             ->map(function (User $user) {
                 $activeRoles = $user->roles->filter(fn ($role) => ! $role->pivot->expires_at || \Carbon\Carbon::parse($role->pivot->expires_at)->isFuture());
 
@@ -62,6 +80,7 @@ class AdminRoleController extends Controller
                     'roles' => $activeRoles->map(fn ($role) => [
                         'id' => $role->id,
                         'name' => $role->name,
+                        'icon' => $role->icon,
                         'expires_at' => $role->pivot->expires_at?->toIso8601String(),
                     ])->values()->all(),
                 ];
@@ -73,6 +92,12 @@ class AdminRoleController extends Controller
             'roles' => $roles,
             'permissions' => $permissions,
             'users' => $users,
+            'usersPagination' => [
+                'current_page' => $usersPaginator->currentPage(),
+                'last_page' => $usersPaginator->lastPage(),
+                'total' => $usersPaginator->total(),
+            ],
+            'filters' => $request->only(['search', 'per_page']),
             'hasAccessAdmin' => $request->user()->hasPermission('access admin'),
         ]);
     }
@@ -83,10 +108,12 @@ class AdminRoleController extends Controller
 
         $data = $request->validate([
             'name' => 'required|string|max:255|unique:roles,name',
+            'icon' => 'nullable|string|max:255',
         ]);
 
         Role::create([
             'name' => $data['name'],
+            'icon' => $data['icon'] ?? null,
             'guard_name' => 'web',
         ]);
 
@@ -101,12 +128,14 @@ class AdminRoleController extends Controller
 
         $data = $request->validate([
             'name' => 'required|string|max:255|unique:roles,name,'.$role->id.',id',
+            'icon' => 'nullable|string|max:255',
             'permissions' => 'nullable|array',
             'permissions.*' => 'string|exists:permissions,id',
         ]);
 
         DB::transaction(function () use ($role, $data) {
             $role->name = $data['name'];
+            $role->icon = $data['icon'] ?? null;
             $role->save();
 
             $role->permissions()->sync($data['permissions'] ?? []);

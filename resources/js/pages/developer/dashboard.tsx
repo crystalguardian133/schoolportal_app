@@ -64,6 +64,7 @@ export default function DeveloperDashboard({ user, stats, typeBreakdown, recentR
                 title={`Welcome, ${firstName}`}
                 description="System overview and report management."
                 showBackLink={false}
+                showHero
             >
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <StatCard

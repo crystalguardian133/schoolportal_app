@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { PortalPageShell } from '@/components/portal-page-shell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PageLoader } from '@/components/page-loader';
 
 type UserRow = {
     uuid: string;
@@ -113,6 +114,7 @@ return;
                 title="ID Cards"
                 description="Generate and print student and staff ID cards."
             >
+                <PageLoader skeleton="cards">
                 <div className="no-print mb-4 flex items-center justify-between gap-3">
                     <form onSubmit={handleSearch} className="flex gap-2">
                         <select
@@ -217,6 +219,7 @@ return;
                         </div>
                     ))}
                 </div>
+                </PageLoader>
             </PortalPageShell>
         </>
     );
