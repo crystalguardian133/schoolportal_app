@@ -10,6 +10,18 @@ export type Track = {
     view_count: number | null;
 };
 
+export type Keybindings = {
+    playPause: string[];
+    prev: string[];
+    next: string[];
+};
+
+const DEFAULT_KEYBINDINGS: Keybindings = {
+    playPause: ['k', ' '],
+    prev: ['j', 'ArrowLeft'],
+    next: ['l', 'ArrowRight'],
+};
+
 type MusicPlayerContextType = {
     queue: Track[];
     currentIndex: number;
@@ -24,6 +36,10 @@ type MusicPlayerContextType = {
     browserCached: Set<string>;
     queueOpen: boolean;
     setQueueOpen: (open: boolean) => void;
+    keybindings: Keybindings;
+    setKeybindings: (kb: Keybindings) => void;
+    pendingResume: boolean;
+    resumePlayback: () => void;
     playTrack: (track: Track, index: number) => void;
     togglePlay: () => void;
     playFromQueue: (index: number) => void;
@@ -56,6 +72,8 @@ function loadPersistedState() {
                 volume: typeof data.volume === 'number' ? data.volume : 0.8,
                 muted: typeof data.muted === 'boolean' ? data.muted : false,
                 isPlaying: typeof data.isPlaying === 'boolean' ? data.isPlaying : false,
+                currentTime: typeof data.currentTime === 'number' ? data.currentTime : 0,
+                keybindings: data.keybindings ?? null,
             };
         }
     } catch {
@@ -156,6 +174,10 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     const [browserCached, setBrowserCached] = useState<Set<string>>(new Set());
     const [queueOpen, setQueueOpen] = useState(false);
     const [activeTrack, setActiveTrack] = useState<Track | null>(() => persisted.current?.activeTrack ?? null);
+    const [keybindings, setKeybindingsState] = useState<Keybindings>(
+        () => persisted.current?.keybindings ?? DEFAULT_KEYBINDINGS,
+    );
+    const [pendingResume, setPendingResume] = useState(false);
 
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const progressRef = useRef<HTMLDivElement>(null);
@@ -178,27 +200,30 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
                     volume,
                     muted,
                     isPlaying,
+                    currentTime,
+                    keybindings,
                 }),
             );
         } catch {
             // storage full or unavailable
         }
-    }, [queue, currentIndex, activeTrack, volume, muted, isPlaying]);
+    }, [queue, currentIndex, activeTrack, volume, muted, isPlaying, currentTime, keybindings]);
 
     // On remount: if we had a playing track, try to re-audio and resume
     useEffect(() => {
         if (!persisted.current) return;
-        const { activeTrack: savedTrack, isPlaying: wasPlaying } = persisted.current;
+        const { activeTrack: savedTrack, isPlaying: wasPlaying, currentTime: savedTime } = persisted.current;
         persisted.current = null; // only do this once
 
         if (!savedTrack || !wasPlaying) return;
 
-        // Re-fetch from browser cache and resume playing
         (async () => {
             try {
+                setLoadingTrack(savedTrack.id);
                 const audioUrl = await fetchAndCacheAudio(savedTrack);
                 const audio = new Audio(audioUrl);
                 audio.volume = muted ? 0 : volume;
+                if (savedTime > 0) audio.currentTime = savedTime;
                 audioRef.current = audio;
 
                 audio.ontimeupdate = () => setCurrentTime(audio.currentTime);
@@ -206,7 +231,6 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
                 audio.oncanplay = () => setLoadingTrack(null);
                 audio.onended = () => {
                     setIsPlaying(false);
-                    setActiveTrack(null);
                 };
                 audio.onerror = () => {
                     setIsPlaying(false);
@@ -216,7 +240,10 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
                 await audio.play();
                 setIsPlaying(true);
             } catch {
-                // Could not resume, user can re-play manually
+                // Autoplay blocked by browser — audio element is still loaded,
+                // user can click play in the header to resume
+                setLoadingTrack(null);
+                setPendingResume(true);
             }
         })();
         // Only run on mount
@@ -238,6 +265,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     const playTrack = useCallback(
         async (track: Track, index: number) => {
             const gen = ++generationRef.current;
+            setPendingResume(false);
 
             audioRef.current?.pause();
             setLoadingTrack(track.id);
@@ -261,8 +289,6 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
                     setIsPlaying(false);
                     if (index >= 0 && index < queueLengthRef.current - 1) {
                         setCurrentIndex(index + 1);
-                    } else {
-                        setActiveTrack(null);
                     }
                 };
                 audio.onerror = () => {
@@ -295,6 +321,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
 
     const togglePlay = useCallback(() => {
         if (!audioRef.current) return;
+        setPendingResume(false);
         if (isPlaying) {
             audioRef.current.pause();
             setIsPlaying(false);
@@ -302,6 +329,11 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
             audioRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
         }
     }, [isPlaying]);
+
+    const resumePlayback = useCallback(() => {
+        setPendingResume(false);
+        togglePlay();
+    }, [togglePlay]);
 
     const playFromQueue = useCallback(
         (index: number) => {
@@ -445,6 +477,46 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
         return `${m}:${sec.toString().padStart(2, '0')}`;
     }, []);
 
+    const setKeybindings = useCallback((kb: Keybindings) => {
+        setKeybindingsState(kb);
+    }, []);
+
+    // Global keybindings
+    const keybindingsRef = useRef(keybindings);
+    keybindingsRef.current = keybindings;
+    const togglePlayRef = useRef(togglePlay);
+    togglePlayRef.current = togglePlay;
+    const skipNextRef = useRef(skipNext);
+    skipNextRef.current = skipNext;
+    const skipPrevRef = useRef(skipPrev);
+    skipPrevRef.current = skipPrev;
+
+    useEffect(() => {
+        const handler = (e: KeyboardEvent) => {
+            const tag = (e.target as HTMLElement)?.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (e.target as HTMLElement)?.isContentEditable) {
+                return;
+            }
+
+            const kb = keybindingsRef.current;
+            if (e.type === 'keydown') {
+                if (kb.playPause.includes(e.key)) {
+                    e.preventDefault();
+                    togglePlayRef.current();
+                } else if (kb.prev.includes(e.key)) {
+                    e.preventDefault();
+                    skipPrevRef.current();
+                } else if (kb.next.includes(e.key)) {
+                    e.preventDefault();
+                    skipNextRef.current();
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    }, []);
+
     return (
         <MusicPlayerContext.Provider
             value={{
@@ -461,6 +533,10 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
                 browserCached,
                 queueOpen,
                 setQueueOpen,
+                keybindings,
+                setKeybindings,
+                pendingResume,
+                resumePlayback,
                 playTrack,
                 togglePlay,
                 playFromQueue,

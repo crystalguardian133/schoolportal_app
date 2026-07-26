@@ -68,10 +68,11 @@ export function AppSidebarHeader({
         currentTrack,
         isPlaying,
         loadingTrack,
+        pendingResume,
         togglePlay,
+        resumePlayback,
         skipNext,
         skipPrev,
-        downloadAndPlayOnly,
     } = useMusicPlayer();
 
     useEffect(() => {
@@ -127,7 +128,7 @@ export function AppSidebarHeader({
                             </button>
                             <button
                                 type="button"
-                                onClick={togglePlay}
+                                onClick={pendingResume ? resumePlayback : togglePlay}
                                 disabled={!!loadingTrack}
                                 className="inline-flex size-7 items-center justify-center rounded-full bg-sidebar-foreground text-sidebar transition-all hover:scale-105 disabled:opacity-50"
                             >

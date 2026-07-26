@@ -125,7 +125,11 @@ export default function MusicPlayer() {
 
     const handleAddToQueue = (track: Track) => {
         if (queue.find((q) => q.id === track.id)) return;
-        downloadAndEnqueue(track);
+        if (!currentTrack) {
+            downloadAndPlayOnly(track);
+        } else {
+            downloadAndEnqueue(track);
+        }
     };
 
     return (
@@ -453,9 +457,9 @@ export default function MusicPlayer() {
                                         </button>
                                     </div>
 
-                                    <div className="flex w-full max-w-md items-center gap-3 text-[11px] text-muted-foreground">
+                                    <div className="flex items-center gap-5 text-[11px] text-muted-foreground">
                                         <span className="w-10 text-right tabular-nums">{fmt(currentTime)}</span>
-                                        <div className="flex-1 text-center tabular-nums">
+                                        <div className="w-10 text-center tabular-nums">
                                             {fmt(duration)}
                                         </div>
                                     </div>
