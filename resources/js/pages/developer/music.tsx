@@ -113,11 +113,7 @@ export default function MusicPlayer() {
     const handlePlayClick = (track: Track) => {
         const idx = queue.findIndex((q) => q.id === track.id);
         if (idx >= 0) {
-            if (idx === currentIndex) {
-                togglePlay();
-            } else {
-                downloadAndPlayOnly(track);
-            }
+            playFromQueue(idx);
         } else {
             downloadAndPlayOnly(track);
         }

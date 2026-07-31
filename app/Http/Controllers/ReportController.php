@@ -111,7 +111,7 @@ class ReportController extends Controller
     {
         $user = auth()->user();
 
-        if (!$user->hasPermission('Access Developer Dashboard')) {
+        if (!$user->hasPermission('Access Developer Dashboard') && $report->user_id !== $user->id) {
             abort(403);
         }
 
@@ -124,7 +124,7 @@ class ReportController extends Controller
     {
         $user = auth()->user();
 
-        if (!$user->hasPermission('Access Developer Dashboard')) {
+        if (!$user->hasPermission('Access Developer Dashboard') && $report->user_id !== $user->id) {
             abort(403);
         }
 

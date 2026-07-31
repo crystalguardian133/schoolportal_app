@@ -81,7 +81,7 @@ class FortifyServiceProvider extends ServiceProvider
     }
 
     /**
-     * Restrict login to the selected portal.
+     * Authenticate using email + password only.
      */
     private function configureAuthentication(): void
     {
@@ -89,7 +89,6 @@ class FortifyServiceProvider extends ServiceProvider
             $request->validate([
                 Fortify::username() => ['required', 'string', 'email'],
                 'password' => ['required', 'string'],
-                'portal' => ['required', 'in:student,staff'],
             ]);
 
             $user = User::query()
@@ -98,12 +97,6 @@ class FortifyServiceProvider extends ServiceProvider
 
             if (!$user || !Hash::check($request->input('password'), $user->password)) {
                 return null;
-            }
-
-            if (!$user->canAccessPortal($request->input('portal'))) {
-                throw ValidationException::withMessages([
-                    Fortify::username() => 'These credentials do not match the selected portal.',
-                ]);
             }
 
             return $user;

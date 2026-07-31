@@ -70,17 +70,17 @@
     --popover-foreground: oklch(0.145 0 0);
     --primary: oklch(0.205 0 0);
     --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
+    --secondary: oklch(0.96 0 0);
     --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
+    --muted: oklch(0.96 0 0);
+    --muted-foreground: oklch(0.46 0 0);
+    --accent: oklch(0.96 0 0);
     --accent-foreground: oklch(0.205 0 0);
     --destructive: oklch(0.577 0.245 27.325);
     --destructive-foreground: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.87 0 0);
+    --border: oklch(0.87 0 0);
+    --input: oklch(0.87 0 0);
+    --ring: oklch(0.78 0 0);
     --chart-1: oklch(0.646 0.222 41.116);
     --chart-2: oklch(0.6 0.118 184.704);
     --chart-3: oklch(0.398 0.07 227.392);
@@ -91,10 +91,10 @@
     --sidebar-foreground: oklch(0.145 0 0);
     --sidebar-primary: oklch(0.205 0 0);
     --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
+    --sidebar-accent: oklch(0.94 0 0);
     --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.87 0 0);
+    --sidebar-border: oklch(0.87 0 0);
+    --sidebar-ring: oklch(0.78 0 0);
 }
 
 .dark {
@@ -324,4 +324,57 @@ input[type='number'] {
     transform: translateX(-100%) skewX(-15deg);
     pointer-events: none;
     animation: glint-slide 1.2s ease-in-out infinite;
+}
+
+/* Login preview — split panel card */
+.login-preview-bg {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background:
+        radial-gradient(ellipse 800px 600px at 10% 20%, rgba(46, 173, 76, 0.08), transparent),
+        radial-gradient(ellipse 600px 400px at 90% 80%, rgba(46, 173, 76, 0.05), transparent);
+}
+
+.dark .login-preview-bg {
+    background:
+        radial-gradient(ellipse 800px 600px at 10% 20%, rgba(46, 173, 76, 0.12), transparent),
+        radial-gradient(ellipse 600px 400px at 90% 80%, rgba(46, 173, 76, 0.06), transparent);
+}
+
+.login-preview-card {
+    border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.dark .login-preview-card {
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.login-preview-branding {
+    background: linear-gradient(160deg, #1a8a38 0%, #0f6b2a 40%, #0b5421 100%);
+}
+
+.dark .login-preview-branding {
+    background: linear-gradient(160deg, #157230 0%, #0d5a24 40%, #094519 100%);
+}
+
+.login-preview-grid {
+    background-image:
+        linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+    background-size: 32px 32px;
+    animation: preview-grid-fade 6s ease-in-out infinite;
+}
+
+@keyframes preview-grid-fade {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 0.7; }
+}
+
+.login-preview-branding-mobile {
+    background: linear-gradient(160deg, #1a8a38 0%, #0f6b2a 40%, #0b5421 100%);
+}
+
+.dark .login-preview-branding-mobile {
+    background: linear-gradient(160deg, #157230 0%, #0d5a24 40%, #094519 100%);
 }

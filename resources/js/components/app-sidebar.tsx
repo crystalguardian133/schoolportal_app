@@ -194,6 +194,18 @@ const adminNavItems: NavItem[] = [
         permission: 'create teacher',
     },
     {
+        title: 'Manage Students',
+        href: '/admin/manage-students',
+        icon: GraduationCap,
+        permission: 'manage enrollments',
+    },
+    {
+        title: 'Manage Teachers',
+        href: '/admin/manage-teachers',
+        icon: BookOpenText,
+        permission: 'manage users',
+    },
+    {
         title: 'Roles & Permissions',
         href: '/admin/roles',
         icon: Shield,
@@ -414,6 +426,9 @@ const developerNavItems: NavItem[] = [
         href: '/developer/reports',
         icon: Bug,
     },
+];
+
+const musicPlayerNavItem: NavItem[] = [
     {
         title: 'Music Player',
         href: '/developer/music',
@@ -478,6 +493,7 @@ return true;
     if (isTeacher) allNavArrays.push(teacherNavItems);
     if (isStaff) allNavArrays.push(staffNavItems);
     if (isStudent) allNavArrays.push(studentNavItems);
+    if (hasPermission('access music player')) allNavArrays.push(musicPlayerNavItem);
 
     const seen = new Set<string>();
     let navItems: NavItem[] = [];

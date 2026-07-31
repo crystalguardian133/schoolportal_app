@@ -41,36 +41,28 @@ class HandleInertiaRequests extends Middleware
         $userRoles = $user->roles->pluck('name')->map(fn ($name) => strtolower($name))->toArray();
         $hasAdminRole = !empty(array_intersect($userRoles, array_map('strtolower', $adminRoles)));
 
-        // Detect developer by permission, not role name — any role that grants
-        // "access developer dashboard" is treated as a developer role.
         $hasDeveloperPerm = $user->roles->contains(function ($role) {
             return $role->permissions->contains('name', 'Access Developer Dashboard');
         });
 
+        $hasMusicPlayerPerm = $user->roles->contains(function ($role) {
+            return $role->permissions->contains('name', 'Access Music Player');
+        });
+
         if ($hasAdminRole) {
-            $perms = ['manage users', 'manage roles', 'manage subjects', 'manage sections', 'manage assignments', 'manage enrollments', 'manage announcements', 'manage schedules', 'view logs', 'view announcements', 'access admin', 'assign subjects', 'access admin dashboard', 'access school head dashboard'];
-            if ($hasDeveloperPerm) {
-                $perms[] = 'access developer dashboard';
-                $perms[] = 'access music player';
-            }
+            $perms = ['manage users', 'manage roles', 'manage subjects', 'manage sections', 'manage assignments', 'manage enrollments', 'manage announcements', 'manage schedules', 'view logs', 'view announcements', 'access admin', 'assign subjects', 'access admin dashboard', 'access school head dashboard', 'access developer dashboard', 'access music player'];
             return $perms;
         }
 
         $permissions = $user->getAllPermissions()->pluck('name')->map(fn ($name) => strtolower($name))->unique()->values();
 
-        // "Access Admin" permission grants all permissions
         if ($permissions->contains('access admin')) {
-            $perms = ['manage users', 'manage roles', 'manage subjects', 'manage sections', 'manage assignments', 'manage enrollments', 'manage announcements', 'manage schedules', 'view logs', 'view announcements', 'access admin', 'assign subjects', 'access admin dashboard', 'access school head dashboard'];
-            if ($hasDeveloperPerm) {
-                $perms[] = 'access developer dashboard';
-                $perms[] = 'access music player';
-            }
+            $perms = ['manage users', 'manage roles', 'manage subjects', 'manage sections', 'manage assignments', 'manage enrollments', 'manage announcements', 'manage schedules', 'view logs', 'view announcements', 'access admin', 'assign subjects', 'access admin dashboard', 'access school head dashboard', 'access developer dashboard', 'access music player'];
             return $perms;
         }
 
         $result = $permissions->toArray();
 
-        // Developer permission is only returned for users with a role that grants it
         if (!$hasDeveloperPerm) {
             $result = array_diff($result, ['access developer dashboard']);
         }

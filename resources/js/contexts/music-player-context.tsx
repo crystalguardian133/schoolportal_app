@@ -183,8 +183,10 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     const progressRef = useRef<HTMLDivElement>(null);
     const blobUrlsRef = useRef<Map<string, string>>(new Map());
     const generationRef = useRef(0);
-    const queueLengthRef = useRef(0);
-    queueLengthRef.current = queue.length;
+    const queueRef = useRef<Track[]>(queue);
+    queueRef.current = queue;
+    const currentIndexRef = useRef(currentIndex);
+    currentIndexRef.current = currentIndex;
 
     const currentTrack = activeTrack ?? (currentIndex >= 0 ? queue[currentIndex] : null);
 
@@ -212,7 +214,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     // On remount: if we had a playing track, try to re-audio and resume
     useEffect(() => {
         if (!persisted.current) return;
-        const { activeTrack: savedTrack, isPlaying: wasPlaying, currentTime: savedTime } = persisted.current;
+        const { activeTrack: savedTrack, isPlaying: wasPlaying, currentTime: savedTime, currentIndex: savedIndex } = persisted.current;
         persisted.current = null; // only do this once
 
         if (!savedTrack || !wasPlaying) return;
@@ -231,6 +233,13 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
                 audio.oncanplay = () => setLoadingTrack(null);
                 audio.onended = () => {
                     setIsPlaying(false);
+                    const q = queueRef.current;
+                    const idx = savedIndex >= 0 ? savedIndex : currentIndexRef.current;
+                    if (idx >= 0 && idx < q.length - 1) {
+                        const nextIdx = idx + 1;
+                        setCurrentIndex(nextIdx);
+                        playTrackRef.current(q[nextIdx], nextIdx);
+                    }
                 };
                 audio.onerror = () => {
                     setIsPlaying(false);
@@ -287,8 +296,12 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
                 audio.oncanplay = () => setLoadingTrack(null);
                 audio.onended = () => {
                     setIsPlaying(false);
-                    if (index >= 0 && index < queueLengthRef.current - 1) {
-                        setCurrentIndex(index + 1);
+                    const q = queueRef.current;
+                    const idx = index >= 0 ? index : currentIndexRef.current;
+                    if (idx >= 0 && idx < q.length - 1) {
+                        const nextIdx = idx + 1;
+                        setCurrentIndex(nextIdx);
+                        playTrackRef.current(q[nextIdx], nextIdx);
                     }
                 };
                 audio.onerror = () => {
@@ -299,6 +312,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
                 await audio.play();
                 setIsPlaying(true);
                 setActiveTrack(track);
+                setCurrentIndex(index >= 0 ? index : currentIndexRef.current);
             } catch {
                 setIsPlaying(false);
                 setLoadingTrack(null);
@@ -307,17 +321,8 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
         [volume, muted],
     );
 
-    // Auto-play next when onended advances currentIndex
-    const prevIndexRef = useRef(currentIndex);
-    useEffect(() => {
-        if (currentIndex !== prevIndexRef.current && currentIndex >= 0 && queue[currentIndex]) {
-            const isNext = currentIndex === prevIndexRef.current + 1;
-            if (isNext) {
-                playTrack(queue[currentIndex], currentIndex);
-            }
-        }
-        prevIndexRef.current = currentIndex;
-    }, [currentIndex, playTrack, queue]);
+    const playTrackRef = useRef(playTrack);
+    playTrackRef.current = playTrack;
 
     const togglePlay = useCallback(() => {
         if (!audioRef.current) return;
@@ -337,53 +342,60 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
 
     const playFromQueue = useCallback(
         (index: number) => {
-            if (index === currentIndex) {
+            const q = queueRef.current;
+            const idx = currentIndexRef.current;
+            if (index === idx) {
                 togglePlay();
             } else {
                 audioRef.current?.pause();
                 setCurrentIndex(index);
-                playTrack(queue[index], index);
+                playTrack(q[index], index);
             }
         },
-        [currentIndex, queue, playTrack, togglePlay],
+        [playTrack, togglePlay],
     );
 
     const removeFromQueue = useCallback(
         (index: number) => {
             setQueue((prev) => prev.filter((_, i) => i !== index));
-            if (index === currentIndex) {
+            const idx = currentIndexRef.current;
+            if (index === idx) {
                 audioRef.current?.pause();
                 setIsPlaying(false);
                 setCurrentIndex(-1);
                 setActiveTrack(null);
                 setCurrentTime(0);
                 setDuration(0);
-            } else if (index < currentIndex) {
+            } else if (index < idx) {
                 setCurrentIndex((prev) => prev - 1);
             }
         },
-        [currentIndex],
+        [],
     );
 
     const skipNext = useCallback(() => {
-        if (currentIndex < queue.length - 1) {
-            const next = currentIndex + 1;
+        const q = queueRef.current;
+        const idx = currentIndexRef.current;
+        if (idx < q.length - 1) {
+            const next = idx + 1;
             audioRef.current?.pause();
             setCurrentIndex(next);
-            playTrack(queue[next], next);
+            playTrack(q[next], next);
         }
-    }, [currentIndex, queue, playTrack]);
+    }, [playTrack]);
 
     const skipPrev = useCallback(() => {
+        const q = queueRef.current;
+        const idx = currentIndexRef.current;
         if (audioRef.current && audioRef.current.currentTime > 3) {
             audioRef.current.currentTime = 0;
-        } else if (currentIndex > 0) {
-            const prev = currentIndex - 1;
+        } else if (idx > 0) {
+            const prev = idx - 1;
             audioRef.current?.pause();
             setCurrentIndex(prev);
-            playTrack(queue[prev], prev);
+            playTrack(q[prev], prev);
         }
-    }, [currentIndex, queue, playTrack]);
+    }, [playTrack]);
 
     const setVolume = useCallback((v: number) => {
         setVolumeState(v);

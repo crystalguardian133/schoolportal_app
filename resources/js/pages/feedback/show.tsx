@@ -1,5 +1,4 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { useState } from 'react';
 import {
     Bug,
     Lightbulb,
@@ -14,6 +13,7 @@ import {
     Eye,
     Clock,
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { formatDate } from '@/lib/dates';
 import { cn } from '@/lib/utils';
 
@@ -60,6 +60,7 @@ export default function ReportShow({ report }: Props) {
     const flash: any = props.flash || {};
     const auth = props.auth as { user: { id: number }; permissions: string[] };
     const isDeveloper = auth.permissions.includes('access developer dashboard');
+    const canClose = isDeveloper || auth.user.id === report.user.id;
 
     const [replyText, setReplyText] = useState('');
     const [replyImages, setReplyImages] = useState<File[]>([]);
@@ -70,9 +71,25 @@ export default function ReportShow({ report }: Props) {
     const TypeIcon = cfg.icon;
     const StatusIcon = status.icon;
 
+    useEffect(() => {
+        if (report.closed) {
+            return;
+        }
+
+        const poll = router.poll(3500, { only: ['report'] });
+
+        return () => {
+            poll.destroy();
+        };
+    }, [report.closed]);
+
     function handleReplyImageChange(e: React.ChangeEvent<HTMLInputElement>) {
         const files = Array.from(e.target.files || []);
-        if (files.length + replyImages.length > 5) return;
+
+        if (files.length + replyImages.length > 5) {
+            return;
+        }
+
         const newImages = [...replyImages, ...files].slice(0, 5);
         setReplyImages(newImages);
         setReplyImagePreviews(newImages.map((f) => URL.createObjectURL(f)));
@@ -85,7 +102,10 @@ export default function ReportShow({ report }: Props) {
     }
 
     function submitReply() {
-        if (!replyText.trim()) return;
+        if (!replyText.trim()) {
+            return;
+        }
+
         const formData = new FormData();
         formData.append('message', replyText);
         replyImages.forEach((img) => formData.append('images[]', img));
@@ -111,25 +131,25 @@ export default function ReportShow({ report }: Props) {
     return (
         <>
             <Head title={report.subject} />
-            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-4">
+            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-3 sm:gap-6 sm:p-4">
                 {/* Hero banner */}
-                <section className="rounded-2xl border border-sidebar-border/70 bg-white p-6 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
+                <section className="rounded-2xl border border-sidebar-border/70 bg-white p-4 shadow-sm dark:border-sidebar-border dark:bg-sidebar sm:p-6">
                     <Link
                         href="/feedback"
-                        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4"
+                        className="mb-3 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground sm:mb-4"
                     >
                         <ArrowLeft className="size-4" />
                         Back to Reports
                     </Link>
 
-                    <div className="flex flex-wrap items-start justify-between gap-4">
-                        <div className="flex items-start gap-4">
-                            <div className={cn('mt-1 rounded-xl p-3', cfg.bg)}>
-                                <TypeIcon className="size-6" />
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="flex items-start gap-3 sm:gap-4">
+                            <div className={cn('mt-1 rounded-xl p-2 sm:p-3', cfg.bg)}>
+                                <TypeIcon className="size-5 sm:size-6" />
                             </div>
-                            <div>
-                                <h1 className="text-2xl font-bold">{report.subject}</h1>
-                                <div className="mt-2 flex flex-wrap items-center gap-3">
+                            <div className="min-w-0 flex-1">
+                                <h1 className="text-xl font-bold sm:text-2xl">{report.subject}</h1>
+                                <div className="mt-2 flex flex-wrap items-center gap-2 sm:gap-3">
                                     <span className={cn('inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium', cfg.bg)}>
                                         <TypeIcon className="size-3" />
                                         {cfg.label}
@@ -146,17 +166,19 @@ export default function ReportShow({ report }: Props) {
                                     )}
                                 </div>
                                 <p className="mt-1 text-sm text-muted-foreground">
-                                    by {report.user.name} ({report.user.email}) · {formatDate(report.created_at, 'MMM d, yyyy h:mm a')}
+                                    <span className="block sm:inline">by {report.user.name}</span>
+                                    <span className="hidden sm:inline"> </span>
+                                    <span className="block text-xs text-muted-foreground sm:inline sm:text-sm">({report.user.email}) · {formatDate(report.created_at, 'MMM d, yyyy h:mm a')}</span>
                                 </p>
                             </div>
                         </div>
 
-                        {isDeveloper && (
-                            <div className="flex gap-2">
+                        {canClose && (
+                            <div className="flex gap-2 sm:shrink-0">
                                 {report.closed ? (
                                     <button
                                         onClick={reopenThread}
-                                        className="inline-flex items-center gap-1.5 rounded-xl border border-border px-4 py-2 text-sm font-medium transition hover:bg-muted"
+                                        className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-border px-4 py-2 text-sm font-medium transition hover:bg-muted sm:w-auto"
                                     >
                                         <Unlock className="size-4" />
                                         Reopen Thread
@@ -164,7 +186,7 @@ export default function ReportShow({ report }: Props) {
                                 ) : (
                                     <button
                                         onClick={closeThread}
-                                        className="inline-flex items-center gap-1.5 rounded-xl border border-border px-4 py-2 text-sm font-medium transition hover:bg-muted"
+                                        className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-border px-4 py-2 text-sm font-medium transition hover:bg-muted sm:w-auto"
                                     >
                                         <Lock className="size-4" />
                                         Close Thread
@@ -175,18 +197,18 @@ export default function ReportShow({ report }: Props) {
                     </div>
 
                     {/* Original message */}
-                    <div className="mt-6 rounded-xl bg-muted/50 p-5">
+                    <div className="mt-4 rounded-xl bg-muted/50 p-3 sm:mt-6 sm:p-5">
                         <p className="text-sm leading-relaxed whitespace-pre-wrap">{report.message}</p>
                     </div>
 
                     {report.images && report.images.length > 0 && (
-                        <div className="mt-4 flex flex-wrap gap-3">
+                        <div className="mt-3 flex flex-wrap gap-2 sm:mt-4 sm:gap-3">
                             {report.images.map((img, i) => (
                                 <a key={i} href={`/storage/${img}`} target="_blank" rel="noopener noreferrer">
                                     <img
                                         src={`/storage/${img}`}
                                         alt="Report image"
-                                        className="size-24 rounded-xl border border-border object-cover transition hover:opacity-80"
+                                        className="size-16 rounded-xl border border-border object-cover transition hover:opacity-80 sm:size-24"
                                     />
                                 </a>
                             ))}
@@ -195,7 +217,7 @@ export default function ReportShow({ report }: Props) {
                 </section>
 
                 {/* Thread / Replies */}
-                <section className="rounded-2xl border border-sidebar-border/70 bg-white p-6 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
+                <section className="rounded-2xl border border-sidebar-border/70 bg-white p-4 shadow-sm dark:border-sidebar-border dark:bg-sidebar sm:p-6">
                     <h2 className="text-lg font-semibold">
                         Thread
                         {report.replies.length > 0 && (
@@ -214,18 +236,19 @@ export default function ReportShow({ report }: Props) {
                     {report.replies.length === 0 ? (
                         <p className="mt-4 text-sm text-muted-foreground">No replies yet.</p>
                     ) : (
-                        <div className="mt-5 space-y-4">
+                        <div className="mt-4 space-y-3 sm:mt-5 sm:space-y-4">
                             {report.replies.map((reply) => {
                                 const isOwnReply = reply.user.id === report.user.id;
+
                                 return (
                                     <div
                                         key={reply.id}
                                         className={cn(
-                                            'rounded-xl p-4',
+                                            'rounded-xl p-3 sm:p-4',
                                             isOwnReply ? 'bg-muted' : 'bg-primary/5 border border-primary/20',
                                         )}
                                     >
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex flex-wrap items-center gap-1.5 gap-y-1 sm:gap-2">
                                             <span className={cn(
                                                 'text-xs font-semibold',
                                                 isOwnReply ? 'text-foreground' : 'text-primary',
@@ -247,7 +270,7 @@ export default function ReportShow({ report }: Props) {
                                                         <img
                                                             src={`/storage/${img}`}
                                                             alt="Reply image"
-                                                            className="size-20 rounded-lg border border-border object-cover transition hover:opacity-80"
+                                                            className="size-14 rounded-lg border border-border object-cover transition hover:opacity-80 sm:size-20"
                                                         />
                                                     </a>
                                                 ))}
@@ -261,8 +284,8 @@ export default function ReportShow({ report }: Props) {
 
                     {/* Reply input */}
                     {!report.closed ? (
-                        <div className="mt-6 space-y-3">
-                            <div className="flex gap-3">
+                        <div className="mt-5 space-y-3 sm:mt-6">
+                            <div className="flex flex-col gap-3 sm:flex-row">
                                 <input
                                     type="text"
                                     value={replyText}
@@ -276,31 +299,33 @@ export default function ReportShow({ report }: Props) {
                                     placeholder="Write a reply..."
                                     className="flex-1 rounded-xl border border-border bg-white px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20 dark:bg-sidebar"
                                 />
-                                <label className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-sm text-muted-foreground transition hover:bg-muted">
-                                    <ImagePlus className="size-4" />
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        multiple
-                                        className="hidden"
-                                        onChange={handleReplyImageChange}
-                                    />
-                                </label>
-                                <button
-                                    type="button"
-                                    onClick={submitReply}
-                                    disabled={!replyText.trim()}
-                                    className="shrink-0 inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 disabled:opacity-50"
-                                >
-                                    <Send className="size-4" />
-                                    Send
-                                </button>
+                                <div className="flex gap-3">
+                                    <label className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-sm text-muted-foreground transition hover:bg-muted">
+                                        <ImagePlus className="size-4" />
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            multiple
+                                            className="hidden"
+                                            onChange={handleReplyImageChange}
+                                        />
+                                    </label>
+                                    <button
+                                        type="button"
+                                        onClick={submitReply}
+                                        disabled={!replyText.trim()}
+                                        className="inline-flex w-full flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 disabled:opacity-50 sm:w-auto sm:flex-none"
+                                    >
+                                        <Send className="size-4" />
+                                        Send
+                                    </button>
+                                </div>
                             </div>
 
                             {replyImagePreviews.length > 0 && (
                                 <div className="flex flex-wrap gap-2">
                                     {replyImagePreviews.map((src, i) => (
-                                        <div key={i} className="relative size-16 overflow-hidden rounded-lg border border-border">
+                                        <div key={i} className="relative size-14 overflow-hidden rounded-lg border border-border sm:size-16">
                                             <img src={src} alt="" className="size-full object-cover" />
                                             <button
                                                 type="button"
@@ -315,7 +340,7 @@ export default function ReportShow({ report }: Props) {
                             )}
                         </div>
                     ) : (
-                        <div className="mt-6 flex items-center gap-2 rounded-xl border border-border bg-muted/50 p-4 text-sm text-muted-foreground">
+                        <div className="mt-5 flex items-center gap-2 rounded-xl border border-border bg-muted/50 p-3 text-sm text-muted-foreground sm:mt-6 sm:p-4">
                             <Lock className="size-4" />
                             This thread is closed. No new replies can be sent.
                         </div>
