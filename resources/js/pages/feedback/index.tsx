@@ -1,6 +1,6 @@
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
-import { useState } from 'react';
 import { Bug, Lightbulb, MessageSquare, X, Send, ImagePlus, Lock } from 'lucide-react';
+import { useState } from 'react';
 import { PortalPageShell } from '@/components/portal-page-shell';
 import { formatDate } from '@/lib/dates';
 import { cn } from '@/lib/utils';
@@ -51,7 +51,11 @@ export default function FeedbackIndex({ reports }: Props) {
 
     function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
         const files = Array.from(e.target.files || []);
-        if (files.length + images.length > 5) return;
+
+        if (files.length + images.length > 5) {
+return;
+}
+
         const newImages = [...images, ...files].slice(0, 5);
         setImages(newImages);
         setImagePreviews(newImages.map((f) => URL.createObjectURL(f)));
@@ -127,6 +131,7 @@ export default function FeedbackIndex({ reports }: Props) {
                                     {(Object.keys(typeConfig) as Array<keyof typeof typeConfig>).map((type) => {
                                         const cfg = typeConfig[type];
                                         const Icon = cfg.icon;
+
                                         return (
                                             <button
                                                 key={type}

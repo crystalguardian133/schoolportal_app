@@ -1,10 +1,10 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { QrCode } from 'lucide-react';
 import { useState } from 'react';
+import { PageLoader } from '@/components/page-loader';
 import { PortalPageShell } from '@/components/portal-page-shell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { PageLoader } from '@/components/page-loader';
 
 type UserRow = {
     uuid: string;

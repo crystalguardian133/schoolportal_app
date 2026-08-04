@@ -234,7 +234,7 @@ class EnrollmentController extends Controller
             $data = $request->validate([
                 'student_uuids' => 'nullable|array',
                 'student_uuids.*' => 'string',
-                'class_section_uuid' => 'nullable|string',
+                'class_section_uuid' => 'required_with:new_student|string',
                 'new_student' => 'nullable|array',
                 'new_student.name' => 'required_with:new_student|string|max:255',
                 'new_student.email' => 'required_with:new_student|email|max:255|unique:users,email',
@@ -365,7 +365,9 @@ class EnrollmentController extends Controller
                     'birthday' => $newStudentData['birthday'] ?? null,
                     'lrn' => $newStudentData['lrn'] ?? null,
                     'student_id' => $newStudentData['student_id'] ?? null,
-                    'grade_level' => $newStudentData['grade_level'] ?? ($classSection->grade_level ?? null),
+                    'grade_level' => ! empty($newStudentData['grade_level'])
+                        ? $newStudentData['grade_level']
+                        : ($classSection->grade_level ?? null),
                     'contact_number' => $newStudentData['contact_number'] ?? null,
                     'address' => trim(implode(', ', array_filter([
                         $newStudentData['address_zone_street'] ?? null,

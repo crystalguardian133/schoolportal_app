@@ -107,11 +107,15 @@ export default function EditStudent() {
             URL.revokeObjectURL(avatarPreviewUrlRef.current);
             avatarPreviewUrlRef.current = null;
         }
+
         setAvatarFile(file);
+
         if (!file) {
             setAvatarPreview(currentAvatarUrl);
+
             return;
         }
+
         const url = URL.createObjectURL(file);
         avatarPreviewUrlRef.current = url;
         setAvatarPreview(url);
@@ -129,9 +133,16 @@ export default function EditStudent() {
 
     function handleAddressBlur(field: keyof Pick<CommonAddress, 'address_zone_street' | 'address_barangay' | 'address_municipality' | 'address_province'>, value: string) {
         const query = value.trim().toLowerCase();
-        if (!query) return;
+
+        if (!query) {
+return;
+}
+
         const match = commonAddresses.find((a) => (a[field] || '').trim().toLowerCase().startsWith(query));
-        if (match) applyCommonAddress(match);
+
+        if (match) {
+applyCommonAddress(match);
+}
     }
 
     function showToast(message: string, type: 'success' | 'error' = 'success') {
@@ -143,14 +154,19 @@ export default function EditStudent() {
 
         if (!hasOnlyDigits(form.contact_number)) {
             showToast('Contact number can only contain digits.', 'error');
+
             return;
         }
+
         if (form.last_school_year && !hasOnlyDigitsAndHyphen(form.last_school_year)) {
             showToast('Last school year can only contain digits and hyphens.', 'error');
+
             return;
         }
+
         if (form.last_grade_level && !hasOnlyDigits(form.last_grade_level)) {
             showToast('Last grade level can only contain digits.', 'error');
+
             return;
         }
 
@@ -215,12 +231,17 @@ export default function EditStudent() {
                         <div className="flex flex-col items-center gap-3 md:col-span-2">
                             <div
                                 className="relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-2 border-dashed border-border bg-muted"
-                                onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                                onDragOver={(e) => {
+ e.preventDefault(); e.stopPropagation(); 
+}}
                                 onDrop={(e) => {
                                     e.preventDefault();
                                     e.stopPropagation();
                                     const file = e.dataTransfer.files?.[0];
-                                    if (file) handleAvatarFile(file);
+
+                                    if (file) {
+handleAvatarFile(file);
+}
                                 }}
                             >
                                 {avatarPreview ? (

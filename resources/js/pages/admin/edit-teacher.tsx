@@ -42,12 +42,17 @@ export default function EditTeacher() {
         let first = '';
         let middle = '';
         let last = '';
-        if (parts.length >= 1) last = parts[0].trim();
+
+        if (parts.length >= 1) {
+last = parts[0].trim();
+}
+
         if (parts.length >= 2) {
             const rest = parts[1].trim().split(' ');
             first = rest[0] || '';
             middle = rest[1] || '';
         }
+
         return { first_name: first, middle_name: middle, last_name: last };
     }
 
@@ -88,11 +93,15 @@ export default function EditTeacher() {
             URL.revokeObjectURL(avatarPreviewUrlRef.current);
             avatarPreviewUrlRef.current = null;
         }
+
         setAvatarFile(file);
+
         if (!file) {
             setAvatarPreview(currentAvatarUrl);
+
             return;
         }
+
         const url = URL.createObjectURL(file);
         avatarPreviewUrlRef.current = url;
         setAvatarPreview(url);
@@ -107,11 +116,13 @@ export default function EditTeacher() {
 
         if (!form.last_name || !form.email || !form.role) {
             showToast('Name, email, and role are required.', 'error');
+
             return;
         }
 
         if (form.password && form.password !== form.password_confirmation) {
             showToast('Passwords do not match.', 'error');
+
             return;
         }
 
@@ -168,12 +179,17 @@ export default function EditTeacher() {
                         <div className="flex flex-col items-center gap-3 md:col-span-2">
                             <div
                                 className="relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-2 border-dashed border-border bg-muted"
-                                onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                                onDragOver={(e) => {
+ e.preventDefault(); e.stopPropagation(); 
+}}
                                 onDrop={(e) => {
                                     e.preventDefault();
                                     e.stopPropagation();
                                     const file = e.dataTransfer.files?.[0];
-                                    if (file) handleAvatarFile(file);
+
+                                    if (file) {
+handleAvatarFile(file);
+}
                                 }}
                             >
                                 {avatarPreview ? (

@@ -15,50 +15,58 @@ use Inertia\Response;
 
 class DashboardController extends Controller
 {
+    /**
+     * Build a composite dashboard: every role section the user is
+     * allowed to see is rendered, in priority order, instead of
+     * showing a single first-match dashboard.
+     */
     public function __invoke(Request $request): Response
     {
         $user = $request->user();
-        $permissions = $user->getAllPermissions()->pluck('name')->map(fn ($name) => strtolower($name))->values();
+        $permissions = $user->getAllPermissions()
+            ->pluck('name')
+            ->map(fn ($name) => strtolower($name))
+            ->values();
 
-        if ($permissions->contains('access school head dashboard')) {
-            return $this->schoolHeadDashboard($request);
+        $sections = [];
+
+        $order = [
+            'access school head dashboard' => 'schoolHeadSection',
+            'access admin dashboard' => 'adminSection',
+            'access department head dashboard' => 'departmentHeadSection',
+            'access teacher dashboard' => 'teacherSection',
+            'access staff dashboard' => 'staffSection',
+            'access developer dashboard' => 'developerSection',
+        ];
+
+        foreach ($order as $permission => $method) {
+            if ($permissions->contains($permission)) {
+                $sections[] = $this->{$method}($request);
+            }
         }
 
-        if ($permissions->contains('access admin dashboard')) {
-            return $this->adminDashboard($request);
+        $studentSection = $this->studentSection($request);
+        if ($studentSection) {
+            $sections[] = $studentSection;
         }
 
-        if ($permissions->contains('access department head dashboard')) {
-            return $this->departmentHeadDashboard($request);
+        if (empty($sections)) {
+            $sections[] = [
+                'key' => 'empty',
+                'label' => 'Your Account',
+                'message' => 'No dashboard sections are available for your account yet.',
+            ];
         }
 
-        if ($permissions->contains('access teacher dashboard')) {
-            return $this->teacherDashboard($request);
-        }
-
-        if ($permissions->contains('access staff dashboard')) {
-            return $this->staffDashboard($request);
-        }
-
-        if ($permissions->contains('access developer dashboard')) {
-            return $this->developerDashboard($request);
-        }
-
-        return $this->fallbackDashboard($request);
+        return Inertia::render('dashboard', [
+            'user' => ['name' => $user->name, 'email' => $user->email],
+            'sections' => $sections,
+        ]);
     }
 
-    private function schoolHeadDashboard(Request $request): Response
+    private function recentAnnouncements(): array
     {
-        $user = $request->user();
-
-        $totalStudents = Student::count();
-        $totalTeachers = \App\Models\User::whereHas('roles', fn ($q) => $q->where('name', 'teacher'))->count();
-        $totalSections = ClassSection::count();
-        $totalSubjects = Subject::count();
-
-        $activeSchoolYear = SchoolYear::where('status', 'active')->first();
-
-        $recentAnnouncements = Announcement::latest('created_at')
+        return Announcement::latest('created_at')
             ->take(5)
             ->get()
             ->map(fn ($a) => [
@@ -66,90 +74,84 @@ class DashboardController extends Controller
                 'body' => $a->body,
                 'scope' => $a->scope,
                 'created_at' => $a->created_at->diffForHumans(),
-            ]);
+            ])
+            ->all();
+    }
 
-        return Inertia::render('school-head/dashboard', [
-            'user' => ['name' => $user->name, 'email' => $user->email],
+    private function schoolHeadSection(Request $request): array
+    {
+        $activeSchoolYear = SchoolYear::where('status', 'active')->first();
+
+        return [
+            'key' => 'school-head',
+            'label' => 'School Administration',
             'stats' => [
-                'totalStudents' => $totalStudents,
-                'totalTeachers' => $totalTeachers,
-                'totalSections' => $totalSections,
-                'totalSubjects' => $totalSubjects,
+                ['label' => 'Total Students', 'value' => Student::count()],
+                ['label' => 'Total Teachers', 'value' => User::whereHas('roles', fn ($q) => $q->where('name', 'teacher'))->count()],
+                ['label' => 'Total Sections', 'value' => ClassSection::count()],
+                ['label' => 'Total Subjects', 'value' => Subject::count()],
+            ],
+            'tools' => [
+                ['label' => 'Enrollments', 'href' => '/admin/enrollments'],
+                ['label' => 'Subjects', 'href' => '/admin/subjects'],
+                ['label' => 'Sections', 'href' => '/admin/sections'],
+                ['label' => 'Users', 'href' => '/admin/users'],
+                ['label' => 'Announcements', 'href' => '/admin/announcements'],
+                ['label' => 'School Year', 'href' => '/admin/school-years'],
             ],
             'activeSchoolYear' => $activeSchoolYear ? [
                 'name' => $activeSchoolYear->name,
                 'start_date' => $activeSchoolYear->start_date,
                 'end_date' => $activeSchoolYear->end_date,
             ] : null,
-            'recentAnnouncements' => $recentAnnouncements,
-        ]);
+            'recentAnnouncements' => $this->recentAnnouncements(),
+        ];
     }
 
-    private function adminDashboard(Request $request): Response
+    private function adminSection(Request $request): array
     {
-        $user = $request->user();
-
-        $totalStudents = Student::count();
-        $totalSections = ClassSection::count();
-        $totalSubjects = Subject::count();
-
-        $recentAnnouncements = Announcement::latest('created_at')
-            ->take(5)
-            ->get()
-            ->map(fn ($a) => [
-                'title' => $a->title,
-                'body' => $a->body,
-                'scope' => $a->scope,
-                'created_at' => $a->created_at->diffForHumans(),
-            ]);
-
-        return Inertia::render('admin/dashboard', [
-            'user' => ['name' => $user->name, 'email' => $user->email, 'roles' => $user->roles()->pluck('name')->all()],
+        return [
+            'key' => 'admin',
+            'label' => 'Administrative Tools',
+            'stats' => [
+                ['label' => 'Total Students', 'value' => Student::count()],
+                ['label' => 'Total Sections', 'value' => ClassSection::count()],
+                ['label' => 'Total Subjects', 'value' => Subject::count()],
+            ],
             'tools' => [
                 ['label' => 'Assignments', 'href' => '/admin/assignments'],
                 ['label' => 'Enrollments', 'href' => '/admin/enrollments'],
                 ['label' => 'Manage Users', 'href' => '/admin/users'],
             ],
-            'stats' => [
-                'totalStudents' => $totalStudents,
-                'totalSections' => $totalSections,
-                'totalSubjects' => $totalSubjects,
-            ],
-            'recentAnnouncements' => $recentAnnouncements,
-        ]);
+            'recentAnnouncements' => $this->recentAnnouncements(),
+        ];
     }
 
-    private function departmentHeadDashboard(Request $request): Response
+    private function departmentHeadSection(Request $request): array
     {
         $user = $request->user();
 
-        $totalSubjects = Subject::count();
-        $totalSections = ClassSection::count();
-
         $assignedSubjects = Subject::whereHas('teachers', fn ($q) => $q->where('users.uuid', $user->uuid))->count();
 
-        $recentAnnouncements = Announcement::latest('created_at')
-            ->take(5)
-            ->get()
-            ->map(fn ($a) => [
-                'title' => $a->title,
-                'body' => $a->body,
-                'scope' => $a->scope,
-                'created_at' => $a->created_at->diffForHumans(),
-            ]);
-
-        return Inertia::render('department-head/dashboard', [
-            'user' => ['name' => $user->name, 'email' => $user->email],
+        return [
+            'key' => 'department-head',
+            'label' => 'Department Management',
             'stats' => [
-                'totalSubjects' => $totalSubjects,
-                'totalSections' => $totalSections,
-                'assignedSubjects' => $assignedSubjects,
+                ['label' => 'Total Subjects', 'value' => Subject::count()],
+                ['label' => 'Total Sections', 'value' => ClassSection::count()],
+                ['label' => 'My Assigned Subjects', 'value' => $assignedSubjects],
             ],
-            'recentAnnouncements' => $recentAnnouncements,
-        ]);
+            'tools' => [
+                ['label' => 'Manage Subjects', 'href' => '/admin/subjects'],
+                ['label' => 'Sections', 'href' => '/admin/sections'],
+                ['label' => 'Announcements', 'href' => '/admin/announcements'],
+                ['label' => 'Grades', 'href' => '/teacher/grades'],
+            ],
+            'recentAnnouncements' => $this->recentAnnouncements(),
+        ];
     }
 
-    private function teacherDashboard(Request $request): Response
+    private function teacherSection(Request $request): array
     {
         $user = $request->user();
 
@@ -163,60 +165,46 @@ class DashboardController extends Controller
             });
         })->count();
 
-        $recentAnnouncements = Announcement::latest('created_at')
-            ->take(5)
-            ->get()
-            ->map(fn ($a) => [
-                'title' => $a->title,
-                'body' => $a->body,
-                'scope' => $a->scope,
-                'created_at' => $a->created_at->diffForHumans(),
-            ]);
-
-        return Inertia::render('teacher/dashboard', [
-            'user' => ['name' => $user->name, 'email' => $user->email],
+        return [
+            'key' => 'teacher',
+            'label' => 'Teaching',
             'stats' => [
-                'assignedSubjects' => $assignedSubjects,
-                'totalStudents' => $totalStudents,
+                ['label' => 'Assigned Subjects', 'value' => $assignedSubjects],
+                ['label' => 'Total Students', 'value' => $totalStudents],
             ],
-            'recentAnnouncements' => $recentAnnouncements,
-        ]);
+            'tools' => [
+                ['label' => 'My Classes', 'href' => '/teacher/classes'],
+                ['label' => 'Edit Grades', 'href' => '/teacher/grades'],
+                ['label' => 'Schedule', 'href' => '/teacher/schedule'],
+                ['label' => 'Announcements', 'href' => '/teacher/announcements'],
+            ],
+            'recentAnnouncements' => $this->recentAnnouncements(),
+        ];
     }
 
-    private function staffDashboard(Request $request): Response
+    private function staffSection(Request $request): array
     {
-        $user = $request->user();
-
-        $recentAnnouncements = Announcement::latest('created_at')
-            ->take(5)
-            ->get()
-            ->map(fn ($a) => [
-                'title' => $a->title,
-                'body' => $a->body,
-                'scope' => $a->scope,
-                'created_at' => $a->created_at->diffForHumans(),
-            ]);
-
-        return Inertia::render('staff/dashboard', [
-            'user' => ['name' => $user->name, 'email' => $user->email],
-            'recentAnnouncements' => $recentAnnouncements,
-        ]);
+        return [
+            'key' => 'staff',
+            'label' => 'Staff Portal',
+            'tools' => [
+                ['label' => 'Classes', 'href' => '/teacher/classes'],
+                ['label' => 'Schedule', 'href' => '/teacher/schedule'],
+                ['label' => 'Announcements', 'href' => '/teacher/announcements'],
+                ['label' => 'Subjects', 'href' => '/student/subjects-enrolled'],
+            ],
+            'recentAnnouncements' => $this->recentAnnouncements(),
+        ];
     }
 
-    private function developerDashboard(Request $request): Response
+    private function developerSection(Request $request): array
     {
-        $user = $request->user();
-
         $totalReports = Report::count();
         $pendingReports = Report::where('status', 'pending')->count();
         $underReviewReports = Report::where('status', 'under_review')->count();
         $acceptedReports = Report::where('status', 'accepted')->count();
         $rejectedReports = Report::where('status', 'rejected')->count();
         $totalUsers = User::count();
-
-        $bugReports = Report::where('type', 'bug')->count();
-        $suggestionReports = Report::where('type', 'suggestion')->count();
-        $feedbackReports = Report::where('type', 'feedback')->count();
 
         $recentReports = Report::with('user')
             ->latest()
@@ -229,47 +217,53 @@ class DashboardController extends Controller
                 'status' => $r->status,
                 'user_name' => $r->user->name,
                 'created_at' => $r->created_at->diffForHumans(),
-            ]);
+            ])
+            ->all();
 
-        return Inertia::render('developer/dashboard', [
-            'user' => ['name' => $user->name, 'email' => $user->email],
+        return [
+            'key' => 'developer',
+            'label' => 'Developer',
             'stats' => [
-                'totalReports' => $totalReports,
-                'pendingReports' => $pendingReports,
-                'underReviewReports' => $underReviewReports,
-                'acceptedReports' => $acceptedReports,
-                'rejectedReports' => $rejectedReports,
-                'totalUsers' => $totalUsers,
+                ['label' => 'Total Reports', 'value' => $totalReports],
+                ['label' => 'Pending', 'value' => $pendingReports],
+                ['label' => 'Under Review', 'value' => $underReviewReports],
+                ['label' => 'Total Users', 'value' => $totalUsers],
             ],
             'typeBreakdown' => [
-                'bugs' => $bugReports,
-                'suggestions' => $suggestionReports,
-                'feedback' => $feedbackReports,
+                'bugs' => Report::where('type', 'bug')->count(),
+                'suggestions' => Report::where('type', 'suggestion')->count(),
+                'feedback' => Report::where('type', 'feedback')->count(),
+            ],
+            'statusBreakdown' => [
+                'accepted' => $acceptedReports,
+                'rejected' => $rejectedReports,
             ],
             'recentReports' => $recentReports,
-        ]);
+            'tools' => [
+                ['label' => 'Developer Reports', 'href' => '/developer/reports'],
+            ],
+        ];
     }
 
-    private function fallbackDashboard(Request $request): Response
+    private function studentSection(Request $request): ?array
     {
         $user = $request->user();
-
         $student = $user->student()->first();
-        $currentSchoolYear = $student?->school_year;
 
-        $enrollments = $student
-            ? $student->enrollments()
-                ->when($currentSchoolYear, fn ($query) => $query->where('school_year', $currentSchoolYear))
-                ->get()
-            : collect();
+        if (! $student) {
+            return null;
+        }
 
-        $subjectsEnrolledCount = $enrollments->count();
-        $averageGrade = $enrollments->isNotEmpty() ? round($enrollments->avg('total') ?? 0, 2) : null;
+        $currentSchoolYear = $student->school_year;
 
-        $unseenAnnouncementsCount = Announcement::where('created_at', '>', now()->subDays(7))->count();
+        $enrollments = $student->enrollments()
+            ->when($currentSchoolYear, fn ($query) => $query->where('school_year', $currentSchoolYear))
+            ->get();
 
-        return Inertia::render('dashboard', [
-            'student' => $student ? [
+        return [
+            'key' => 'student',
+            'label' => 'Student',
+            'student' => [
                 'name' => $student->full_name ?: $student->name,
                 'firstName' => $student->first_name,
                 'middleName' => $student->middle_name,
@@ -279,10 +273,10 @@ class DashboardController extends Controller
                 'schoolYear' => $student->school_year,
                 'lrn' => $student->lrn,
                 'qrToken' => $student->qr_token,
-            ] : null,
-            'subjectsEnrolledCount' => $subjectsEnrolledCount,
-            'averageGrade' => $averageGrade,
-            'unseenAnnouncementsCount' => $unseenAnnouncementsCount,
-        ]);
+            ],
+            'subjectsEnrolledCount' => $enrollments->count(),
+            'averageGrade' => $enrollments->isNotEmpty() ? round($enrollments->avg('total') ?? 0, 2) : null,
+            'unseenAnnouncementsCount' => Announcement::where('created_at', '>', now()->subDays(7))->count(),
+        ];
     }
 }

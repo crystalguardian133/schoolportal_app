@@ -1,6 +1,6 @@
-import { ReactNode } from 'react';
-import { usePageLoading } from '@/hooks/use-page-loading';
+import type { ReactNode } from 'react';
 import { TableSkeleton, FormPlusTableSkeleton, DashboardSkeleton, CardsSkeleton, ListSkeleton } from '@/components/skeletons';
+import { usePageLoading } from '@/hooks/use-page-loading';
 
 type SkeletonType = 'table' | 'form-table' | 'dashboard' | 'cards' | 'list';
 

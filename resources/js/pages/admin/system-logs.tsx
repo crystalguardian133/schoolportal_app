@@ -9,13 +9,13 @@ import {
     UserRound,
 } from 'lucide-react';
 import { useState } from 'react';
+import { PageLoader } from '@/components/page-loader';
 import {
     Dialog,
     DialogContent,
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { PageLoader } from '@/components/page-loader';
 
 function toArray(value) {
     if (Array.isArray(value)) {

@@ -4,12 +4,13 @@ import {
     getPaginationRowModel,
     getSortedRowModel,
     getFilteredRowModel,
-    flexRender,
-    type ColumnDef,
-    type SortingState,
+    flexRender
+    
+    
 } from '@tanstack/react-table';
-import { useState } from 'react';
+import type {ColumnDef, SortingState} from '@tanstack/react-table';
 import { ChevronLeft, ChevronRight, ArrowUpDown } from 'lucide-react';
+import { useState } from 'react';
 import { cn } from '@/lib/utils';
 
 type DataTableProps<TData, TValue> = {

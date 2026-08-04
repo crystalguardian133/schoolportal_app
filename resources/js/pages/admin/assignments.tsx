@@ -56,7 +56,7 @@ return null;
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent>
                 <DialogTitle>Teachers for {subject.name}</DialogTitle>
-                <div className="mt-4 space-y-2">
+                <div className="mt-4 max-h-[24rem] space-y-2 overflow-y-auto">
                     {subject.teachers.length > 0 ? (
                         subject.teachers.map((teacher) => (
                             <div
@@ -234,54 +234,6 @@ export default function Assignments({ subjects, teachers }) {
             <Head title="Assignments" />
 
             <div className="mx-auto max-w-7xl space-y-6">
-                <section className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
-                    <div className="relative px-6 py-8 sm:px-8">
-                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(148,163,184,0.08),_transparent_40%),radial-gradient(circle_at_bottom_left,_rgba(100,116,139,0.06),_transparent_34%)]" />
-                        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-                            <div className="max-w-2xl space-y-3">
-                                <div className="inline-flex items-center rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium tracking-[0.18em] text-muted-foreground uppercase">
-                                    Administrative Tools
-                                </div>
-                                <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                                    Assign Teachers to Subjects
-                                </h1>
-                                <p className="max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
-                                    Use the subject dropdown to focus on one
-                                    subject at a time while keeping the assigned
-                                    teachers visible in a compact table.
-                                </p>
-                            </div>
-
-                            <div className="grid grid-cols-3 gap-3 sm:min-w-[360px]">
-                                <div className="rounded-2xl border border-border bg-card px-4 py-3 shadow-sm">
-                                    <div className="text-xs tracking-wide text-muted-foreground uppercase">
-                                        Subjects
-                                    </div>
-                                    <div className="mt-1 text-2xl font-semibold">
-                                        {subjectList.length}
-                                    </div>
-                                </div>
-                                <div className="rounded-2xl border border-border bg-card px-4 py-3 shadow-sm">
-                                    <div className="text-xs tracking-wide text-muted-foreground uppercase">
-                                        Assigned
-                                    </div>
-                                    <div className="mt-1 text-2xl font-semibold text-emerald-600 dark:text-emerald-400">
-                                        {assignedCount}
-                                    </div>
-                                </div>
-                                <div className="rounded-2xl border border-border bg-card px-4 py-3 shadow-sm">
-                                    <div className="text-xs tracking-wide text-muted-foreground uppercase">
-                                        Unassigned
-                                    </div>
-                                    <div className="mt-1 text-2xl font-semibold text-amber-600 dark:text-amber-400">
-                                        {unassignedCount}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
                 <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
                     <article className="rounded-3xl border border-border bg-card p-5 shadow-sm">
                         <div className="space-y-1">
@@ -445,9 +397,9 @@ export default function Assignments({ subjects, teachers }) {
                             </div>
                         </div>
 
-                        <div className="mt-5 overflow-hidden rounded-2xl border border-border">
+                        <div className="mt-5 max-h-[30rem] overflow-y-auto rounded-2xl border border-border">
                             <table className="min-w-full divide-y divide-border text-left text-sm">
-                                <thead className="bg-muted text-xs tracking-wide text-muted-foreground uppercase">
+                                <thead className="sticky top-0 z-10 bg-muted text-xs tracking-wide text-muted-foreground uppercase">
                                     <tr>
                                         <th className="px-4 py-3 font-medium">
                                             Teacher

@@ -16,6 +16,7 @@ export function usePrefetchedPagination(options: Options) {
     const buildParams = useCallback(
         (page: number) => {
             const params: Record<string, string | number> = { [paramName]: page };
+
             if (extraParams) {
                 for (const [key, val] of Object.entries(extraParams)) {
                     if (val !== undefined && val !== '') {
@@ -23,6 +24,7 @@ export function usePrefetchedPagination(options: Options) {
                     }
                 }
             }
+
             return params;
         },
         [paramName, extraParams],
@@ -30,7 +32,9 @@ export function usePrefetchedPagination(options: Options) {
 
     const goToPage = useCallback(
         (page: number) => {
-            if (page < 1 || page > usersPagination.last_page) return;
+            if (page < 1 || page > usersPagination.last_page) {
+return;
+}
 
             router.get(
                 baseUrl,

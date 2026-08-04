@@ -18,7 +18,7 @@ class AdminUserController extends Controller
         $this->authorizeAdmin($request);
 
         $query = User::query()
-            ->select(['uuid', 'name', 'email', 'profile_picture', 'is_adviser', 'adviser_section']);
+            ->select(['uuid', 'name', 'email', 'profile_picture', 'is_adviser', 'adviser_section', 'created_at']);
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -28,6 +28,11 @@ class AdminUserController extends Controller
             });
         }
 
+        if ($request->filled('role') && $request->role !== 'all') {
+            $role = $request->role;
+            $query->whereHas('roles', fn ($q) => $q->where('name', $role));
+        }
+
         $users = $query
             ->orderBy('name')
             ->paginate((int) $request->query('per_page', 10))
@@ -35,10 +40,15 @@ class AdminUserController extends Controller
 
         $roles = DB::table('role_user')
             ->join('roles', 'roles.id', '=', 'role_user.role_uuid')
-            ->select(['role_user.user_uuid', 'roles.name as role_name'])
+            ->select(['role_user.user_uuid', 'roles.id as role_id', 'roles.name as role_name', 'roles.icon as role_icon', 'role_user.expires_at'])
             ->get()
             ->groupBy('user_uuid')
-            ->map(fn ($items) => $items->pluck('role_name')->values()->all())
+            ->map(fn ($items) => $items->map(fn ($item) => [
+                'id' => $item->role_id,
+                'name' => $item->role_name,
+                'icon' => $item->role_icon,
+                'expires_at' => $item->expires_at ? \Carbon\Carbon::parse($item->expires_at)->toIso8601String() : null,
+            ])->values()->all())
             ->all();
 
         $permissions = Permission::query()
@@ -66,11 +76,24 @@ class AdminUserController extends Controller
             ->values()
             ->all();
 
+        $stats = [
+            'total_users' => User::count(),
+            'total_advisers' => User::where('is_adviser', true)->count(),
+            'total_roles' => Role::count(),
+            'role_counts' => DB::table('role_user')
+                ->join('roles', 'roles.id', '=', 'role_user.role_uuid')
+                ->selectRaw('roles.name, count(*) as total')
+                ->groupBy('roles.name')
+                ->pluck('total', 'name')
+                ->all(),
+        ];
+
         return inertia('admin/users', [
             'users' => $users,
-            'filters' => $request->only(['search', 'per_page']),
+            'filters' => $request->only(['search', 'per_page', 'role']),
+            'stats' => $stats,
             'roles' => $roles,
-            'roleOptions' => Role::query()->select(['id', 'name'])->get()->sortBy('name')->map(fn ($r) => ['id' => $r->id, 'name' => $r->name])->values()->all(),
+            'roleOptions' => Role::query()->select(['id', 'name', 'icon'])->get()->sortBy('name')->map(fn ($r) => ['id' => $r->id, 'name' => $r->name, 'icon' => $r->icon])->values()->all(),
             'permissions' => $permissions,
             'rolePermissions' => $rolePermissions,
             'sections' => ClassSection::query()->select(['uuid', 'name', 'grade_level'])->get()->sortBy('name')->map(fn ($s) => ['uuid' => $s->uuid, 'name' => $s->name, 'grade_level' => $s->grade_level])->values()->all(),
@@ -291,22 +314,10 @@ class AdminUserController extends Controller
             'last_name' => 'required|string|max:50',
             'email' => ['required', 'email'],
             'password' => 'nullable|string|min:6|confirmed',
-            'role' => 'required|string',
             'is_adviser' => 'nullable|boolean',
             'adviser_section' => 'nullable|string',
             'avatar' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
         ]);
-
-        // prevent demoting yourself
-        $currentUser = $request->user();
-        if ($currentUser && method_exists($currentUser, 'uuid') && $currentUser->uuid === $user->uuid) {
-            $currentUserRoles = $currentUser->roles->pluck('name')->values()->all();
-            $adminRoles = ['admin', 'principal', 'registrar'];
-            $hasAdminRole = !empty(array_intersect($currentUserRoles, $adminRoles));
-            if (!in_array($data['role'], $adminRoles) && $hasAdminRole) {
-                return back()->with('error', 'Cannot remove your own admin privileges.');
-            }
-        }
 
         // ensure email is unique except for current user
         $exists = DB::table('users')->where('email', $data['email'])->where('uuid', '<>', $user->uuid)->exists();
@@ -366,12 +377,6 @@ class AdminUserController extends Controller
         }
 
         $user->save();
-
-        // sync single role
-        $roleModel = Role::query()->where('name', $data['role'])->first();
-        if ($roleModel) {
-            $user->roles()->sync([$roleModel->id]);
-        }
 
         return redirect()->route('admin.users')->with('success', 'User updated successfully.');
     }

@@ -40,10 +40,13 @@ function formatStudentName(s: Student) {
     const last = (s.last_name || '').trim();
     const first = (s.first_name || '').trim();
     const middle = (s.middle_name || '').trim();
+
     if (last || first || middle) {
         const mi = middle ? ` ${middle.charAt(0).toUpperCase()}` : '';
+
         return last ? `${last}, ${first}${mi}`.trim() : `${first}${mi}`.trim();
     }
+
     return s.name || '-';
 }
 
@@ -62,11 +65,14 @@ export default function ManageStudents() {
     useEffect(() => {
         if (initialRender.current) {
             initialRender.current = false;
+
             return;
         }
+
         const timer = window.setTimeout(() => {
             reload({ q: query, per_page: perPage, sort_by: sortBy, sort_direction: sortDirection });
         }, 250);
+
         return () => window.clearTimeout(timer);
     }, [query, perPage, sortBy, sortDirection]);
 
@@ -86,6 +92,7 @@ export default function ManageStudents() {
     function sortLabel(column: string, label: string) {
         const active = sortBy === column;
         const arrow = active ? (sortDirection === 'asc' ? ' ↑' : ' ↓') : '';
+
         return `${label}${arrow}`;
     }
 

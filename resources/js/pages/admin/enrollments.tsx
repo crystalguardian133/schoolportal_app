@@ -1,8 +1,39 @@
 import type { PageProps } from '@inertiajs/core';
 import { Head, router, usePage } from '@inertiajs/react';
-import { useEffect, useRef, useState } from 'react';
-import { PortalPageShell } from '@/components/portal-page-shell';
+import {
+    BookOpen,
+    CheckCircle2,
+    CheckSquare,
+    ChevronLeft,
+    ChevronRight,
+    CircleAlert,
+    GraduationCap,
+    Info,
+    Search,
+    UserPlus,
+    Users,
+} from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { PageLoader } from '@/components/page-loader';
+import { PortalPageShell } from '@/components/portal-page-shell';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectSeparator,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 
 type Student = {
     uuid: string;
@@ -46,6 +77,9 @@ type EnrollmentsPageProps = PageProps & {
     filters?: EnrollmentsFilters;
 };
 
+const MAX_INLINE_SUBJECTS = 2;
+const ALL_SECTIONS_VALUE = '__all__';
+
 export default function AdminEnrollments() {
     const { props } = usePage<EnrollmentsPageProps>();
     const studentsProp = props.students || {
@@ -54,9 +88,14 @@ export default function AdminEnrollments() {
         last_page: 1,
         total: 0,
     };
-    const students: Student[] = studentsProp.data || [];
-    const classSections: ClassSection[] = props.classSections || [];
-    const selectedSection: ClassSection | null = props.selectedSection || null;
+    const students: Student[] = useMemo(
+        () => studentsProp.data || [],
+        [studentsProp.data],
+    );
+    const classSections: ClassSection[] = useMemo(
+        () => props.classSections || [],
+        [props.classSections],
+    );
     const filters = props.filters || {
         q: '',
         per_page: 25,
@@ -64,16 +103,13 @@ export default function AdminEnrollments() {
         sort_by: 'name',
         sort_direction: 'asc',
     };
-    const selectedSectionGrade = selectedSection?.grade_level ?? null;
 
     const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
     const [query, setQuery] = useState<string>(filters.q ?? '');
     const [perPage, setPerPage] = useState<number>(
         typeof filters.per_page === 'number' ? filters.per_page : 25,
     );
-    const [classSectionUuid, setClassSectionUuid] = useState<string>(
-        filters.section_uuid ?? classSections[0]?.uuid ?? '',
-    );
+    const [classSectionUuid, setClassSectionUuid] = useState<string>('');
     const [sortBy, setSortBy] = useState<'name' | 'grade_level'>(
         filters.sort_by ?? 'name',
     );
@@ -81,7 +117,112 @@ export default function AdminEnrollments() {
         filters.sort_direction ?? 'asc',
     );
     const [submitting, setSubmitting] = useState(false);
+    const [subjectsModalOpen, setSubjectsModalOpen] = useState(false);
     const initialRender = useRef(true);
+
+    const selectedSection: ClassSection | null =
+        classSections.find((section) => section.uuid === classSectionUuid) ??
+        null;
+    const selectedSectionGrade = selectedSection?.grade_level ?? null;
+
+    const selectedStudentsData = useMemo(
+        () =>
+            students.filter((student) =>
+                selectedStudents.includes(student.uuid),
+            ),
+        [students, selectedStudents],
+    );
+
+    const dropdownSections = useMemo(() => {
+        if (selectedStudentsData.length === 0) {
+            return classSections;
+        }
+
+        const grades = selectedStudentsData
+            .map((student) => student.grade_level)
+            .filter((grade): grade is string => Boolean(grade));
+
+        if (grades.length === 0) {
+            return classSections;
+        }
+
+        return classSections.filter(
+            (section) =>
+                grades.length > 0 &&
+                grades.every((grade) => grade === section.grade_level),
+        );
+    }, [classSections, selectedStudentsData]);
+
+    const visibleStudents = useMemo(() => {
+        if (!selectedSection) {
+            return students;
+        }
+
+        const targetGrade = selectedSection.grade_level;
+
+        return students.filter(
+            (student) =>
+                !student.grade_level || student.grade_level === targetGrade,
+        );
+    }, [students, selectedSection]);
+
+    const anchorGrade =
+        selectedStudents.length > 0
+            ? (students.find(
+                  (student) => student.uuid === selectedStudents[0],
+              )?.grade_level ?? null)
+            : null;
+
+    const compatibleVisibleStudents = useMemo(
+        () =>
+            anchorGrade
+                ? visibleStudents.filter(
+                      (student) =>
+                          !student.grade_level ||
+                          student.grade_level === anchorGrade,
+                  )
+                : visibleStudents,
+        [visibleStudents, anchorGrade],
+    );
+
+    function isStudentMismatched(student: Student | undefined): boolean {
+        if (!student) {
+            return false;
+        }
+
+        return (
+            anchorGrade != null &&
+            student.grade_level != null &&
+            student.grade_level !== anchorGrade
+        );
+    }
+
+    function sectionUuidForSelection(nextSelected: string[]): string {
+        if (classSectionUuid === ALL_SECTIONS_VALUE) {
+            return ALL_SECTIONS_VALUE;
+        }
+
+        if (nextSelected.length === 0) {
+            return classSectionUuid;
+        }
+
+        const grades = students
+            .filter((student) => nextSelected.includes(student.uuid))
+            .map((student) => student.grade_level)
+            .filter((grade): grade is string => Boolean(grade));
+
+        if (grades.length === 0) {
+            return classSectionUuid;
+        }
+
+        const compatible = classSections.some(
+            (section) =>
+                section.uuid === classSectionUuid &&
+                grades.every((grade) => grade === section.grade_level),
+        );
+
+        return compatible ? classSectionUuid : '';
+    }
 
     useEffect(() => {
         if (initialRender.current) {
@@ -95,21 +236,56 @@ export default function AdminEnrollments() {
             reload({
                 q: query,
                 per_page: perPage,
-                section_uuid: classSectionUuid || undefined,
                 sort_by: sortBy,
                 sort_direction: sortDirection,
             });
         }, 250);
 
         return () => window.clearTimeout(timer);
-    }, [query, perPage, classSectionUuid, sortBy, sortDirection]);
+    }, [query, perPage, sortBy, sortDirection]);
 
     function toggleStudent(uuid: string) {
-        setSelectedStudents((prev) =>
-            prev.includes(uuid)
-                ? prev.filter((item) => item !== uuid)
-                : [...prev, uuid],
-        );
+        if (isStudentMismatched(students.find((item) => item.uuid === uuid))) {
+            return;
+        }
+
+        const next = selectedStudents.includes(uuid)
+            ? selectedStudents.filter((item) => item !== uuid)
+            : [...selectedStudents, uuid];
+
+        setSelectedStudents(next);
+        setClassSectionUuid(sectionUuidForSelection(next));
+    }
+
+    function handleSectionChange(uuid: string) {
+        if (uuid === ALL_SECTIONS_VALUE) {
+            setClassSectionUuid(ALL_SECTIONS_VALUE);
+            setSubjectsModalOpen(false);
+
+            return;
+        }
+
+        const section =
+            classSections.find((item) => item.uuid === uuid) ?? null;
+
+        setClassSectionUuid(uuid);
+        setSubjectsModalOpen(false);
+
+        if (section) {
+            setSelectedStudents((prev) =>
+                prev.filter((studentUuid) => {
+                    const student = students.find(
+                        (item) => item.uuid === studentUuid,
+                    );
+
+                    return (
+                        !student ||
+                        !student.grade_level ||
+                        student.grade_level === section.grade_level
+                    );
+                }),
+            );
+        }
     }
 
     function reload(
@@ -122,7 +298,15 @@ export default function AdminEnrollments() {
     }
 
     function enroll() {
-        if (!classSectionUuid) {
+        if (!selectedSection) {
+            return;
+        }
+
+        const eligibleStudents = selectedStudents.filter((uuid) =>
+            visibleStudents.some((student) => student.uuid === uuid),
+        );
+
+        if (eligibleStudents.length === 0) {
             return;
         }
 
@@ -131,7 +315,7 @@ export default function AdminEnrollments() {
             '/admin/enrollments',
             {
                 class_section_uuid: classSectionUuid,
-                student_uuids: selectedStudents,
+                student_uuids: eligibleStudents,
             },
             {
                 onFinish: () => setSubmitting(false),
@@ -148,7 +332,6 @@ export default function AdminEnrollments() {
                     reload({
                         q: query,
                         per_page: perPage,
-                        section_uuid: classSectionUuid,
                         sort_by: sortBy,
                         sort_direction: sortDirection,
                     });
@@ -205,7 +388,12 @@ export default function AdminEnrollments() {
     }
 
     function selectAllPage() {
-        setSelectedStudents(students.map((student) => student.uuid));
+        const next = compatibleVisibleStudents.map(
+            (student) => student.uuid,
+        );
+
+        setSelectedStudents(next);
+        setClassSectionUuid(sectionUuidForSelection(next));
     }
 
     function formatStudentName(student: Student) {
@@ -226,6 +414,26 @@ export default function AdminEnrollments() {
         return student.name;
     }
 
+    function placementStatus(status: string) {
+        const classes =
+            status === 'OK'
+                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                : status === 'Check'
+                  ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                  : 'bg-muted text-muted-foreground';
+
+        return (
+            <span
+                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${classes}`}
+            >
+                {status === 'OK' && <CheckCircle2 className="size-3" />}
+                {status === 'Check' && <CircleAlert className="size-3" />}
+                {status === 'Review' && <Info className="size-3" />}
+                {status}
+            </span>
+        );
+    }
+
     return (
         <>
             <Head title="Enroll Students" />
@@ -234,76 +442,107 @@ export default function AdminEnrollments() {
                 description="Pick a class section, then enroll a block of students into all of its pre-assigned subjects."
             >
                 <PageLoader skeleton="table">
-                <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+                <div className="grid items-start gap-4 xl:grid-cols-[1.2fr_0.8fr]">
                     <section className="rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
-                        <div className="flex flex-wrap items-end gap-2">
-                            <h2 className="text-lg font-semibold">Students</h2>
-                            <div className="ml-auto flex flex-wrap items-end gap-2">
-                                <label className="space-y-1 text-sm">
-                                    <span className="block text-muted-foreground">
-                                        Search
-                                    </span>
-                                    <input
+                        <div className="flex flex-wrap items-center gap-3">
+                            <div>
+                                <h2 className="flex items-center gap-2 text-lg font-semibold">
+                                    <Users className="size-5 text-muted-foreground" />
+                                    Students
+                                </h2>
+                                <p className="mt-1 text-xs text-muted-foreground">
+                                    Checkboxes of students with a different
+                                    grade level than the first selected student
+                                    are disabled.
+                                </p>
+                            </div>
+                            <div className="ml-auto flex flex-wrap items-center gap-2">
+                                <div className="relative">
+                                    <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+                                    <Input
                                         placeholder="Search name, student id, or section"
                                         value={query}
                                         onChange={(e) =>
                                             setQuery(e.target.value)
                                         }
-                                        className="w-64 rounded border px-2 py-1"
+                                        className="w-full pl-8 sm:w-64"
                                     />
-                                </label>
-                                <label className="space-y-1 text-sm">
-                                    <span className="block text-muted-foreground">
-                                        Per page
-                                    </span>
-                                    <select
-                                        value={perPage}
-                                        onChange={(e) =>
-                                            setPerPage(Number(e.target.value))
-                                        }
-                                        className="rounded border px-2 py-1"
-                                    >
-                                        <option value={10}>10</option>
-                                        <option value={25}>25</option>
-                                        <option value={50}>50</option>
-                                    </select>
-                                </label>
-                                <button
-                                    type="button"
-                                    onClick={selectAllPage}
-                                    className="rounded border px-3 py-1"
+                                </div>
+                                <Select
+                                    value={String(perPage)}
+                                    onValueChange={(value) =>
+                                        setPerPage(Number(value))
+                                    }
                                 >
+                                    <SelectTrigger className="w-fit gap-1.5">
+                                        <SelectValue placeholder="Per page" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {[10, 25, 50].map((size) => (
+                                            <SelectItem
+                                                key={size}
+                                                value={String(size)}
+                                            >
+                                                {size} per page
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={selectAllPage}
+                                >
+                                    <CheckSquare className="size-3.5" />
                                     Select page
-                                </button>
-                                <div className="text-sm text-muted-foreground">
-                                    {studentsProp.total ?? 0} total
+                                </Button>
+                                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                                    {selectedSection && (
+                                        <span>
+                                            {visibleStudents.length} shown of
+                                        </span>
+                                    )}
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium">
+                                        {studentsProp.total ?? 0} total
+                                    </span>
                                 </div>
                             </div>
                         </div>
 
                         <div className="table-scroll-container table-scroll-small mt-4 rounded-xl border border-sidebar-border/70">
                             <table className="min-w-full divide-y divide-sidebar-border/70 text-sm">
-                                <thead className="bg-sidebar/60 text-left text-muted-foreground">
+                                <thead className="bg-sidebar/60 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
                                     <tr>
                                         <th className="px-4 py-3 font-medium">
-                                            <input
-                                                type="checkbox"
+                                            <Checkbox
                                                 checked={
-                                                    students.length > 0 &&
-                                                    selectedStudents.length ===
-                                                        students.length
+                                                    selectedStudents.length > 0 &&
+                                                    selectedStudents.length <
+                                                        compatibleVisibleStudents.length
+                                                        ? 'indeterminate'
+                                                        : compatibleVisibleStudents.length >
+                                                              0 &&
+                                                            selectedStudents.length ===
+                                                                compatibleVisibleStudents.length
                                                 }
-                                                onChange={() =>
-                                                    setSelectedStudents(
+                                                onCheckedChange={() => {
+                                                    const next =
                                                         selectedStudents.length ===
-                                                            students.length
+                                                        compatibleVisibleStudents.length
                                                             ? []
-                                                            : students.map(
+                                                            : compatibleVisibleStudents.map(
                                                                   (student) =>
                                                                       student.uuid,
-                                                              ),
-                                                    )
-                                                }
+                                                              );
+
+                                                    setSelectedStudents(next);
+                                                    setClassSectionUuid(
+                                                        sectionUuidForSelection(
+                                                            next,
+                                                        ),
+                                                    );
+                                                }}
                                             />
                                         </th>
                                         <th className="px-4 py-3 font-medium">
@@ -318,7 +557,7 @@ export default function AdminEnrollments() {
                                                 onClick={() =>
                                                     toggleSort('grade_level')
                                                 }
-                                                className="flex items-center gap-1 text-left hover:text-foreground"
+                                                className="flex items-center gap-1 text-left font-medium hover:text-foreground"
                                             >
                                                 {sortLabel(
                                                     'grade_level',
@@ -327,19 +566,37 @@ export default function AdminEnrollments() {
                                             </button>
                                         </th>
                                         <th className="px-4 py-3 font-medium">
-                                            Last Grade Level
+                                            Last Grade
                                         </th>
                                         <th className="px-4 py-3 font-medium">
                                             Last Section
                                         </th>
                                         <th className="px-4 py-3 font-medium">
-                                            Placement Check
+                                            Placement
                                         </th>
                                         <th className="px-4 py-3 font-medium"></th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-sidebar-border/70 bg-white dark:bg-sidebar">
-                                    {students.map((student) => {
+                                    {visibleStudents.length === 0 && (
+                                        <tr>
+                                            <td
+                                                colSpan={8}
+                                                className="px-4 py-12 text-center"
+                                            >
+                                                <Users className="mx-auto size-8 text-muted-foreground/50" />
+                                                <p className="mt-2 text-sm font-medium text-foreground">
+                                                    No students found
+                                                </p>
+                                                <p className="mt-1 text-sm text-muted-foreground">
+                                                    {selectedSection
+                                                        ? "No students match the selected section's grade level."
+                                                        : 'Try adjusting your search or filters.'}
+                                                </p>
+                                            </td>
+                                        </tr>
+                                    )}
+                                    {visibleStudents.map((student) => {
                                         const placementCheck =
                                             !selectedSectionGrade ||
                                             !student.grade_level
@@ -357,12 +614,14 @@ export default function AdminEnrollments() {
                                                 className="hover:bg-sidebar-accent/40"
                                             >
                                                 <td className="px-4 py-3">
-                                                    <input
-                                                        type="checkbox"
+                                                    <Checkbox
                                                         checked={selectedStudents.includes(
                                                             student.uuid,
                                                         )}
-                                                        onChange={() =>
+                                                        disabled={isStudentMismatched(
+                                                            student,
+                                                        )}
+                                                        onCheckedChange={() =>
                                                             toggleStudent(
                                                                 student.uuid,
                                                             )
@@ -390,7 +649,9 @@ export default function AdminEnrollments() {
                                                         'N/A'}
                                                 </td>
                                                 <td className="px-4 py-3 text-muted-foreground">
-                                                    {placementCheck}
+                                                    {placementStatus(
+                                                        placementCheck,
+                                                    )}
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     {(() => {
@@ -401,25 +662,27 @@ export default function AdminEnrollments() {
                                                                 student.last_grade_level;
 
                                                         return (
-                                                            <button
+                                                            <Button
                                                                 type="button"
+                                                                size="sm"
                                                                 disabled={alreadyPromoted}
                                                                 onClick={() =>
                                                                     promoteStudent(
                                                                         student.uuid,
                                                                     )
                                                                 }
-                                                                className="rounded px-3 py-1 text-xs text-white disabled:cursor-not-allowed disabled:opacity-50 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300"
+                                                                className="bg-amber-500 text-white hover:bg-amber-600 disabled:bg-amber-300"
                                                                 title={
                                                                     alreadyPromoted
                                                                         ? 'Student has already been promoted'
                                                                         : undefined
                                                                 }
                                                             >
+                                                                <GraduationCap className="size-3.5" />
                                                                 {alreadyPromoted
                                                                     ? 'Promoted'
                                                                     : 'Promote'}
-                                                            </button>
+                                                            </Button>
                                                         );
                                                     })()}
                                                 </td>
@@ -430,8 +693,10 @@ export default function AdminEnrollments() {
                             </table>
                         </div>
 
-                        <div className="mt-3 flex items-center gap-2">
-                            <button
+                        <div className="mt-3 flex items-center justify-between gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
                                 disabled={studentsProp.current_page <= 1}
                                 onClick={() =>
                                     reload({
@@ -440,21 +705,21 @@ export default function AdminEnrollments() {
                                         page:
                                             (studentsProp.current_page || 1) -
                                             1,
-                                        section_uuid:
-                                            classSectionUuid || undefined,
                                         sort_by: sortBy,
                                         sort_direction: sortDirection,
                                     })
                                 }
-                                className="rounded border px-3 py-1 disabled:opacity-50"
                             >
+                                <ChevronLeft className="size-3.5" />
                                 Prev
-                            </button>
+                            </Button>
                             <div className="text-sm text-muted-foreground">
                                 Page {studentsProp.current_page} of{' '}
                                 {studentsProp.last_page}
                             </div>
-                            <button
+                            <Button
+                                variant="outline"
+                                size="sm"
                                 disabled={
                                     (studentsProp.current_page || 1) >=
                                     (studentsProp.last_page || 1)
@@ -466,25 +731,24 @@ export default function AdminEnrollments() {
                                         page:
                                             (studentsProp.current_page || 1) +
                                             1,
-                                        section_uuid:
-                                            classSectionUuid || undefined,
                                         sort_by: sortBy,
                                         sort_direction: sortDirection,
                                     })
                                 }
-                                className="rounded border px-3 py-1 disabled:opacity-50"
                             >
                                 Next
-                            </button>
+                                <ChevronRight className="size-3.5" />
+                            </Button>
                         </div>
                     </section>
 
-                    <section className="space-y-4 rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
+                    <section className="flex flex-col space-y-4 self-stretch rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
                         <div>
-                            <h2 className="text-lg font-semibold">
+                            <h2 className="flex items-center gap-2 text-lg font-semibold">
+                                <GraduationCap className="size-5 text-muted-foreground" />
                                 Class Section Target
                             </h2>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="mt-1 text-sm text-muted-foreground">
                                 Choose a class section and the selected students
                                 will be enrolled into every subject attached to
                                 it.
@@ -492,69 +756,127 @@ export default function AdminEnrollments() {
                         </div>
 
                         <div className="rounded-xl border border-sidebar-border/70 p-4">
-                            <label className="text-sm font-medium">
+                            <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                                 Class Section
-                            </label>
-                            <select
-                                value={classSectionUuid}
-                                onChange={(e) =>
-                                    setClassSectionUuid(e.target.value)
+                            </div>
+                            <Select
+                                value={classSectionUuid || undefined}
+                                onValueChange={(value) =>
+                                    handleSectionChange(value)
                                 }
-                                className="mt-2 w-full rounded border px-2 py-2"
                             >
-                                <option value="">
-                                    -- Select class section --
-                                </option>
-                                {classSections.map((section) => (
-                                    <option
-                                        key={section.uuid}
-                                        value={section.uuid}
-                                    >
-                                        {section.name}{' '}
-                                        {section.grade_level
-                                            ? `· ${section.grade_level}`
-                                            : ''}{' '}
-                                        {section.school_year
-                                            ? `· ${section.school_year}`
-                                            : ''}
-                                    </option>
-                                ))}
-                            </select>
+                                <SelectTrigger className="mt-2 w-full">
+                                    <SelectValue placeholder="-- Select class section --" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value={ALL_SECTIONS_VALUE}>
+                                        Show all students
+                                    </SelectItem>
+                                    <SelectSeparator />
+                                    {dropdownSections.map((section) => (
+                                        <SelectItem
+                                            key={section.uuid}
+                                            value={section.uuid}
+                                        >
+                                            {section.name}
+                                            {section.grade_level
+                                                ? ` · ${section.grade_level}`
+                                                : ''}
+                                            {section.school_year
+                                                ? ` · ${section.school_year}`
+                                                : ''}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            {selectedStudentsData.length > 0 &&
+                                dropdownSections.length === 0 && (
+                                    <p className="mt-2 flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+                                        <CircleAlert className="size-3.5 shrink-0" />
+                                        No class sections match the selected
+                                        students' grade level.
+                                    </p>
+                                )}
                             {selectedSection && (
-                                <div className="mt-3 rounded-lg border border-sidebar-border/70 p-3 text-sm">
+                                <div className="mt-3 rounded-lg border border-sidebar-border/70 bg-sidebar/30 p-3 text-sm dark:bg-sidebar/40">
                                     <div className="font-medium text-sidebar-foreground">
                                         {selectedSection.name}
                                     </div>
-                                    <div className="text-muted-foreground">
-                                        {selectedSection.grade_level ??
-                                            'Grade n/a'}{' '}
-                                        ·{' '}
-                                        {selectedSection.school_year ??
-                                            'School year auto-assigned'}
+                                    <div className="mt-2 flex flex-wrap gap-1.5">
+                                        <span className="inline-flex items-center rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-medium text-sky-700 dark:bg-sky-900/30 dark:text-sky-300">
+                                            {selectedSection.grade_level ??
+                                                'Grade n/a'}
+                                        </span>
+                                        <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+                                            {selectedSection.school_year ??
+                                                'School year auto-assigned'}
+                                        </span>
+                                        <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
+                                            <BookOpen className="size-3" />
+                                            {selectedSection.subject_count}{' '}
+                                            subject(s)
+                                        </span>
                                     </div>
-                                    <div className="mt-2 text-muted-foreground">
-                                        {selectedSection.subject_count}{' '}
-                                        subject(s) attached
-                                    </div>
-                                    <div className="mt-1 text-muted-foreground">
+                                    <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+                                        <Info className="size-3.5 shrink-0" />
                                         Students are checked against the
                                         selected section's level before
                                         enrollment.
-                                    </div>
+                                    </p>
                                     <div className="mt-3">
-                                        <div className="text-sm font-medium">
-                                            Subjects
+                                        <div className="flex items-center justify-between gap-2">
+                                            <div className="flex items-center gap-1.5 text-sm font-medium">
+                                                <BookOpen className="size-3.5 text-muted-foreground" />
+                                                Subjects
+                                            </div>
+                                            {selectedSection.subjects.length >
+                                                MAX_INLINE_SUBJECTS && (
+                                                <Button
+                                                    type="button"
+                                                    variant="link"
+                                                    size="sm"
+                                                    className="h-auto px-0 text-xs text-sky-600 dark:text-sky-400"
+                                                    onClick={() =>
+                                                        setSubjectsModalOpen(
+                                                            true,
+                                                        )
+                                                    }
+                                                >
+                                                    View all{' '}
+                                                    {
+                                                        selectedSection.subjects
+                                                            .length
+                                                    }{' '}
+                                                    subjects
+                                                </Button>
+                                            )}
                                         </div>
-                                        <ul className="mt-2 space-y-1 text-muted-foreground">
-                                            {selectedSection.subjects.map(
-                                                (subject) => (
-                                                    <li key={subject.uuid}>
-                                                        {subject.name}{' '}
-                                                        {subject.code
-                                                            ? `(${subject.code})`
-                                                            : ''}
+                                        <ul className="mt-2 space-y-1.5 text-muted-foreground">
+                                            {selectedSection.subjects
+                                                .slice(0, MAX_INLINE_SUBJECTS)
+                                                .map((subject) => (
+                                                    <li
+                                                        key={subject.uuid}
+                                                        className="flex items-center gap-2"
+                                                    >
+                                                        <span className="size-1.5 shrink-0 rounded-full bg-muted-foreground/40" />
+                                                        <span>
+                                                            {subject.name}{' '}
+                                                            {subject.code
+                                                                ? `(${subject.code})`
+                                                                : ''}
+                                                        </span>
                                                     </li>
-                                                ),
+                                                ))}
+                                            {selectedSection.subjects.length >
+                                                MAX_INLINE_SUBJECTS && (
+                                                <li className="pt-0.5 text-xs text-muted-foreground/80">
+                                                    +
+                                                    {selectedSection.subjects
+                                                        .length -
+                                                        MAX_INLINE_SUBJECTS}{' '}
+                                                    more subjects
+                                                </li>
                                             )}
                                         </ul>
                                     </div>
@@ -563,15 +885,36 @@ export default function AdminEnrollments() {
                         </div>
 
                         <div className="rounded-xl border border-sidebar-border/70 p-4">
-                            <div className="text-sm font-medium">
-                                Selected Students
+                            <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2 text-sm font-medium">
+                                    <Users className="size-4 text-muted-foreground" />
+                                    Selected Students
+                                    {selectedStudents.length > 0 && (
+                                        <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                                            {selectedStudents.length}
+                                        </span>
+                                    )}
+                                </div>
+                                {selectedStudents.length > 0 && (
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-auto px-2 text-xs text-muted-foreground hover:text-destructive"
+                                        onClick={() => {
+                                            setSelectedStudents([]);
+                                            setClassSectionUuid(
+                                                sectionUuidForSelection([]),
+                                            );
+                                        }}
+                                    >
+                                        Clear
+                                    </Button>
+                                )}
                             </div>
-                            <div className="mt-2 text-sm text-muted-foreground">
-                                {selectedStudents.length} student(s) selected
-                            </div>
-                            <div className="mt-3 max-h-48 overflow-auto rounded border border-sidebar-border/70 p-2 text-sm">
+                            <div className="mt-3 max-h-48 space-y-0.5 overflow-auto rounded-lg border border-sidebar-border/70 p-2 text-sm">
                                 {selectedStudents.length > 0 ? (
-                                    students
+                                    visibleStudents
                                         .filter((student) =>
                                             selectedStudents.includes(
                                                 student.uuid,
@@ -580,24 +923,28 @@ export default function AdminEnrollments() {
                                         .map((student) => (
                                             <div
                                                 key={student.uuid}
-                                                className="flex items-center justify-between py-1"
+                                                className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 hover:bg-sidebar-accent/40"
                                             >
-                                                <span>{student.name}</span>
-                                                <span className="text-muted-foreground">
+                                                <span className="truncate font-medium text-sidebar-foreground">
+                                                    {student.name}
+                                                </span>
+                                                <span className="shrink-0 text-xs text-muted-foreground">
                                                     {student.student_id}
                                                 </span>
                                             </div>
                                         ))
                                 ) : (
-                                    <div className="text-muted-foreground">
+                                    <div className="flex flex-col items-center gap-1.5 px-2 py-6 text-center text-muted-foreground">
+                                        <Users className="size-5 text-muted-foreground/50" />
                                         No students selected.
                                     </div>
                                 )}
                             </div>
                         </div>
 
-                        <div className="rounded-xl border border-sidebar-border/70 p-4">
-                            <div className="text-sm font-medium">
+                        <div className="rounded-xl border border-sidebar-border/70 bg-sidebar/30 p-4 dark:bg-sidebar/40">
+                            <div className="flex items-center gap-2 text-sm font-medium">
+                                <UserPlus className="size-4 text-muted-foreground" />
                                 Create Student
                             </div>
                             <div className="mt-2 text-sm text-muted-foreground">
@@ -605,32 +952,120 @@ export default function AdminEnrollments() {
                                 page.
                             </div>
                             <div className="mt-3">
-                                <button
+                                <Button
                                     type="button"
                                     onClick={openCreateStudentPage}
-                                    className="rounded bg-indigo-600 px-4 py-2 text-white"
+                                    className="w-full bg-indigo-600 hover:bg-indigo-500"
                                 >
+                                    <UserPlus className="size-4" />
                                     Open Create Student Page
-                                </button>
+                                </Button>
                             </div>
                         </div>
 
-                        <button
+                        <Button
+                            type="button"
+                            size="lg"
                             disabled={
                                 submitting ||
-                                !classSectionUuid ||
+                                !selectedSection ||
                                 selectedStudents.length === 0
                             }
                             onClick={enroll}
-                            className="rounded bg-emerald-600 px-4 py-2 text-white disabled:opacity-50"
+                            className="mt-auto w-full bg-emerald-600 hover:bg-emerald-500"
                         >
+                            <GraduationCap className="size-4" />
                             {submitting
                                 ? 'Enrolling…'
                                 : 'Enroll Block Into Section'}
-                        </button>
+                        </Button>
                     </section>
                 </div>
                 </PageLoader>
+
+                {selectedSection && (
+                    <Dialog
+                        open={subjectsModalOpen}
+                        onOpenChange={setSubjectsModalOpen}
+                    >
+                        <DialogContent className="max-w-2xl">
+                            <DialogHeader>
+                                <DialogTitle className="flex items-center gap-2">
+                                    <GraduationCap className="size-5 text-muted-foreground" />
+                                    {selectedSection.name}
+                                </DialogTitle>
+                                <DialogDescription>
+                                    {selectedSection.grade_level ??
+                                        'Grade n/a'}{' '}
+                                    ·{' '}
+                                    {selectedSection.school_year ??
+                                        'School year auto-assigned'}
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="mt-4 grid gap-6 sm:grid-cols-2">
+                                <div>
+                                    <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                                        <BookOpen className="size-4 text-muted-foreground" />
+                                        Subjects (
+                                        {selectedSection.subjects.length})
+                                    </div>
+                                    <ul className="mt-2 max-h-80 space-y-1 overflow-auto rounded-lg border border-sidebar-border/70 p-3 text-sm text-muted-foreground">
+                                        {selectedSection.subjects.map(
+                                            (subject) => (
+                                                <li
+                                                    key={subject.uuid}
+                                                    className="flex items-center gap-2 rounded-md px-1 py-1 hover:bg-sidebar-accent/40"
+                                                >
+                                                    <span className="size-1.5 shrink-0 rounded-full bg-muted-foreground/40" />
+                                                    {subject.name}{' '}
+                                                    {subject.code
+                                                        ? `(${subject.code})`
+                                                        : ''}
+                                                </li>
+                                            ),
+                                        )}
+                                    </ul>
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                                        <Users className="size-4 text-muted-foreground" />
+                                        Selected Students (
+                                        {selectedStudents.length})
+                                    </div>
+                                    <ul className="mt-2 max-h-80 space-y-1 overflow-auto rounded-lg border border-sidebar-border/70 p-3 text-sm text-muted-foreground">
+                                        {selectedStudents.length > 0 ? (
+                                            visibleStudents
+                                                .filter((student) =>
+                                                    selectedStudents.includes(
+                                                        student.uuid,
+                                                    ),
+                                                )
+                                                .map((student) => (
+                                                    <li
+                                                        key={student.uuid}
+                                                        className="flex items-center justify-between gap-2 rounded-md px-1 py-1 hover:bg-sidebar-accent/40"
+                                                    >
+                                                        <span className="truncate">
+                                                            {student.name}
+                                                        </span>
+                                                        <span className="shrink-0 text-xs">
+                                                            {
+                                                                student.student_id
+                                                            }
+                                                        </span>
+                                                    </li>
+                                                ))
+                                        ) : (
+                                            <li className="px-1 py-4 text-center">
+                                                No students selected.
+                                            </li>
+                                        )}
+                                    </ul>
+                                </div>
+                            </div>
+                        </DialogContent>
+                    </Dialog>
+                )}
             </PortalPageShell>
         </>
     );

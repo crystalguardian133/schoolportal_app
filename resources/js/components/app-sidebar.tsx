@@ -41,11 +41,21 @@ import { dashboard } from '@/routes';
 import type { NavItem } from '@/types';
 import type { Auth } from '@/types/auth';
 
-const mainNavItems: NavItem[] = [
+const platformNavItems: NavItem[] = [
     {
         title: 'Dashboard',
         href: dashboard().url,
         icon: LayoutGrid,
+    },
+    {
+        title: 'Announcements',
+        href: '/student/announcements',
+        icon: Bell,
+    },
+    {
+        title: 'Reports & Feedback',
+        href: '/feedback',
+        icon: MessageSquare,
     },
 ];
 
@@ -451,52 +461,81 @@ export function AppSidebar() {
 
     const hasPermission = (permission?: string) => {
         if (!permission) {
-return true;
-}
-
-        const noAccessAdminBypass = ['manage assignments', 'manage subjects', 'access developer dashboard', 'access music player'];
-
-        if (permissions.includes('access admin') && !noAccessAdminBypass.includes(permission)) {
-return true;
-}
+            return true;
+        }
 
         if (auth.user?.is_adviser && ['assign subjects', 'manage schedules'].includes(permission)) {
-return true;
-}
+            return true;
+        }
 
         return permissions.includes(permission);
     };
 
-    let sectionLabel: string | null;
+    const hasAnyItemPermission = (items: NavItem[]) =>
+        items.some((item) => item.permission && hasPermission(item.permission));
 
-    if (isDeveloper) {
-        sectionLabel = 'Developer';
-    } else if (isSchoolHead) {
-        sectionLabel = 'School Administration';
-    } else if (isAdmin) {
-        sectionLabel = 'Administrative Tools';
-    } else if (isDeptHead) {
-        sectionLabel = 'Department Management';
-    } else if (isTeacher) {
-        sectionLabel = 'Teaching Tools';
-    } else if (isStaff) {
-        sectionLabel = 'Staff Portal';
-    } else {
-        sectionLabel = isStudent ? null : 'Platform';
-    }
+    const portals: { items: NavItem[]; enabled: boolean }[] = [
+        { items: developerNavItems, enabled: isDeveloper || hasAnyItemPermission(developerNavItems) },
+        { items: schoolHeadNavItems, enabled: isSchoolHead || hasAnyItemPermission(schoolHeadNavItems) },
+        { items: adminNavItems, enabled: isAdmin || hasAnyItemPermission(adminNavItems) },
+        { items: deptHeadNavItems, enabled: isDeptHead || hasAnyItemPermission(deptHeadNavItems) },
+        { items: teacherNavItems, enabled: isTeacher || hasAnyItemPermission(teacherNavItems) },
+        { items: staffNavItems, enabled: isStaff || hasAnyItemPermission(staffNavItems) },
+    ];
+
+    const sectionLabel = isStudent
+        ? null
+        : isDeveloper
+          ? 'Developer'
+          : isSchoolHead
+            ? 'School Administration'
+            : isAdmin
+              ? 'Administrative Tools'
+              : isDeptHead
+                ? 'Department Management'
+                : isTeacher
+                  ? 'Teaching Tools'
+                  : isStaff
+                    ? 'Staff Portal'
+                    : 'Platform';
+
+    const portalFlags = [isDeveloper, isSchoolHead, isAdmin, isDeptHead, isTeacher, isStaff];
+    const hasPrimaryPortal = portalFlags.some(Boolean);
 
     const allNavArrays: NavItem[][] = [];
-    if (isDeveloper) allNavArrays.push(developerNavItems);
-    if (isSchoolHead) allNavArrays.push(schoolHeadNavItems);
-    if (isAdmin) allNavArrays.push(adminNavItems);
-    if (isDeptHead) allNavArrays.push(deptHeadNavItems);
-    if (isTeacher) allNavArrays.push(teacherNavItems);
-    if (isStaff) allNavArrays.push(staffNavItems);
-    if (isStudent) allNavArrays.push(studentNavItems);
-    if (hasPermission('access music player')) allNavArrays.push(musicPlayerNavItem);
+
+    if (!isStudent && !hasPrimaryPortal) {
+        allNavArrays.push(platformNavItems);
+    }
+
+    const enabledPortals = portals
+        .map((portal, index) => ({ portal, flag: portalFlags[index] }))
+        .filter(({ portal }) => portal.enabled)
+        .sort((a, b) => Number(b.flag) - Number(a.flag));
+
+    for (const { portal, flag } of enabledPortals) {
+        if (flag) {
+            allNavArrays.push(portal.items);
+        } else {
+            const gated = portal.items.filter((item) => item.permission && hasPermission(item.permission));
+
+            if (gated.length > 0) {
+                allNavArrays.push(gated);
+            }
+        }
+    }
+
+    if (isStudent) {
+        allNavArrays.push(studentNavItems);
+    }
+
+    if (hasPermission('access music player')) {
+        allNavArrays.push(musicPlayerNavItem);
+    }
 
     const seen = new Set<string>();
     let navItems: NavItem[] = [];
+
     for (const arr of allNavArrays) {
         for (const item of arr) {
             if (!seen.has(item.href)) {
@@ -507,6 +546,10 @@ return true;
     }
 
     navItems = navItems.filter((item) => hasPermission(item.permission));
+
+    if (navItems.length === 0 && !isStudent) {
+        navItems = platformNavItems;
+    }
 
     return (
         <Sidebar collapsible="icon" variant="inset">

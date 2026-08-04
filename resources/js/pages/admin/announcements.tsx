@@ -11,6 +11,7 @@ import {
 import { useEffect, useState } from 'react';
 import { AnnouncementModal } from '@/components/announcement-modal';
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { PageLoader } from '@/components/page-loader';
 import { PortalPageShell } from '@/components/portal-page-shell';
 import { Button } from '@/components/ui/button';
 import {
@@ -24,7 +25,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAnnouncementRealtime } from '@/hooks/use-announcement-realtime';
-import { PageLoader } from '@/components/page-loader';
 
 type AnnouncementRow = {
     uuid: string;

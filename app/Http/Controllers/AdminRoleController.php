@@ -47,57 +47,9 @@ class AdminRoleController extends Controller
             ->values()
             ->all();
 
-        $usersQuery = User::query()
-            ->with(['roles' => function ($q) {
-                $q->withPivot('expires_at');
-            }]);
-
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $usersQuery->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%");
-            });
-        }
-
-        $perPage = (int) $request->query('per_page', 10);
-        $pageName = 'users_page';
-
-        $usersPaginator = $usersQuery
-            ->orderBy('name')
-            ->paginate($perPage, ['*'], $pageName)
-            ->withQueryString();
-
-        $users = $usersPaginator
-            ->getCollection()
-            ->map(function (User $user) {
-                $activeRoles = $user->roles->filter(fn ($role) => ! $role->pivot->expires_at || \Carbon\Carbon::parse($role->pivot->expires_at)->isFuture());
-
-                return [
-                    'uuid' => $user->uuid,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'roles' => $activeRoles->map(fn ($role) => [
-                        'id' => $role->id,
-                        'name' => $role->name,
-                        'icon' => $role->icon,
-                        'expires_at' => $role->pivot->expires_at?->toIso8601String(),
-                    ])->values()->all(),
-                ];
-            })
-            ->values()
-            ->all();
-
         return inertia('admin/roles', [
             'roles' => $roles,
             'permissions' => $permissions,
-            'users' => $users,
-            'usersPagination' => [
-                'current_page' => $usersPaginator->currentPage(),
-                'last_page' => $usersPaginator->lastPage(),
-                'total' => $usersPaginator->total(),
-            ],
-            'filters' => $request->only(['search', 'per_page']),
             'hasAccessAdmin' => $request->user()->hasPermission('access admin'),
         ]);
     }
@@ -199,6 +151,26 @@ class AdminRoleController extends Controller
         ]);
 
         $user = User::query()->where('uuid', $data['user_uuid'])->firstOrFail();
+
+        // prevent removing your own last admin-level role
+        $currentUser = $request->user();
+        $adminRoles = ['admin', 'principal', 'registrar'];
+        if ($currentUser && $currentUser->uuid === $user->uuid) {
+            $roleName = DB::table('roles')->where('id', $data['role_uuid'])->value('name');
+            if (in_array($roleName, $adminRoles)) {
+                $hasOtherAdminRole = $user->roles()
+                    ->wherePivot('expires_at', null)
+                    ->orWherePivot('expires_at', '>', \Carbon\Carbon::now())
+                    ->whereIn('roles.name', $adminRoles)
+                    ->where('roles.name', '<>', $roleName)
+                    ->exists();
+
+                if (! $hasOtherAdminRole) {
+                    return back()->with('error', 'Cannot remove your last admin-level role.');
+                }
+            }
+        }
+
         $user->removeRole($data['role_uuid']);
 
         return back()->with('success', 'Role removed successfully.');

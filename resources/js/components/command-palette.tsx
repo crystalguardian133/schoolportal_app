@@ -1,6 +1,6 @@
 import { Command } from 'cmdk';
-import { useEffect, useState } from 'react';
 import { Search, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 export type CommandItem = {
     id: string;
@@ -20,27 +20,40 @@ export function CommandPalette({ items, open, onClose, placeholder = 'Search...'
     const [search, setSearch] = useState('');
 
     useEffect(() => {
-        if (!open) setSearch('');
+        if (!open) {
+setSearch('');
+}
     }, [open]);
 
     useEffect(() => {
         function onKeyDown(e: KeyboardEvent) {
             if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
                 e.preventDefault();
-                if (open) onClose();
+
+                if (open) {
+onClose();
+}
             }
         }
         document.addEventListener('keydown', onKeyDown);
+
         return () => document.removeEventListener('keydown', onKeyDown);
     }, [open, onClose]);
 
-    if (!open) return null;
+    if (!open) {
+return null;
+}
 
     const grouped = items.reduce(
         (acc, item) => {
             const section = item.section || 'Results';
-            if (!acc[section]) acc[section] = [];
+
+            if (!acc[section]) {
+acc[section] = [];
+}
+
             acc[section].push(item);
+
             return acc;
         },
         {} as Record<string, CommandItem[]>,

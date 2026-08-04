@@ -9,7 +9,10 @@ function roundToHundredth(n: number): number {
 }
 
 function formatGrade(n: number | null): string {
-    if (n === null || n === undefined) return '—';
+    if (n === null || n === undefined) {
+return '—';
+}
+
     return roundToHundredth(n).toFixed(2);
 }
 

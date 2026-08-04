@@ -1,5 +1,5 @@
-import { QRCodeSVG } from 'qrcode.react';
 import { X, Download } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { useRef } from 'react';
 
 type Props = {
@@ -13,11 +13,16 @@ type Props = {
 export function QrCodeModal({ open, onClose, studentName, lrn, qrToken }: Props) {
     const svgRef = useRef<HTMLDivElement>(null);
 
-    if (!open) return null;
+    if (!open) {
+return null;
+}
 
     function downloadQR() {
         const svgEl = svgRef.current?.querySelector('svg');
-        if (!svgEl) return;
+
+        if (!svgEl) {
+return;
+}
 
         const svgData = new XMLSerializer().serializeToString(svgEl);
         const canvas = document.createElement('canvas');
@@ -25,7 +30,10 @@ export function QrCodeModal({ open, onClose, studentName, lrn, qrToken }: Props)
         canvas.width = size;
         canvas.height = size;
         const ctx = canvas.getContext('2d');
-        if (!ctx) return;
+
+        if (!ctx) {
+return;
+}
 
         const img = new Image();
         img.onload = () => {

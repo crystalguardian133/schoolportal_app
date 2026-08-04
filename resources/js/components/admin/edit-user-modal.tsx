@@ -1,5 +1,5 @@
 import { router } from '@inertiajs/react';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Pencil } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -13,7 +13,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-export default function EditUserModal({ user, roles, sections, takenAdviserSections = [] }: any) {
+export default function EditUserModal({ user, sections, takenAdviserSections = [] }: any) {
     const [open, setOpen] = useState(false);
     const currentAvatarUrl = user.profile_picture
         ? `/assets/${user.profile_picture}`
@@ -41,10 +41,6 @@ export default function EditUserModal({ user, roles, sections, takenAdviserSecti
             email: user.email || '',
             password: '',
             password_confirmation: '',
-            role:
-                (user.roles && user.roles[0]) ||
-                (roles && roles[0] && roles[0].name) ||
-                '',
             is_adviser: !!user.is_adviser,
             adviser_section: user.adviser_section || '',
         };
@@ -171,12 +167,15 @@ export default function EditUserModal({ user, roles, sections, takenAdviserSecti
             }}
         >
             <DialogTrigger asChild>
-                <button
+                <Button
                     type="button"
-                    className="inline-flex items-center gap-2 text-indigo-600"
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 text-indigo-600"
                 >
+                    <Pencil className="size-3.5" />
                     Edit
-                </button>
+                </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-3xl">
                 <DialogTitle>Edit user</DialogTitle>
@@ -301,23 +300,11 @@ export default function EditUserModal({ user, roles, sections, takenAdviserSecti
                             </div>
 
                             <div className="grid gap-2">
-                                <Label className="text-xs">Role</Label>
-                                <select
-                                    value={form.role}
-                                    onChange={(e) =>
-                                        setForm({
-                                            ...form,
-                                            role: e.target.value,
-                                        })
-                                    }
-                                    className="w-full rounded-md border bg-transparent px-3 py-2 text-sm"
-                                >
-                                    {roles.map((r: any) => (
-                                        <option key={r.id} value={r.name}>
-                                            {r.name}
-                                        </option>
-                                    ))}
-                                </select>
+                                <Label className="text-xs">Roles</Label>
+                                <div className="rounded-md border border-dashed border-sidebar-border/70 px-3 py-2 text-sm text-muted-foreground">
+                                    Roles are managed from the user list with
+                                    the "Role" button.
+                                </div>
                             </div>
 
                             <label className="flex items-center gap-2 rounded-2xl border border-border px-3 py-3 text-sm text-foreground dark:text-sidebar-foreground">

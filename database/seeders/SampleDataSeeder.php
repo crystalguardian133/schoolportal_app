@@ -78,7 +78,24 @@ class SampleDataSeeder extends Seeder
         }
 
         DB::table('users')->insertOrIgnore($teachers);
-        $this->command->info("Created {$count} teachers (no role assigned). Password: password");
+
+        $teacherRoleId = DB::table('roles')
+            ->whereRaw('UPPER(name) = ?', ['TEACHER'])
+            ->value('id');
+
+        if ($teacherRoleId) {
+            $roleAssignments = collect($teachers)->map(fn (array $t) => [
+                'user_uuid' => $t['uuid'],
+                'role_uuid' => $teacherRoleId,
+                'expires_at' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ])->all();
+
+            DB::table('role_user')->insertOrIgnore($roleAssignments);
+        }
+
+        $this->command->info("Created {$count} teachers (TEACHER role assigned). Password: password");
     }
 
     private function seedStudents(int $count): void

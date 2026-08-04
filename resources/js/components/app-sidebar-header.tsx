@@ -14,11 +14,15 @@ function MarqueeTitle({ text }: { text: string }) {
     useEffect(() => {
         const container = containerRef.current;
         const textEl = textRef.current;
-        if (!container || !textEl) return;
+
+        if (!container || !textEl) {
+return;
+}
 
         const measure = () => {
             const overflows = textEl.scrollWidth > container.clientWidth;
             setNeedsScroll(overflows);
+
             if (overflows) {
                 setDistance(textEl.scrollWidth);
             }
@@ -27,6 +31,7 @@ function MarqueeTitle({ text }: { text: string }) {
 
         const ro = new ResizeObserver(measure);
         ro.observe(container);
+
         return () => ro.disconnect();
     }, [text]);
 
@@ -81,8 +86,12 @@ export function AppSidebarHeader({
     }, []);
 
     useEffect(() => {
-        if (!mounted) return;
+        if (!mounted) {
+return;
+}
+
         const timer = window.setInterval(() => setNow(new Date()), 1000);
+
         return () => window.clearInterval(timer);
     }, [mounted]);
 

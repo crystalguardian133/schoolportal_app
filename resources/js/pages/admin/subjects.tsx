@@ -1,6 +1,7 @@
 import { Head, router, usePage } from '@inertiajs/react';
 import { BookPlus, Pencil, Plus, Trash2, UserPlus } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { PageLoader } from '@/components/page-loader';
 import { PortalPageShell } from '@/components/portal-page-shell';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -22,7 +23,6 @@ import {
     SelectContent,
     SelectItem,
 } from '@/components/ui/select';
-import { PageLoader } from '@/components/page-loader';
 
 type SubjectRow = {
     uuid: string;

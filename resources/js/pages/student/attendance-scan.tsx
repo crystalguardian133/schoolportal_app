@@ -30,11 +30,14 @@ export default function AttendanceScan({ session, error }: Props) {
         const interval = setInterval(() => {
             setCurrentTime(new Date().toLocaleTimeString());
         }, 1000);
+
         return () => clearInterval(interval);
     }, []);
 
     async function submitAttendance() {
-        if (!session || submitting) return;
+        if (!session || submitting) {
+return;
+}
 
         const token = window.location.pathname.split('/').pop() ?? '';
         setSubmitting(true);

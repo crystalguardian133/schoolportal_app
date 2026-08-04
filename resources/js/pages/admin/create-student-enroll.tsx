@@ -1,3 +1,4 @@
+import type { PageProps } from '@inertiajs/core';
 import { Head, router, usePage } from '@inertiajs/react';
 import { Eye, EyeOff } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
@@ -10,6 +11,14 @@ type CommonAddress = {
     address_barangay?: string | null;
     address_municipality?: string | null;
     address_province?: string | null;
+};
+type ClassSection = {
+    uuid: string;
+    name: string;
+    grade_level?: string | null;
+    school_year?: string | null;
+    subject_count: number;
+    subjects: { uuid: string; name: string; code?: string | null }[];
 };
 
 function generateStudentId() {
@@ -75,9 +84,19 @@ function createInitialForm() {
     };
 }
 
+type CreateStudentEnrollProps = PageProps & {
+    commonAddresses?: CommonAddress[];
+    classSections?: ClassSection[];
+};
+
 export default function CreateStudentEnroll() {
-    const { props } = usePage();
+    const { props } = usePage<CreateStudentEnrollProps>();
     const commonAddresses: CommonAddress[] = props.commonAddresses || [];
+    const classSections: ClassSection[] = props.classSections || [];
+    const [classSectionUuid, setClassSectionUuid] = useState<string>('');
+    const selectedClassSection =
+        classSections.find((section) => section.uuid === classSectionUuid) ??
+        null;
     const [form, setForm] = useState(createInitialForm);
     const composedName = composeName(
         form.first_name,
@@ -202,6 +221,19 @@ export default function CreateStudentEnroll() {
             return;
         }
 
+        if (!classSectionUuid) {
+            window.dispatchEvent(
+                new CustomEvent('local-toast', {
+                    detail: {
+                        message: 'Select a class section to enroll into.',
+                        type: 'error',
+                    },
+                }),
+            );
+
+            return;
+        }
+
         // ensure name is composed from breakdown before submit in format: Last, First M
         const composedAddress = [
             form.address_zone_street,
@@ -228,6 +260,7 @@ export default function CreateStudentEnroll() {
                 formData.append(`new_student[${key}]`, value as any);
             });
             formData.append('new_student[avatar]', avatarFile);
+            formData.append('class_section_uuid', classSectionUuid);
 
             router.post('/admin/enrollments', formData, {
                 onFinish: () => setSubmitting(false),
@@ -248,6 +281,7 @@ export default function CreateStudentEnroll() {
                 '/admin/enrollments',
                 {
                     new_student: payload,
+                    class_section_uuid: classSectionUuid,
                 },
                 {
                     onFinish: () => setSubmitting(false),
@@ -320,6 +354,71 @@ export default function CreateStudentEnroll() {
                     className="rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm dark:border-sidebar-border dark:bg-sidebar"
                 >
                     <div className="grid gap-4 md:grid-cols-2">
+                        <div className="rounded-2xl border border-sidebar-border/60 bg-sidebar/30 p-4 md:col-span-2">
+                            <label className="space-y-2 text-sm">
+                                <span className={labelClass}>
+                                    Class Section Target{' '}
+                                    <span className="text-destructive">*</span>
+                                </span>
+                                <select
+                                    value={classSectionUuid}
+                                    onChange={(e) =>
+                                        setClassSectionUuid(e.target.value)
+                                    }
+                                    className={inputClass}
+                                >
+                                    <option value="">
+                                        -- Select class section --
+                                    </option>
+                                    {classSections.map((section) => (
+                                        <option
+                                            key={section.uuid}
+                                            value={section.uuid}
+                                        >
+                                            {section.name}{' '}
+                                            {section.grade_level
+                                                ? `· ${section.grade_level}`
+                                                : ''}{' '}
+                                            {section.school_year
+                                                ? `· ${section.school_year}`
+                                                : ''}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+                            {selectedClassSection && (
+                                <div className="mt-3 rounded-lg border border-sidebar-border/70 bg-background/60 p-3 text-sm">
+                                    <div className="font-medium text-foreground">
+                                        {selectedClassSection.name}
+                                    </div>
+                                    <div className="mt-1 text-muted-foreground">
+                                        {selectedClassSection.grade_level ??
+                                            'Grade n/a'}{' '}
+                                        ·{' '}
+                                        {selectedClassSection.school_year ??
+                                            'School year auto-assigned'}
+                                    </div>
+                                    <div className="mt-2 text-muted-foreground">
+                                        The student will be enrolled into{' '}
+                                        {selectedClassSection.subjects.length}{' '}
+                                        subject(s):
+                                    </div>
+                                    <ul className="mt-2 space-y-1 text-muted-foreground">
+                                        {selectedClassSection.subjects.map(
+                                            (subject) => (
+                                                <li key={subject.uuid}>
+                                                    {subject.name}{' '}
+                                                    {subject.code
+                                                        ? `(${subject.code})`
+                                                        : ''}
+                                                </li>
+                                            ),
+                                        )}
+                                    </ul>
+                                </div>
+                            )}
+                        </div>
+
                         {/* Name breakdown first (personal information) */}
                         <label className="space-y-2 md:col-span-2">
                             <span className={labelClass}>
@@ -800,6 +899,7 @@ export default function CreateStudentEnroll() {
                             <button
                                 disabled={
                                     submitting ||
+                                    !classSectionUuid ||
                                     !composedName ||
                                     !form.email ||
                                     !form.password ||

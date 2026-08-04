@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
+import { useEffect, useRef } from 'react';
 
 type Props = {
     onScan: (decodedText: string) => void;
@@ -22,11 +22,15 @@ export function QrScanner({ onScan, enabled }: Props) {
                     scannerRef.current?.clear().catch(() => {});
                 });
             }
+
             return;
         }
 
         const el = document.getElementById(SCANNER_ID);
-        if (!el) return;
+
+        if (!el) {
+return;
+}
 
         const scanner = new Html5Qrcode(SCANNER_ID);
         scannerRef.current = scanner;
@@ -48,6 +52,7 @@ export function QrScanner({ onScan, enabled }: Props) {
 
         return () => {
             startedRef.current = false;
+
             if (scannerRef.current) {
                 scannerRef.current.stop().then(() => {
                     scannerRef.current?.clear().catch(() => {});

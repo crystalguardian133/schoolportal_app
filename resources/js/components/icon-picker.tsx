@@ -1,5 +1,5 @@
-import { useState, useMemo, useRef, useEffect, lazy, Suspense } from 'react';
 import { Search, X } from 'lucide-react';
+import { useState, useMemo, useRef, useEffect, lazy, Suspense } from 'react';
 import { LUCIDE_ICON_NAMES } from '@/lib/lucide-icons';
 import { cn } from '@/lib/utils';
 
@@ -16,6 +16,7 @@ function getLazyIcon(name: string) {
             ),
         );
     }
+
     return iconCache.get(name)!;
 }
 
@@ -32,8 +33,12 @@ export default function IconPicker({ value, onChange, className }: IconPickerPro
     const inputRef = useRef<HTMLInputElement>(null);
 
     const filtered = useMemo(() => {
-        if (!query) return LUCIDE_ICON_NAMES;
+        if (!query) {
+return LUCIDE_ICON_NAMES;
+}
+
         const q = query.toLowerCase().replace(/[\s_]/g, '');
+
         return LUCIDE_ICON_NAMES.filter((name) =>
             name.toLowerCase().replace(/[\s_]/g, '').includes(q),
         );
@@ -49,6 +54,7 @@ export default function IconPicker({ value, onChange, className }: IconPickerPro
             }
         }
         document.addEventListener('mousedown', handleClickOutside);
+
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
@@ -106,6 +112,7 @@ export default function IconPicker({ value, onChange, className }: IconPickerPro
                         >
                             {filtered.map((name) => {
                                 const Icon = getLazyIcon(name);
+
                                 return (
                                     <button
                                         key={name}

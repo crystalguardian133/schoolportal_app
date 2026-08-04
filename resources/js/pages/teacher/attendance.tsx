@@ -145,6 +145,7 @@ export default function TeacherAttendance({ sessions, teacherClasses }: Props) {
                                                 const end = new Date(start.getTime() + dur * 60000);
                                                 const schedEnd = new Date(`2000-01-01T${selectedClass.end_time}`);
                                                 const actual = end > schedEnd ? schedEnd : end;
+
                                                 return actual.toTimeString().slice(0, 5);
                                             })()}
                                         </p>

@@ -1,5 +1,4 @@
 import { Head } from '@inertiajs/react';
-import { useState, useCallback } from 'react';
 import {
     Search,
     Play,
@@ -18,7 +17,9 @@ import {
     Check,
     Download,
 } from 'lucide-react';
-import { useMusicPlayer, type Track } from '@/contexts/music-player-context';
+import { useState, useCallback } from 'react';
+import { useMusicPlayer  } from '@/contexts/music-player-context';
+import type {Track} from '@/contexts/music-player-context';
 
 function DownloadCircle({ className }: { className?: string }) {
     return (
@@ -84,8 +85,12 @@ export default function MusicPlayer() {
     } = useMusicPlayer();
 
     const doSearch = useCallback(async (q: string) => {
-        if (!q.trim()) return;
+        if (!q.trim()) {
+return;
+}
+
         setSearching(true);
+
         try {
             const res = await fetch('/developer/music/search', {
                 method: 'POST',
@@ -112,6 +117,7 @@ export default function MusicPlayer() {
 
     const handlePlayClick = (track: Track) => {
         const idx = queue.findIndex((q) => q.id === track.id);
+
         if (idx >= 0) {
             playFromQueue(idx);
         } else {
@@ -120,7 +126,10 @@ export default function MusicPlayer() {
     };
 
     const handleAddToQueue = (track: Track) => {
-        if (queue.find((q) => q.id === track.id)) return;
+        if (queue.find((q) => q.id === track.id)) {
+return;
+}
+
         if (!currentTrack) {
             downloadAndPlayOnly(track);
         } else {
@@ -177,6 +186,7 @@ export default function MusicPlayer() {
                                     const isDownloading = downloadingTracks.has(track.id);
                                     const isBrowserReady = browserCached.has(track.id);
                                     const isAlreadyQueued = queue.some((q) => q.id === track.id);
+
                                     return (
                                         <div
                                             key={track.id}
@@ -287,6 +297,7 @@ export default function MusicPlayer() {
                                     .map(({ track, originalIndex }) => {
                                         const isBrowserReady = browserCached.has(track.id);
                                         const isDownloading = downloadingTracks.has(track.id);
+
                                         return (
                                             <div
                                                 key={`${track.id}-${originalIndex}`}
@@ -345,7 +356,9 @@ export default function MusicPlayer() {
                                         .map(({ track, originalIndex }, displayIndex) => (
                                             <div
                                                 key={`${track.id}-drawer-${originalIndex}`}
-                                                onClick={() => { playFromQueue(originalIndex); setQueueOpen(false); }}
+                                                onClick={() => {
+ playFromQueue(originalIndex); setQueueOpen(false); 
+}}
                                                 className="flex items-center gap-3 rounded-lg px-3 py-2 cursor-pointer transition-colors hover:bg-sidebar-accent/40"
                                             >
                                                 <span className="w-5 text-center text-xs text-muted-foreground">{displayIndex + 1}</span>
@@ -357,7 +370,9 @@ export default function MusicPlayer() {
                                                 <span className="text-xs text-muted-foreground tabular-nums">{track.duration_string}</span>
                                                 <button
                                                     type="button"
-                                                    onClick={(e) => { e.stopPropagation(); removeFromQueue(originalIndex); }}
+                                                    onClick={(e) => {
+ e.stopPropagation(); removeFromQueue(originalIndex); 
+}}
                                                     className="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                                                 >
                                                     <X className="size-3.5" />
@@ -374,7 +389,10 @@ export default function MusicPlayer() {
                             <div
                                 ref={progressRef}
                                 onClick={(e) => {
-                                    if (!progressRef.current || !duration) return;
+                                    if (!progressRef.current || !duration) {
+return;
+}
+
                                     const rect = progressRef.current.getBoundingClientRect();
                                     const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
                                     seekTo(pct);

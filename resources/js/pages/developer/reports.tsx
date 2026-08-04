@@ -1,11 +1,11 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { useState } from 'react';
 import { Bug, Lightbulb, MessageSquare, X, Check, Clock, Eye, Search, ChevronLeft, ChevronRight, Trash2, Lock, MessageCircle } from 'lucide-react';
+import { useState } from 'react';
+import { SimpleBarChart } from '@/components/charts';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { PortalPageShell } from '@/components/portal-page-shell';
 import { formatDate } from '@/lib/dates';
 import { cn } from '@/lib/utils';
-import { SimpleBarChart } from '@/components/charts';
-import { ConfirmDialog } from '@/components/confirm-dialog';
 
 type Report = {
     id: string;
@@ -78,7 +78,11 @@ export default function DeveloperReports({ reports, stats, filters }: Props) {
 
     function deleteReport(e: React.MouseEvent) {
         e.preventDefault();
-        if (!deleteTarget) return;
+
+        if (!deleteTarget) {
+return;
+}
+
         router.delete(`/feedback/${deleteTarget}`, {
             onSuccess: () => setDeleteTarget(null),
         });
@@ -108,6 +112,7 @@ export default function DeveloperReports({ reports, stats, filters }: Props) {
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     {statusOptions.map((s) => {
                         const Icon = s.icon;
+
                         return (
                             <button
                                 key={s.value}
@@ -138,6 +143,7 @@ export default function DeveloperReports({ reports, stats, filters }: Props) {
                     <div className="flex gap-2">
                         {Object.entries(typeConfig).map(([key, cfg]) => {
                             const Icon = cfg.icon;
+
                             return (
                                 <button
                                     key={key}
@@ -232,6 +238,7 @@ export default function DeveloperReports({ reports, stats, filters }: Props) {
                                     <span className="text-xs text-muted-foreground">Status:</span>
                                     {statusOptions.map((s) => {
                                         const StIcon = s.icon;
+
                                         return (
                                             <button
                                                 key={s.value}

@@ -1,8 +1,8 @@
 import { Head, router } from '@inertiajs/react';
 import { ArrowLeft, Camera, CameraOff, Save, UserCheck, UserX, Clock, Minus, Search, ShieldAlert } from 'lucide-react';
 import { useCallback, useState } from 'react';
-import { QrScanner } from '@/components/qr-scanner';
 import { PortalPageShell } from '@/components/portal-page-shell';
+import { QrScanner } from '@/components/qr-scanner';
 
 type Student = {
     student_uuid: string;
@@ -96,6 +96,7 @@ export default function AttendanceSession({ session, students, enrolledUuids }: 
                 } else {
                     setScanResult({ type: 'error', message: data.message });
                 }
+
                 setTimeout(() => setScanResult(null), 5000);
             })
             .catch(() => {
@@ -105,7 +106,9 @@ export default function AttendanceSession({ session, students, enrolledUuids }: 
     }, [session.id]);
 
     function confirmOverride() {
-        if (!overrideStudent) return;
+        if (!overrideStudent) {
+return;
+}
 
         fetch(`/teacher/attendance/sessions/${session.id}/override`, {
             method: 'POST',
@@ -128,6 +131,7 @@ export default function AttendanceSession({ session, students, enrolledUuids }: 
                     }));
                     router.reload({ only: ['students'] });
                 }
+
                 setOverrideStudent(null);
                 setTimeout(() => setScanResult(null), 5000);
             });
@@ -135,8 +139,10 @@ export default function AttendanceSession({ session, students, enrolledUuids }: 
 
     function searchForStudent(q: string) {
         setSearchQuery(q);
+
         if (q.length < 2) {
             setSearchResults([]);
+
             return;
         }
 
@@ -163,7 +169,9 @@ export default function AttendanceSession({ session, students, enrolledUuids }: 
             .filter((s) => records[s.student_uuid] !== s.status)
             .map((s) => ({ student_uuid: s.student_uuid, status: records[s.student_uuid] }));
 
-        if (changedStudents.length === 0) return;
+        if (changedStudents.length === 0) {
+return;
+}
 
         router.post(`/teacher/attendance/sessions/${session.id}/bulk-manual`, { records: changedStudents });
     }
@@ -347,6 +355,7 @@ export default function AttendanceSession({ session, students, enrolledUuids }: 
                             <tbody className="divide-y divide-sidebar-border/70 bg-white dark:bg-sidebar">
                                 {students.map((student) => {
                                     const currentStatus = records[student.student_uuid] ?? 'absent';
+
                                     return (
                                         <tr key={student.student_uuid} className="hover:bg-sidebar-accent/40">
                                             <td className="px-4 py-3 font-medium text-sidebar-foreground">
@@ -375,6 +384,7 @@ export default function AttendanceSession({ session, students, enrolledUuids }: 
                                                 <div className="flex gap-1.5">
                                                     {STATUS_OPTIONS.map((opt) => {
                                                         const Icon = opt.icon;
+
                                                         return (
                                                             <button
                                                                 key={opt.value}

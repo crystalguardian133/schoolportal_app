@@ -1,11 +1,12 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { Users, LayoutGrid, BookOpen, Bell, BarChart3 } from 'lucide-react';
 import { useState, useCallback } from 'react';
-import { PortalPageShell } from '@/components/portal-page-shell';
-import { CommandPalette, type CommandItem } from '@/components/command-palette';
 import { SimpleBarChart } from '@/components/charts';
-import { useCommandPalette } from '@/hooks/use-command-palette';
+import { CommandPalette  } from '@/components/command-palette';
+import type {CommandItem} from '@/components/command-palette';
 import { PageLoader } from '@/components/page-loader';
+import { PortalPageShell } from '@/components/portal-page-shell';
+import { useCommandPalette } from '@/hooks/use-command-palette';
 
 type Props = {
     user: { name: string; email: string; roles?: string[] };

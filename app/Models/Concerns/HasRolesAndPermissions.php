@@ -86,10 +86,6 @@ trait HasRolesAndPermissions
     /** Check if model has a permission via roles (case-insensitive), excluding expired roles. */
     public function hasPermission(string $permission): bool
     {
-        if ($this->hasPermissionRaw('access admin')) {
-            return true;
-        }
-
         return $this->hasPermissionRaw($permission);
     }
 

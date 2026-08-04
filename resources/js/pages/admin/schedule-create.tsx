@@ -89,10 +89,15 @@ export default function ScheduleCreate({
     }
 
     function submitSchedule() {
-        if (!selectedSubjectUuid || queue.length === 0) return;
+        if (!selectedSubjectUuid || queue.length === 0) {
+return;
+}
 
         const subject = subjects.find((s) => s.uuid === selectedSubjectUuid);
-        if (!subject || !subject.teacher) return;
+
+        if (!subject || !subject.teacher) {
+return;
+}
 
         router.post(
             '/admin/schedules',

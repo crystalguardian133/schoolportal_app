@@ -37,36 +37,11 @@ class HandleInertiaRequests extends Middleware
     {
         $user->loadMissing('roles.permissions');
 
-        $adminRoles = ['admin', 'principal', 'registrar', 'ADMINISTRATOR', 'school-head'];
-        $userRoles = $user->roles->pluck('name')->map(fn ($name) => strtolower($name))->toArray();
-        $hasAdminRole = !empty(array_intersect($userRoles, array_map('strtolower', $adminRoles)));
-
-        $hasDeveloperPerm = $user->roles->contains(function ($role) {
-            return $role->permissions->contains('name', 'Access Developer Dashboard');
-        });
-
-        $hasMusicPlayerPerm = $user->roles->contains(function ($role) {
-            return $role->permissions->contains('name', 'Access Music Player');
-        });
-
-        if ($hasAdminRole) {
-            $perms = ['manage users', 'manage roles', 'manage subjects', 'manage sections', 'manage assignments', 'manage enrollments', 'manage announcements', 'manage schedules', 'view logs', 'view announcements', 'access admin', 'assign subjects', 'access admin dashboard', 'access school head dashboard', 'access developer dashboard', 'access music player'];
-            return $perms;
-        }
-
-        $permissions = $user->getAllPermissions()->pluck('name')->map(fn ($name) => strtolower($name))->unique()->values();
-
-        if ($permissions->contains('access admin')) {
-            $perms = ['manage users', 'manage roles', 'manage subjects', 'manage sections', 'manage assignments', 'manage enrollments', 'manage announcements', 'manage schedules', 'view logs', 'view announcements', 'access admin', 'assign subjects', 'access admin dashboard', 'access school head dashboard', 'access developer dashboard', 'access music player'];
-            return $perms;
-        }
-
-        $result = $permissions->toArray();
-
-        if (!$hasDeveloperPerm) {
-            $result = array_diff($result, ['access developer dashboard']);
-        }
-
-        return $result;
+        return $user->getAllPermissions()
+            ->pluck('name')
+            ->map(fn ($name) => strtolower($name))
+            ->unique()
+            ->values()
+            ->toArray();
     }
 }

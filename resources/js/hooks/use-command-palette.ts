@@ -13,6 +13,7 @@ export function useCommandPalette(onToggle: () => void) {
 
     useEffect(() => {
         document.addEventListener('keydown', handleKeyDown);
+
         return () => document.removeEventListener('keydown', handleKeyDown);
     }, [handleKeyDown]);
 }

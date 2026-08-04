@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useRef, useEffect, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useRef, useEffect, useCallback  } from 'react';
+import type {ReactNode} from 'react';
 
 export type Track = {
     id: string;
@@ -63,8 +64,10 @@ const STORAGE_KEY = 'music-player-state';
 function loadPersistedState() {
     try {
         const raw = sessionStorage.getItem(STORAGE_KEY);
+
         if (raw) {
             const data = JSON.parse(raw);
+
             return {
                 queue: Array.isArray(data.queue) ? data.queue : [],
                 currentIndex: typeof data.currentIndex === 'number' ? data.currentIndex : -1,
@@ -79,6 +82,7 @@ function loadPersistedState() {
     } catch {
         // corrupted storage
     }
+
     return null;
 }
 
@@ -94,8 +98,13 @@ async function getCachedBlob(trackId: string): Promise<string | null> {
     return caches.open(CACHE_NAME).then(async (cache) => {
         const req = new Request(`/music-audio/${trackId}`);
         const resp = await cache.match(req);
-        if (!resp) return null;
+
+        if (!resp) {
+return null;
+}
+
         const blob = await resp.blob();
+
         return URL.createObjectURL(blob);
     }).catch(() => null);
 }
@@ -115,7 +124,10 @@ async function cacheAudioBlob(trackId: string, blob: Blob): Promise<void> {
 
 async function fetchAndCacheAudio(track: Track): Promise<string> {
     const cached = await getCachedBlob(track.id);
-    if (cached) return cached;
+
+    if (cached) {
+return cached;
+}
 
     try {
         const preResp = await fetch('/developer/music/pre-cache', {
@@ -127,6 +139,7 @@ async function fetchAndCacheAudio(track: Track): Promise<string> {
             },
             body: JSON.stringify({ video_id: track.id }),
         });
+
         if (!preResp.ok) {
             console.warn('Pre-cache returned', preResp.status);
         }
@@ -138,7 +151,9 @@ async function fetchAndCacheAudio(track: Track): Promise<string> {
         headers: { 'X-Requested-With': 'XMLHttpRequest' },
     });
 
-    if (!resp.ok) throw new Error('Failed to fetch audio');
+    if (!resp.ok) {
+throw new Error('Failed to fetch audio');
+}
 
     const blob = await resp.blob();
     const url = URL.createObjectURL(blob);
@@ -150,11 +165,16 @@ async function fetchAndCacheAudio(track: Track): Promise<string> {
 
 export function checkBrowserCache(trackIds: string[]): Promise<Set<string>> {
     const cached = new Set<string>();
+
     return caches.open(CACHE_NAME).then(async (cache) => {
         for (const id of trackIds) {
             const resp = await cache.match(new Request(`/music-audio/${id}`));
-            if (resp) cached.add(id);
+
+            if (resp) {
+cached.add(id);
+}
         }
+
         return cached;
     }).catch(() => cached);
 }
@@ -213,11 +233,16 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
 
     // On remount: if we had a playing track, try to re-audio and resume
     useEffect(() => {
-        if (!persisted.current) return;
+        if (!persisted.current) {
+return;
+}
+
         const { activeTrack: savedTrack, isPlaying: wasPlaying, currentTime: savedTime, currentIndex: savedIndex } = persisted.current;
         persisted.current = null; // only do this once
 
-        if (!savedTrack || !wasPlaying) return;
+        if (!savedTrack || !wasPlaying) {
+return;
+}
 
         (async () => {
             try {
@@ -225,7 +250,11 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
                 const audioUrl = await fetchAndCacheAudio(savedTrack);
                 const audio = new Audio(audioUrl);
                 audio.volume = muted ? 0 : volume;
-                if (savedTime > 0) audio.currentTime = savedTime;
+
+                if (savedTime > 0) {
+audio.currentTime = savedTime;
+}
+
                 audioRef.current = audio;
 
                 audio.ontimeupdate = () => setCurrentTime(audio.currentTime);
@@ -235,6 +264,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
                     setIsPlaying(false);
                     const q = queueRef.current;
                     const idx = savedIndex >= 0 ? savedIndex : currentIndexRef.current;
+
                     if (idx >= 0 && idx < q.length - 1) {
                         const nextIdx = idx + 1;
                         setCurrentIndex(nextIdx);
@@ -261,7 +291,11 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
 
     useEffect(() => {
         const ids = queue.map((t) => t.id);
-        if (ids.length === 0) return;
+
+        if (ids.length === 0) {
+return;
+}
+
         checkBrowserCache(ids).then(setBrowserCached);
     }, [queue]);
 
@@ -282,7 +316,9 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
             try {
                 const audioUrl = await fetchAndCacheAudio(track);
 
-                if (gen !== generationRef.current) return;
+                if (gen !== generationRef.current) {
+return;
+}
 
                 blobUrlsRef.current.set(track.id, audioUrl);
                 setBrowserCached((prev) => new Set(prev).add(track.id));
@@ -298,6 +334,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
                     setIsPlaying(false);
                     const q = queueRef.current;
                     const idx = index >= 0 ? index : currentIndexRef.current;
+
                     if (idx >= 0 && idx < q.length - 1) {
                         const nextIdx = idx + 1;
                         setCurrentIndex(nextIdx);
@@ -325,8 +362,12 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     playTrackRef.current = playTrack;
 
     const togglePlay = useCallback(() => {
-        if (!audioRef.current) return;
+        if (!audioRef.current) {
+return;
+}
+
         setPendingResume(false);
+
         if (isPlaying) {
             audioRef.current.pause();
             setIsPlaying(false);
@@ -344,6 +385,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
         (index: number) => {
             const q = queueRef.current;
             const idx = currentIndexRef.current;
+
             if (index === idx) {
                 togglePlay();
             } else {
@@ -359,6 +401,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
         (index: number) => {
             setQueue((prev) => prev.filter((_, i) => i !== index));
             const idx = currentIndexRef.current;
+
             if (index === idx) {
                 audioRef.current?.pause();
                 setIsPlaying(false);
@@ -376,6 +419,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     const skipNext = useCallback(() => {
         const q = queueRef.current;
         const idx = currentIndexRef.current;
+
         if (idx < q.length - 1) {
             const next = idx + 1;
             audioRef.current?.pause();
@@ -387,6 +431,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     const skipPrev = useCallback(() => {
         const q = queueRef.current;
         const idx = currentIndexRef.current;
+
         if (audioRef.current && audioRef.current.currentTime > 3) {
             audioRef.current.currentTime = 0;
         } else if (idx > 0) {
@@ -400,11 +445,17 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     const setVolume = useCallback((v: number) => {
         setVolumeState(v);
         setMuted(false);
-        if (audioRef.current) audioRef.current.volume = v;
+
+        if (audioRef.current) {
+audioRef.current.volume = v;
+}
     }, []);
 
     const toggleMute = useCallback(() => {
-        if (!audioRef.current) return;
+        if (!audioRef.current) {
+return;
+}
+
         if (muted) {
             audioRef.current.volume = volume || 0.8;
             setMuted(false);
@@ -416,7 +467,10 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
 
     const seekTo = useCallback(
         (pct: number) => {
-            if (!audioRef.current || !duration) return;
+            if (!audioRef.current || !duration) {
+return;
+}
+
             audioRef.current.currentTime = pct * duration;
         },
         [duration],
@@ -424,7 +478,9 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
 
     const downloadAndPlayOnly = useCallback(
         async (track: Track) => {
-            if (downloadingTracks.has(track.id)) return;
+            if (downloadingTracks.has(track.id)) {
+return;
+}
 
             setDownloadingTracks((prev) => new Set(prev).add(track.id));
             setLoadingTrack(track.id);
@@ -443,6 +499,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
                 setDownloadingTracks((prev) => {
                     const next = new Set(prev);
                     next.delete(track.id);
+
                     return next;
                 });
                 setLoadingTrack((prev) => (prev === track.id ? null : prev));
@@ -453,8 +510,13 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
 
     const downloadAndEnqueue = useCallback(
         async (track: Track) => {
-            if (downloadingTracks.has(track.id)) return;
-            if (queue.find((q) => q.id === track.id)) return;
+            if (downloadingTracks.has(track.id)) {
+return;
+}
+
+            if (queue.find((q) => q.id === track.id)) {
+return;
+}
 
             setDownloadingTracks((prev) => new Set(prev).add(track.id));
             setLoadingTrack(track.id);
@@ -465,7 +527,10 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
                 setBrowserCached((prev) => new Set(prev).add(track.id));
 
                 setQueue((prev) => {
-                    if (prev.find((q) => q.id === track.id)) return prev;
+                    if (prev.find((q) => q.id === track.id)) {
+return prev;
+}
+
                     return [...prev, track];
                 });
             } catch (err) {
@@ -474,6 +539,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
                 setDownloadingTracks((prev) => {
                     const next = new Set(prev);
                     next.delete(track.id);
+
                     return next;
                 });
                 setLoadingTrack((prev) => (prev === track.id ? null : prev));
@@ -483,9 +549,13 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     );
 
     const fmt = useCallback((s: number) => {
-        if (!s || !isFinite(s)) return '0:00';
+        if (!s || !isFinite(s)) {
+return '0:00';
+}
+
         const m = Math.floor(s / 60);
         const sec = Math.floor(s % 60);
+
         return `${m}:${sec.toString().padStart(2, '0')}`;
     }, []);
 
@@ -506,11 +576,13 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         const handler = (e: KeyboardEvent) => {
             const tag = (e.target as HTMLElement)?.tagName;
+
             if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (e.target as HTMLElement)?.isContentEditable) {
                 return;
             }
 
             const kb = keybindingsRef.current;
+
             if (e.type === 'keydown') {
                 if (kb.playPause.includes(e.key)) {
                     e.preventDefault();
@@ -526,6 +598,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
         };
 
         window.addEventListener('keydown', handler);
+
         return () => window.removeEventListener('keydown', handler);
     }, []);
 
@@ -571,6 +644,10 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
 
 export function useMusicPlayer() {
     const ctx = useContext(MusicPlayerContext);
-    if (!ctx) throw new Error('useMusicPlayer must be used within MusicPlayerProvider');
+
+    if (!ctx) {
+throw new Error('useMusicPlayer must be used within MusicPlayerProvider');
+}
+
     return ctx;
 }

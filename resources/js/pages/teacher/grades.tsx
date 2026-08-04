@@ -256,7 +256,10 @@ return;
     }
 
     function downloadGradesPdf() {
-        if (!selectedSubject) return;
+        if (!selectedSubject) {
+return;
+}
+
         const headers = ['Student', 'LRN', 'Q1', 'Q2', 'Q3', 'Total'];
         const rows = students.map((s) => [
             s.name,

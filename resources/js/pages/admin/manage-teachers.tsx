@@ -45,11 +45,14 @@ export default function ManageTeachers() {
     useEffect(() => {
         if (initialRender.current) {
             initialRender.current = false;
+
             return;
         }
+
         const timer = window.setTimeout(() => {
             reload({ q: query, per_page: perPage });
         }, 250);
+
         return () => window.clearTimeout(timer);
     }, [query, perPage]);
 

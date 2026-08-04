@@ -1,8 +1,8 @@
 import { Head, router, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
 import { ConfirmDialog } from '@/components/confirm-dialog';
-import { PortalPageShell } from '@/components/portal-page-shell';
 import { PageLoader } from '@/components/page-loader';
+import { PortalPageShell } from '@/components/portal-page-shell';
 
 type Subject = {
     uuid: string;
@@ -375,7 +375,9 @@ export default function AdminSections() {
                                             <td className="px-4 py-3 text-muted-foreground">
                                                 {section.subjects && section.subjects.length > 0 ? (
                                                     <div className="flex flex-wrap gap-1">
-                                                        {section.subjects.map((subject) => (
+                                                        {section.subjects
+                                                            .slice(0, 3)
+                                                            .map((subject) => (
                                                             <span
                                                                 key={subject.uuid}
                                                                 className="inline-block rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700 dark:bg-sky-950 dark:text-sky-300"
@@ -383,6 +385,13 @@ export default function AdminSections() {
                                                                 {subject.name}
                                                             </span>
                                                         ))}
+                                                        {section.subjects.length > 3 && (
+                                                            <span className="inline-block rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground dark:bg-muted/50">
+                                                                +
+                                                                {section.subjects.length - 3}{' '}
+                                                                more subjects
+                                                            </span>
+                                                        )}
                                                     </div>
                                                 ) : (
                                                     <span className="text-xs italic">None</span>

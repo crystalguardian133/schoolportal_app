@@ -66,9 +66,18 @@ export function exportAttendancePdf({
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
     let y = 28;
-    if (section) { doc.text(`Section: ${section}`, 14, y); y += 6; }
-    if (subject) { doc.text(`Subject: ${subject}`, 14, y); y += 6; }
-    if (date) { doc.text(`Date: ${date}`, 14, y); y += 6; }
+
+    if (section) {
+ doc.text(`Section: ${section}`, 14, y); y += 6; 
+}
+
+    if (subject) {
+ doc.text(`Subject: ${subject}`, 14, y); y += 6; 
+}
+
+    if (date) {
+ doc.text(`Date: ${date}`, 14, y); y += 6; 
+}
 
     autoTable(doc, {
         startY: y + 4,

@@ -2,6 +2,7 @@ import { Head, router, usePage } from '@inertiajs/react';
 import { CalendarPlus, CalendarOff, Users, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { PageLoader } from '@/components/page-loader';
 import { PortalPageShell } from '@/components/portal-page-shell';
 import { Button } from '@/components/ui/button';
 import {
@@ -13,10 +14,9 @@ import {
     DialogFooter,
     DialogClose,
 } from '@/components/ui/dialog';
-import { formatDate } from '@/lib/dates';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { PageLoader } from '@/components/page-loader';
+import { formatDate } from '@/lib/dates';
 
 type SchoolYearRow = {
     id: number;
@@ -106,7 +106,9 @@ return;
     }
 
     function deleteYear() {
-        if (!deleteTarget) return;
+        if (!deleteTarget) {
+return;
+}
 
         router.delete(`/admin/school-years/${deleteTarget.id}`, {
             onSuccess: () => {
