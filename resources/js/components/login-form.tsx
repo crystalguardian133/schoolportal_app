@@ -38,11 +38,10 @@ export default function LoginForm({ status, canResetPassword }: Props) {
                     <>
                         {/* Email */}
                         <div className="space-y-1.5">
-                            <Label htmlFor="login-email" className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                            <Label htmlFor="login-email" className="text-xs font-medium text-black dark:text-slate-400">
                                 Email
                             </Label>
                             <div className="relative">
-                                <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500 dark:text-slate-500" />
                                 <Input
                                     id="login-email"
                                     type="email"
@@ -56,6 +55,7 @@ export default function LoginForm({ status, canResetPassword }: Props) {
                                     onChange={(e) => setEmailValue(e.target.value)}
                                     className="h-11 pl-10"
                                 />
+                                <Mail className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-slate-500 dark:text-slate-500" />
                             </div>
                             <InputError message={errors.email} />
                         </div>
@@ -63,7 +63,7 @@ export default function LoginForm({ status, canResetPassword }: Props) {
                         {/* Password */}
                         <div className="space-y-1.5">
                             <div className="flex items-center justify-between">
-                                <Label htmlFor="login-password" className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                                <Label htmlFor="login-password" className="text-xs font-medium text-black dark:text-slate-400">
                                     Password
                                 </Label>
                                 {canResetPassword && (
@@ -72,12 +72,11 @@ export default function LoginForm({ status, canResetPassword }: Props) {
                                         className="text-xs"
                                         tabIndex={5}
                                     >
-                                        Need help?
+                                        Reset password
                                     </TextLink>
                                 )}
                             </div>
                             <div className="relative">
-                                <Lock className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500 dark:text-slate-500" />
                                 <PasswordInput
                                     id="login-password"
                                     name="password"
@@ -91,6 +90,7 @@ export default function LoginForm({ status, canResetPassword }: Props) {
                                     }
                                     className="h-11 pl-10"
                                 />
+                                <Lock className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-slate-500 dark:text-slate-500" />
                             </div>
                             <InputError message={errors.password} />
                         </div>
@@ -104,7 +104,7 @@ export default function LoginForm({ status, canResetPassword }: Props) {
                             />
                             <Label
                                 htmlFor="login-remember"
-                                className="text-sm font-normal text-slate-600 dark:text-slate-400"
+                                className="text-sm font-normal text-black dark:text-slate-400"
                             >
                                 Keep me signed in
                             </Label>
@@ -129,7 +129,7 @@ export default function LoginForm({ status, canResetPassword }: Props) {
                 )}
             </Form>
 
-            <p className="text-center text-xs text-slate-500 dark:text-slate-500">
+            <p className="text-center text-xs text-black dark:text-slate-500">
                 Contact the school office if you need an account.
             </p>
         </div>

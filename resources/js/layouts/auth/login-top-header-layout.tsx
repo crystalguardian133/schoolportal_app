@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { ArrowRightLeft, Moon, Sun, Shield, GraduationCap } from 'lucide-react';
+import { Moon, Sun, Shield, GraduationCap } from 'lucide-react';
 import AppLogoIcon from '@/components/app-logo-icon';
 import { useAppearance } from '@/hooks/use-appearance';
 import { home } from '@/lib/home';
@@ -21,22 +21,12 @@ export default function LoginTopHeaderLayout({
             {/* Floating top bar */}
             <div className="fixed inset-x-0 top-0 z-50 flex items-center justify-between px-4 py-4 sm:px-6">
                 <Link href={home()} className="group flex items-center gap-2.5">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#2ead4c] shadow-md shadow-[#2ead4c]/20 transition-shadow group-hover:shadow-[#2ead4c]/30">
-                        <AppLogoIcon className="size-4 fill-current text-white" />
-                    </span>
+                    <AppLogoIcon className="size-10" />
                     <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">
                         {name}
                     </span>
                 </Link>
-
                 <div className="flex items-center gap-2">
-                    <Link
-                        href="/login"
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white/80 px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm backdrop-blur-sm transition-all hover:bg-white hover:shadow dark:border-neutral-800 dark:bg-black/80 dark:text-slate-300 dark:hover:bg-neutral-900"
-                    >
-                        <ArrowRightLeft className="size-3.5" />
-                        Classic
-                    </Link>
                     <button
                         onClick={() =>
                             updateAppearance(
@@ -69,9 +59,7 @@ export default function LoginTopHeaderLayout({
 
                         <div className="relative z-10">
                             <div className="mb-8 flex items-center gap-3">
-                                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 backdrop-blur-sm">
-                                    <AppLogoIcon className="size-6 fill-current text-white" />
-                                </span>
+                                <AppLogoIcon className="size-14" />
                                 <span className="text-base font-semibold text-white">
                                     {name}
                                 </span>
@@ -79,9 +67,6 @@ export default function LoginTopHeaderLayout({
                         </div>
 
                         <div className="relative z-10">
-                            <div className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[11px] font-medium tracking-wide text-white/80 backdrop-blur-sm">
-                                School Portal
-                            </div>
                             <h1 className="text-3xl font-bold leading-tight text-white">
                                 {title}
                             </h1>
@@ -109,15 +94,13 @@ export default function LoginTopHeaderLayout({
                         </div>
 
                         <div className="relative z-10 text-xs text-white/50">
-                            Secure login &middot; Protected data
+                            Secure login  &middot;  Protected data
                         </div>
                     </div>
 
                     {/* Mobile branding (compact) */}
                     <div className="login-preview-branding-mobile flex flex-col items-center gap-2 px-6 pb-4 pt-20 text-center lg:hidden">
-                        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 backdrop-blur-sm">
-                            <AppLogoIcon className="size-5 fill-current text-white" />
-                        </span>
+                        <AppLogoIcon className="size-20" />
                         <h1 className="text-xl font-bold text-white">
                             {title}
                         </h1>

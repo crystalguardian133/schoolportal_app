@@ -9,7 +9,7 @@ type Props = {
 export default function Login({ status, canResetPassword }: Props) {
     return (
         <>
-            <Head title="Sign in - School portal" />
+            <Head title="Sign in - DNHS School Portal" />
 
             <LoginForm status={status} canResetPassword={canResetPassword} />
         </>
@@ -17,6 +17,6 @@ export default function Login({ status, canResetPassword }: Props) {
 }
 
 Login.layout = {
-    title: 'Welcome back to the school portal',
-    description: 'Choose your portal type and sign in to continue.',
+    title: 'Sign in to DNHS School Portal',
+    description: 'Please enter your credentials to access the school portal.',
 };

@@ -22,7 +22,11 @@ export function NavMain({
 
     return (
         <SidebarGroup className="px-2 py-0">
-            {label ? <SidebarGroupLabel>{label}</SidebarGroupLabel> : null}
+            {label ? (
+                <SidebarGroupLabel className="group-data-[collapsible=icon]:mt-0!">
+                    {label}
+                </SidebarGroupLabel>
+            ) : null}
             <SidebarMenu>
                 {items.map((item) => (
                     <SidebarMenuItem key={item.title}>
