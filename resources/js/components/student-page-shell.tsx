@@ -14,10 +14,10 @@ export function StudentPageShell({
     children,
 }: StudentPageShellProps) {
     return (
-        <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-4">
+        <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto p-3 sm:gap-6 sm:p-4">
             <section className="rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
                 <p className="text-sm text-muted-foreground">Student section</p>
-                <h1 className="mt-1 text-2xl font-semibold">{title}</h1>
+                <h1 className="mt-1 text-xl font-semibold sm:text-2xl">{title}</h1>
                 <p className="mt-3 text-sm leading-6 text-muted-foreground">
                     {description}
                 </p>

@@ -323,7 +323,18 @@ class AnnouncementController extends Controller
             // broadcast failures should not break the request
         }
 
+        $this->notifyAnnouncement($announcement);
+
         return back()->with('success', 'Announcement created successfully.');
+    }
+
+    private function notifyAnnouncement(Announcement $announcement): void
+    {
+        try {
+            app(\App\Services\PushNotificationService::class)->sendAnnouncement($announcement);
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 
     public function update(Request $request, string $uuid)
@@ -658,6 +669,8 @@ class AnnouncementController extends Controller
         } catch (\Throwable $e) {
             // broadcast failures should not break the request
         }
+
+        $this->notifyAnnouncement($announcement);
 
         return back()->with('success', 'Announcement created successfully.');
     }

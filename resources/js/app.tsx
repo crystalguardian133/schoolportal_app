@@ -1,7 +1,9 @@
 import { createInertiaApp } from '@inertiajs/react';
+import { PwaBanners } from '@/components/pwa/pwa-banners';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { MusicPlayerProvider } from '@/contexts/music-player-context';
+import { PwaProvider } from '@/contexts/pwa-context';
 import { initializeTheme } from '@/hooks/use-appearance';
 import AppLayout from '@/layouts/app-layout';
 import LoginLayout from '@/layouts/auth/login-top-header-layout';
@@ -30,12 +32,15 @@ createInertiaApp({
     strictMode: true,
     withApp(app) {
         return (
-            <MusicPlayerProvider>
-                <TooltipProvider delayDuration={0}>
-                    {app}
-                    <Toaster />
-                </TooltipProvider>
-            </MusicPlayerProvider>
+            <PwaProvider>
+                <MusicPlayerProvider>
+                    <TooltipProvider delayDuration={0}>
+                        {app}
+                        <Toaster />
+                        <PwaBanners />
+                    </TooltipProvider>
+                </MusicPlayerProvider>
+            </PwaProvider>
         );
     },
     progress: {

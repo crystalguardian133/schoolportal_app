@@ -397,7 +397,7 @@ export default function Assignments({ subjects, teachers }) {
                             </div>
                         </div>
 
-                        <div className="mt-5 max-h-[30rem] overflow-y-auto rounded-2xl border border-border">
+                        <div className="table-scroll-container mt-5 rounded-2xl border border-border">
                             <table className="min-w-full divide-y divide-border text-left text-sm">
                                 <thead className="sticky top-0 z-10 bg-muted text-xs tracking-wide text-muted-foreground uppercase">
                                     <tr>

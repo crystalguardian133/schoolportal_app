@@ -988,7 +988,7 @@ export default function AdminEnrollments() {
                         open={subjectsModalOpen}
                         onOpenChange={setSubjectsModalOpen}
                     >
-                        <DialogContent className="max-w-2xl">
+                        <DialogContent className="sm:max-w-2xl">
                             <DialogHeader>
                                 <DialogTitle className="flex items-center gap-2">
                                     <GraduationCap className="size-5 text-muted-foreground" />

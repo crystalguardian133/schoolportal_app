@@ -140,6 +140,41 @@
     body {
         @apply bg-background text-foreground;
     }
+
+    /*
+     * Mobile friendliness
+     *
+     * 1. Keep form controls at >=16px on small screens so iOS Safari doesn't
+     *    zoom the page when an input is focused.
+     * 2. Give raw (non-shadcn) inputs and selects a comfortable height and
+     *    touch target.
+     * 3. Remove tap highlight flash on touch devices.
+     */
+    @media (max-width: 767px) {
+        input:not([type='checkbox']):not([type='radio']),
+        select,
+        textarea {
+            font-size: 16px;
+        }
+
+        button,
+        [role='button'] {
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+
+        a {
+            -webkit-tap-highlight-color: transparent;
+        }
+    }
+
+    @media (pointer: coarse) {
+        input:not([type='checkbox']):not([type='radio']),
+        select,
+        textarea {
+            min-height: 44px;
+        }
+    }
 }
 
 /* Native select styling for dark mode */
@@ -174,6 +209,30 @@ input[type='number'] {
     /* default: thin but transparent scrollbar; reveal on hover */
     scrollbar-width: thin; /* Firefox */
     scrollbar-color: transparent transparent;
+}
+
+/* Denser, roomier table rows on narrow screens */
+@media (max-width: 639px) {
+    .table-scroll-container td,
+    .table-scroll-container th {
+        padding-left: 0.625rem;
+        padding-right: 0.625rem;
+    }
+
+    .table-scroll-container td {
+        padding-top: 0.55rem;
+        padding-bottom: 0.55rem;
+    }
+
+    .table-scroll-container table {
+        white-space: normal;
+    }
+
+    .table-scroll-container thead th {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+    }
 }
 
 /* modifier sizes */

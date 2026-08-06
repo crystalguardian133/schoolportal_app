@@ -54,7 +54,7 @@ export function DataTable<TData, TValue>({
                     value={globalFilter}
                     onChange={(e) => setGlobalFilter(e.target.value)}
                     placeholder={searchPlaceholder}
-                    className="w-full rounded-xl border border-border bg-white px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20 dark:bg-sidebar"
+                    className="w-full rounded-xl border border-border bg-white px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20 dark:bg-sidebar"
                 />
             )}
 
@@ -66,7 +66,7 @@ export function DataTable<TData, TValue>({
                                 {headerGroup.headers.map((header) => (
                                     <th
                                         key={header.id}
-                                        className="px-4 py-3 font-medium"
+                                        className="px-3 py-3 font-medium sm:px-4"
                                     >
                                         {header.isPlaceholder ? null : (
                                             <button
@@ -99,7 +99,7 @@ export function DataTable<TData, TValue>({
                             table.getRowModel().rows.map((row) => (
                                 <tr key={row.id} className="transition hover:bg-muted/50">
                                     {row.getVisibleCells().map((cell) => (
-                                        <td key={cell.id} className="px-4 py-3">
+                                        <td key={cell.id} className="px-3 py-2 sm:px-4 sm:py-3">
                                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                         </td>
                                     ))}

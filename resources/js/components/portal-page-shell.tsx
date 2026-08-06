@@ -51,7 +51,20 @@ export function PortalPageShell({
     }, []);
 
     return (
-        <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-4">
+        <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto p-3 sm:gap-6 sm:p-4">
+            {!showHero && (
+                <header className="flex flex-col gap-1">
+                    <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
+                        {title}
+                    </h1>
+                    {description && (
+                        <p className="text-sm leading-6 text-muted-foreground">
+                            {description}
+                        </p>
+                    )}
+                </header>
+            )}
+
             {showHero && (
                 <section className="rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
                     <h1 className="text-2xl font-semibold">{title}</h1>

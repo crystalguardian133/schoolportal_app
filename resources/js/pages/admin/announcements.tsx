@@ -589,7 +589,7 @@ export default function AdminAnnouncements({
                 open={!!editAnnouncement}
                 onOpenChange={(open) => !open && setEditAnnouncement(null)}
             >
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="sm:max-w-2xl">
                     <DialogHeader>
                         <DialogTitle>Edit announcement</DialogTitle>
                     </DialogHeader>

@@ -9,6 +9,7 @@ use App\Http\Controllers\AdminTeacherController;
 use App\Http\Controllers\AdminSectionController;
 use App\Http\Controllers\AdminRoleController;
 use App\Http\Controllers\AnnouncementController;
+use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\AdminAssetController;
 use App\Http\Controllers\AdminSubjectController;
@@ -137,6 +138,12 @@ Route::delete('admin/subjects/teachers/{teacherUuid}/{subjectUuid}', [AdminSubje
     Route::post('developer/music/check-cached', [\App\Http\Controllers\MusicController::class, 'checkCached'])
         ->middleware('permission:access music player')
         ->name('developer.music.check-cached');
+
+    // Push notification subscriptions
+    Route::post('push/subscriptions', [PushSubscriptionController::class, 'store'])
+        ->name('push.subscriptions.store');
+    Route::delete('push/subscriptions', [PushSubscriptionController::class, 'destroy'])
+        ->name('push.subscriptions.destroy');
 });
 
 require __DIR__.'/settings.php';

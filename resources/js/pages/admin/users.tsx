@@ -347,7 +347,7 @@ export default function AdminUsers() {
                         </div>
                     </div>
 
-                    <div className="relative overflow-auto rounded-xl border border-sidebar-border/70">
+                    <div className="table-scroll-container relative overflow-auto rounded-xl border border-sidebar-border/70">
                         {tableLoading && (
                             <div className="absolute inset-0 z-10 rounded-xl bg-white/70 backdrop-blur-sm dark:bg-sidebar/70">
                                 <table className="min-w-full divide-y divide-sidebar-border/70 text-sm">
@@ -487,7 +487,7 @@ export default function AdminUsers() {
                                                         <Button
                                                             variant="outline"
                                                             size="icon"
-                                                            className="size-8 text-red-600"
+                                                            className="size-9 text-red-600"
                                                             aria-label="Delete user"
                                                         >
                                                             <Trash2 className="h-4 w-4" />

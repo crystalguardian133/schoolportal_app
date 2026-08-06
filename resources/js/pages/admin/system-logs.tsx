@@ -257,7 +257,7 @@ export default function SystemLogs() {
                                     </p>
                                 </div>
 
-                                <div className="grid grid-cols-3 gap-3 sm:min-w-[360px]">
+                                <div className="grid grid-cols-2 gap-3 sm:min-w-[360px] sm:grid-cols-3">
                                     <div className="rounded-2xl border border-border bg-card px-4 py-3 shadow-sm">
                                         <div className="text-xs tracking-wide text-muted-foreground uppercase">
                                             Logs
@@ -336,7 +336,7 @@ export default function SystemLogs() {
                             </button>
                         </form>
 
-                        <div className="mt-5 overflow-hidden rounded-2xl border border-border">
+                        <div className="table-scroll-container mt-5 rounded-2xl border border-border">
                             <table className="min-w-full divide-y divide-border text-left text-sm">
                                 <thead className="bg-muted text-xs tracking-wide text-muted-foreground uppercase">
                                     <tr>
@@ -477,7 +477,7 @@ export default function SystemLogs() {
                 open={!!selectedLog}
                 onOpenChange={(open) => !open && setSelectedLog(null)}
             >
-                <DialogContent className="max-w-3xl">
+                <DialogContent className="sm:max-w-3xl">
                     <DialogHeader>
                         <DialogTitle>Log Details</DialogTitle>
                     </DialogHeader>

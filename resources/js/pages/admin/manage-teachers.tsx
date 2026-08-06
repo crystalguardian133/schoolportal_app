@@ -91,7 +91,7 @@ export default function ManageTeachers() {
                         </div>
                     </div>
 
-                    <div className="relative overflow-auto rounded border border-sidebar-border/70">
+                    <div className="table-scroll-container relative overflow-auto rounded border border-sidebar-border/70">
                         <table className="min-w-full divide-y divide-sidebar-border/70 text-sm">
                             <thead className="bg-sidebar/60 text-left text-muted-foreground">
                                 <tr>

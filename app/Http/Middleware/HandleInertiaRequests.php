@@ -30,6 +30,10 @@ class HandleInertiaRequests extends Middleware
                 'error' => fn () => $request->session()->get('error'),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'push' => [
+                'enabled' => (bool) config('push.enabled'),
+                'vapid_public_key' => config('push.vapid.public_key'),
+            ],
         ];
     }
 

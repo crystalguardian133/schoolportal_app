@@ -143,7 +143,7 @@ return;
 
                 <div
                     id="id-cards-print"
-                    className="grid max-w-3xl grid-cols-2 gap-4"
+                    className="grid max-w-3xl grid-cols-1 gap-4 sm:grid-cols-2"
                 >
                     {users.map((user) => (
                         <div

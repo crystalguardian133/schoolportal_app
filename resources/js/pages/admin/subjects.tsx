@@ -314,7 +314,7 @@ return;
                         <div className="mb-3 text-sm text-muted-foreground">
                             Total subjects: {subjectsProp.total ?? 0}
                         </div>
-                        <div className="overflow-auto rounded border border-sidebar-border/70">
+                        <div className="table-scroll-container overflow-auto rounded border border-sidebar-border/70">
                             <table className="min-w-full divide-y divide-sidebar-border/70 text-sm">
                                 <thead className="bg-sidebar/60 text-left text-muted-foreground">
                                     <tr>

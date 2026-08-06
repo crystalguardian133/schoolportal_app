@@ -345,7 +345,7 @@ function RoleSectionBlock({ section }: { section: RoleSection }) {
                 {section.typeBreakdown && (
                     <div className="rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
                         <h3 className="text-lg font-semibold">Report Types</h3>
-                        <div className="mt-3 grid grid-cols-3 gap-3">
+                        <div className="mt-3 grid grid-cols-1 gap-3 min-[480px]:grid-cols-3">
                             <BreakdownStat
                                 label="Bugs"
                                 value={section.typeBreakdown.bugs}

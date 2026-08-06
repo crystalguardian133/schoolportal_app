@@ -404,7 +404,7 @@ export default function AdminSections() {
                                                             section.uuid,
                                                         )
                                                     }
-                                                    className="rounded border px-3 py-1"
+                                                    className="min-h-11 rounded border px-3 py-1 sm:min-h-8"
                                                 >
                                                     Manage
                                                 </button>

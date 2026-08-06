@@ -409,7 +409,7 @@ return;
                                 />
                             </div>
 
-                            <div className="flex items-center gap-4 px-5 py-3.5">
+                            <div className="flex flex-col items-center gap-4 px-5 py-3.5 sm:flex-row sm:items-center">
                                 {/* Track info */}
                                 <div className="flex min-w-0 items-center gap-3.5 w-72">
                                     <div className="relative size-14 shrink-0">
