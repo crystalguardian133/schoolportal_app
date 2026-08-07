@@ -140,40 +140,42 @@
     body {
         @apply bg-background text-foreground;
     }
+}
 
-    /*
-     * Mobile friendliness
-     *
-     * 1. Keep form controls at >=16px on small screens so iOS Safari doesn't
-     *    zoom the page when an input is focused.
-     * 2. Give raw (non-shadcn) inputs and selects a comfortable height and
-     *    touch target.
-     * 3. Remove tap highlight flash on touch devices.
-     */
-    @media (max-width: 767px) {
-        input:not([type='checkbox']):not([type='radio']),
-        select,
-        textarea {
-            font-size: 16px;
-        }
-
-        button,
-        [role='button'] {
-            -webkit-tap-highlight-color: transparent;
-            touch-action: manipulation;
-        }
-
-        a {
-            -webkit-tap-highlight-color: transparent;
-        }
+/*
+ * Mobile friendliness
+ *
+ * Unlayered so these beat Tailwind utilities (e.g. `text-sm`).
+ *
+ * 1. Keep form controls at >=16px on small screens so iOS Safari doesn't
+ *    zoom the page when an input is focused.
+ * 2. Give raw (non-shadcn) inputs and selects a comfortable height and
+ *    touch target.
+ * 3. Remove tap highlight flash on touch devices.
+ */
+@media (max-width: 767px) {
+    input:not([type='checkbox']):not([type='radio']),
+    select,
+    textarea {
+        font-size: 16px;
     }
 
-    @media (pointer: coarse) {
-        input:not([type='checkbox']):not([type='radio']),
-        select,
-        textarea {
-            min-height: 44px;
-        }
+    button,
+    [role='button'] {
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+    }
+
+    a {
+        -webkit-tap-highlight-color: transparent;
+    }
+}
+
+@media (pointer: coarse) {
+    input:not([type='checkbox']):not([type='radio']),
+    select,
+    textarea {
+        min-height: 44px;
     }
 }
 

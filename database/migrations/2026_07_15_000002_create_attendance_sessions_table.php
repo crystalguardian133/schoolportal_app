@@ -13,7 +13,7 @@ return new class extends Migration
             $table->string('uuid', 36)->unique();
             $table->foreignId('schedule_id')->constrained('schedules')->onDelete('cascade');
             $table->string('teacher_uuid', 36);
-            $table->string('subject_uuid', 36);
+            $table->uuid('subject_uuid');
             $table->string('class_section_uuid', 36);
             $table->date('date');
             $table->time('start_time');

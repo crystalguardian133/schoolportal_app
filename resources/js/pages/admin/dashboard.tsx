@@ -7,6 +7,7 @@ import type {CommandItem} from '@/components/command-palette';
 import { PageLoader } from '@/components/page-loader';
 import { PortalPageShell } from '@/components/portal-page-shell';
 import { useCommandPalette } from '@/hooks/use-command-palette';
+import { getFirstName } from '@/lib/utils';
 
 type Props = {
     user: { name: string; email: string; roles?: string[] };
@@ -38,7 +39,7 @@ const commandItems: CommandItem[] = [
 ];
 
 export default function AdminDashboard({ user, tools, stats, recentAnnouncements }: Props) {
-    const firstName = user?.name?.split(' ')[0] ?? 'Admin';
+    const firstName = getFirstName(user?.name) || 'Admin';
     const [cmdOpen, setCmdOpen] = useState(false);
     const toggleCmd = useCallback(() => setCmdOpen((o) => !o), []);
     useCommandPalette(toggleCmd);

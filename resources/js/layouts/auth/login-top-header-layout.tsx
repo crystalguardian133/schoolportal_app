@@ -46,8 +46,8 @@ export default function LoginTopHeaderLayout({
             </div>
 
             {/* Centered card */}
-            <main className="relative z-10 flex min-h-svh items-center justify-center px-4 py-20">
-                <div className="login-preview-card mx-auto flex w-full max-w-[840px] overflow-hidden rounded-2xl shadow-2xl dark:shadow-black/40">
+            <main className="relative z-10 flex min-h-svh items-center justify-center px-3 py-4 sm:px-4 sm:py-20">
+                <div className="login-preview-card mx-auto flex w-full max-w-[840px] flex-col overflow-hidden rounded-2xl shadow-2xl lg:flex-row dark:shadow-black/40">
                     {/* Left branding panel */}
                     <div className="login-preview-branding relative hidden w-[380px] shrink-0 flex-col justify-between p-8 lg:flex xl:w-[420px]">
                         {/* Decorative grid */}
@@ -98,21 +98,29 @@ export default function LoginTopHeaderLayout({
                         </div>
                     </div>
 
-                    {/* Mobile branding (compact) */}
-                    <div className="login-preview-branding-mobile flex flex-col items-center gap-2 px-6 pb-4 pt-20 text-center lg:hidden">
-                        <AppLogoIcon className="size-20" />
-                        <h1 className="text-xl font-bold text-white">
+                    {/* Mobile branding (full-width top block) */}
+                    <div className="login-preview-branding-mobile relative flex w-full flex-col items-center gap-3 overflow-hidden px-6 pt-16 pb-8 text-center lg:hidden">
+                        <div
+                            className="absolute -top-10 -right-10 h-48 w-48 rounded-full bg-white/10 blur-3xl"
+                            aria-hidden="true"
+                        />
+                        <div
+                            className="absolute -bottom-16 -left-10 h-48 w-48 rounded-full bg-white/10 blur-3xl"
+                            aria-hidden="true"
+                        />
+                        <div className="login-preview-grid absolute inset-0" aria-hidden="true" />
+                        <h1 className="relative z-10 text-xl font-bold text-white">
                             {title}
                         </h1>
                         {description && (
-                            <p className="text-xs text-white/70">
+                            <p className="relative z-10 text-xs leading-relaxed text-white/70">
                                 {description}
                             </p>
                         )}
                     </div>
 
                     {/* Right form panel */}
-                    <div className="flex flex-1 flex-col justify-center bg-white px-6 py-8 sm:px-10 dark:bg-black">
+                    <div className="flex w-full flex-1 flex-col justify-center bg-white px-6 py-8 sm:px-10 lg:px-12 dark:bg-black">
                         {children}
                     </div>
                 </div>

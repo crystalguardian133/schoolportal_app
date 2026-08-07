@@ -1,6 +1,7 @@
 import { Head, Link } from '@inertiajs/react';
 import { Bell, ClipboardList, CalendarDays, BookOpenText } from 'lucide-react';
 import { PortalPageShell } from '@/components/portal-page-shell';
+import { getFirstName } from '@/lib/utils';
 
 type Props = {
     user: { name: string; email: string };
@@ -13,7 +14,7 @@ type Props = {
 };
 
 export default function StaffDashboard({ user, recentAnnouncements }: Props) {
-    const firstName = user?.name?.split(' ')[0] ?? 'Staff';
+    const firstName = getFirstName(user?.name) || 'Staff';
 
     return (
         <>

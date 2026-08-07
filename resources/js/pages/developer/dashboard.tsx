@@ -14,7 +14,7 @@ import {
 import { SimpleBarChart, SimplePieChart } from '@/components/charts';
 import { PortalPageShell } from '@/components/portal-page-shell';
 import { formatDate } from '@/lib/dates';
-import { cn } from '@/lib/utils';
+import { cn, getFirstName } from '@/lib/utils';
 
 type Props = {
     user: { name: string; email: string };
@@ -55,7 +55,7 @@ const typeConfig: Record<string, { label: string; icon: typeof Bug; bg: string }
 };
 
 export default function DeveloperDashboard({ user, stats, typeBreakdown, recentReports }: Props) {
-    const firstName = user?.name?.split(' ')[0] ?? 'Developer';
+    const firstName = getFirstName(user?.name) || 'Developer';
 
     return (
         <>

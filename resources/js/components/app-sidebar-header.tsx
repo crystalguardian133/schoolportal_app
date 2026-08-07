@@ -1,9 +1,11 @@
+import { usePage } from '@inertiajs/react';
 import { CalendarDays, Clock3, MapPin, SkipBack, SkipForward, Play, Pause } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useMusicPlayer } from '@/contexts/music-player-context';
 import type { BreadcrumbItem as BreadcrumbItemType } from '@/types';
+import type { Auth } from '@/types/auth';
 
 function MarqueeTitle({ text }: { text: string }) {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -69,6 +71,9 @@ export function AppSidebarHeader({
     const [mounted, setMounted] = useState(false);
     const [now, setNow] = useState(() => new Date(0));
 
+    const { auth } = usePage<{ auth: Auth }>().props;
+    const canUseMusic = auth.permissions.includes('access music player');
+
     const {
         currentTrack,
         isPlaying,
@@ -125,7 +130,7 @@ return;
             </div>
 
             <div className="hidden items-center gap-3 sm:flex">
-                {currentTrack && (
+                {canUseMusic && currentTrack && (
                     <div className="flex items-center gap-2 rounded-full border border-sidebar-border/70 bg-sidebar px-3 py-2 shadow-sm">
                         <div className="flex items-center gap-1">
                             <button

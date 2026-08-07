@@ -179,8 +179,8 @@ cached.add(id);
     }).catch(() => cached);
 }
 
-export function MusicPlayerProvider({ children }: { children: ReactNode }) {
-    const persisted = useRef(loadPersistedState());
+export function MusicPlayerProvider({ children, canUseMusic }: { children: ReactNode; canUseMusic: boolean }) {
+    const persisted = useRef(canUseMusic ? loadPersistedState() : null);
 
     const [queue, setQueue] = useState<Track[]>(() => persisted.current?.queue ?? []);
     const [currentIndex, setCurrentIndex] = useState<number>(() => persisted.current?.currentIndex ?? -1);

@@ -15,7 +15,6 @@ import {
     ListMusic,
     ChevronDown,
     Check,
-    Download,
 } from 'lucide-react';
 import { useState, useCallback } from 'react';
 import { useMusicPlayer  } from '@/contexts/music-player-context';
@@ -166,8 +165,8 @@ return;
                     </form>
                 </section>
 
-                {/* Results + Queue side by side */}
-                <div className="flex gap-6">
+                {/* Results + Queue */}
+                <div className="flex flex-col gap-6 lg:flex-row">
                     {/* Results */}
                     <section className="min-w-0 flex-1 rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
                         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
@@ -283,7 +282,7 @@ return;
                     </section>
 
                     {/* Queue */}
-                    <section className="w-80 shrink-0 rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
+                    <section className="w-full shrink-0 rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm lg:w-80 dark:border-sidebar-border dark:bg-sidebar">
                         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                             Up Next ({queue.filter((_, i) => i !== currentIndex).length})
                         </h2>

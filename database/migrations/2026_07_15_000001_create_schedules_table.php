@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('schedules', function (Blueprint $table) {
             $table->id();
             $table->string('class_section_uuid', 36);
-            $table->string('subject_uuid', 36);
+            $table->uuid('subject_uuid');
             $table->string('teacher_uuid', 36);
             $table->string('day');
             $table->string('start_time');

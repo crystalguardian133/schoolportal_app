@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->string('uuid', 36)->unique();
             $table->foreignId('attendance_session_id')->constrained('attendance_sessions')->onDelete('cascade');
-            $table->string('student_uuid', 36);
+            $table->uuid('student_uuid');
             $table->enum('status', ['present', 'late', 'absent', 'excused'])->default('present');
             $table->enum('recorded_by', ['qr', 'manual'])->default('qr');
             $table->timestamp('scanned_at')->nullable();

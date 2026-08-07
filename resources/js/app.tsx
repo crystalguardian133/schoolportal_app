@@ -30,10 +30,14 @@ createInertiaApp({
         }
     },
     strictMode: true,
-    withApp(app) {
+    withApp(app, { page }) {
+        const permissions =
+            (page.props.auth as { permissions?: string[] } | undefined)?.permissions ?? [];
+        const canUseMusic = permissions.includes('access music player');
+
         return (
             <PwaProvider>
-                <MusicPlayerProvider>
+                <MusicPlayerProvider canUseMusic={canUseMusic}>
                     <TooltipProvider delayDuration={0}>
                         {app}
                         <Toaster />
