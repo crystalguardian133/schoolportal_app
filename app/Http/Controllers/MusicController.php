@@ -111,7 +111,7 @@ class MusicController extends Controller
 
         $this->touchTimestamp($safeId);
 
-        return $this->serveFile($file);
+        return $this->serveFile($request, $file);
     }
 
     public function preCache(Request $request)
@@ -257,7 +257,7 @@ class MusicController extends Controller
         file_put_contents($metaFile, (string) time());
     }
 
-    private function serveFile(string $filePath): Response
+    private function serveFile(Request $request, string $filePath): Response
     {
         $size = filesize($filePath);
         $ext = pathinfo($filePath, PATHINFO_EXTENSION);
@@ -271,21 +271,68 @@ class MusicController extends Controller
         ];
         $contentType = $mimeMap[$ext] ?? 'audio/mpeg';
 
+        $start = 0;
+        $end = $size - 1;
+        $status = 200;
+
+        if ($range = $request->header('Range')) {
+            if (preg_match('/bytes=(\d*)-(\d*)/', $range, $m)) {
+                $rangeStart = $m[1] !== '' ? (int) $m[1] : null;
+                $rangeEnd = $m[2] !== '' ? (int) $m[2] : null;
+
+                if ($rangeStart === null) {
+                    // Suffix range: last N bytes.
+                    $start = max(0, $size - (int) $rangeEnd);
+                    $end = $size - 1;
+                } else {
+                    $start = $rangeStart;
+                    $end = $rangeEnd ?? $size - 1;
+                }
+            }
+
+            if ($start >= $size || $start > $end) {
+                return response(null, 416, ['Content-Range' => "bytes */{$size}"]);
+            }
+
+            $end = min($end, $size - 1);
+            $status = 206;
+        }
+
+        $length = $end - $start + 1;
+
         $handle = fopen($filePath, 'r');
 
         if (! $handle) {
             return response()->json(['error' => 'Failed to open audio file.'], 500);
         }
 
-        return response()->stream(function () use ($handle) {
-            fpassthru($handle);
+        return response()->stream(function () use ($handle, $start, $length) {
+            fseek($handle, $start);
+            $remaining = $length;
+
+            while ($remaining > 0 && ! feof($handle)) {
+                $chunk = fread($handle, min(1048576, $remaining));
+
+                if ($chunk === false || $chunk === '') {
+                    break;
+                }
+
+                echo $chunk;
+                $remaining -= strlen($chunk);
+
+                if (ob_get_level() > 0) {
+                    ob_flush();
+                }
+                flush();
+            }
+
             fclose($handle);
-        }, 200, [
+        }, $status, [
             'Content-Type' => $contentType,
-            'Content-Length' => $size,
+            'Content-Length' => $length,
             'Accept-Ranges' => 'bytes',
             'Cache-Control' => 'public, max-age=3600',
-        ]);
+        ] + ($status === 206 ? ['Content-Range' => "bytes {$start}-{$end}/{$size}"] : []));
     }
 
     private function cleanupExpiredFiles(): void

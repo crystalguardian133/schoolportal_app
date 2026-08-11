@@ -86,12 +86,12 @@ function loadPersistedState() {
     return null;
 }
 
-function xsrfToken(): string {
-    return document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] ?? '';
-}
-
 function streamUrl(track: Track): string {
     return `/developer/music/stream?video_id=${encodeURIComponent(track.id)}`;
+}
+
+function streamUrlForId(trackId: string): string {
+    return `/developer/music/stream?video_id=${encodeURIComponent(trackId)}`;
 }
 
 async function getCachedBlob(trackId: string): Promise<string | null> {
@@ -118,49 +118,42 @@ async function cacheAudioBlob(trackId: string, blob: Blob): Promise<void> {
         });
         await cache.put(req, resp);
     } catch {
-        // Cache API may be unavailable
+        // Cache API may be unavailable or storage quota exceeded
     }
 }
 
-async function fetchAndCacheAudio(track: Track): Promise<string> {
+async function cacheAudioInBackground(trackId: string): Promise<void> {
+    try {
+        const resp = await fetch(streamUrlForId(trackId), {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        });
+
+        if (!resp.ok) {
+            return;
+        }
+
+        const blob = await resp.blob();
+
+        await cacheAudioBlob(trackId, blob);
+    } catch {
+        // Best-effort offline cache; playback streams directly regardless.
+    }
+}
+
+async function fetchAndCacheAudio(track: Track, onCached?: () => void): Promise<string> {
     const cached = await getCachedBlob(track.id);
 
     if (cached) {
-return cached;
-}
+        onCached?.();
 
-    try {
-        const preResp = await fetch('/developer/music/pre-cache', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-XSRF-TOKEN': decodeURIComponent(xsrfToken()),
-            },
-            body: JSON.stringify({ video_id: track.id }),
-        });
-
-        if (!preResp.ok) {
-            console.warn('Pre-cache returned', preResp.status);
-        }
-    } catch {
-        // Pre-cache failed, stream endpoint will try anyway
+        return cached;
     }
 
-    const resp = await fetch(streamUrl(track), {
-        headers: { 'X-Requested-With': 'XMLHttpRequest' },
-    });
+    // Stream progressively so playback starts as soon as the server is ready.
+    // The full file is cached in the background for offline / repeat playback.
+    cacheAudioInBackground(track.id).then(onCached);
 
-    if (!resp.ok) {
-throw new Error('Failed to fetch audio');
-}
-
-    const blob = await resp.blob();
-    const url = URL.createObjectURL(blob);
-
-    cacheAudioBlob(track.id, blob);
-
-    return url;
+    return streamUrl(track);
 }
 
 export function checkBrowserCache(trackIds: string[]): Promise<Set<string>> {
@@ -314,14 +307,15 @@ return;
             setLoadingTrack(track.id);
 
             try {
-                const audioUrl = await fetchAndCacheAudio(track);
+                const audioUrl = await fetchAndCacheAudio(track, () =>
+                    setBrowserCached((prev) => new Set(prev).add(track.id)),
+                );
 
                 if (gen !== generationRef.current) {
 return;
 }
 
                 blobUrlsRef.current.set(track.id, audioUrl);
-                setBrowserCached((prev) => new Set(prev).add(track.id));
 
                 const audio = new Audio(audioUrl);
                 audio.volume = muted ? 0 : volume;
@@ -483,18 +477,11 @@ return;
 }
 
             setDownloadingTracks((prev) => new Set(prev).add(track.id));
-            setLoadingTrack(track.id);
             audioRef.current?.pause();
             setIsPlaying(false);
 
             try {
-                const audioUrl = await fetchAndCacheAudio(track);
-                blobUrlsRef.current.set(track.id, audioUrl);
-                setBrowserCached((prev) => new Set(prev).add(track.id));
-
-                playTrack(track, -1);
-            } catch (err) {
-                console.error('Download failed:', err);
+                await playTrack(track, -1);
             } finally {
                 setDownloadingTracks((prev) => {
                     const next = new Set(prev);
@@ -502,7 +489,6 @@ return;
 
                     return next;
                 });
-                setLoadingTrack((prev) => (prev === track.id ? null : prev));
             }
         },
         [downloadingTracks, playTrack],
@@ -522,9 +508,10 @@ return;
             setLoadingTrack(track.id);
 
             try {
-                const audioUrl = await fetchAndCacheAudio(track);
+                const audioUrl = await fetchAndCacheAudio(track, () =>
+                    setBrowserCached((prev) => new Set(prev).add(track.id)),
+                );
                 blobUrlsRef.current.set(track.id, audioUrl);
-                setBrowserCached((prev) => new Set(prev).add(track.id));
 
                 setQueue((prev) => {
                     if (prev.find((q) => q.id === track.id)) {
@@ -533,8 +520,6 @@ return prev;
 
                     return [...prev, track];
                 });
-            } catch (err) {
-                console.error('Download failed:', err);
             } finally {
                 setDownloadingTracks((prev) => {
                     const next = new Set(prev);
