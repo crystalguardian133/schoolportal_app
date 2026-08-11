@@ -188,11 +188,10 @@ class MusicController extends Controller
         $url = "https://www.youtube.com/watch?v={$safeId}";
         $authArgs = $this->authArgs();
 
-        // Without cookies, YouTube's "not a bot" check often blocks datacenter IPs.
-        // Retry with the web_embedded player client before giving up.
-        $clientArgs = $authArgs
-            ? [null]
-            : [null, 'youtube:player_client=web_embedded'];
+        // The default player client falls back to a downgraded (m3u8) path when
+        // cookies are present and to a 403-ing android_vr client without them.
+        // web_embedded keeps audio-only formats in both cases, so try it first.
+        $clientArgs = ['youtube:player_client=web_embedded', null];
 
         foreach ($clientArgs as $extractorArgs) {
             $file = $this->runDownload($safeId, $url, $authArgs, $extractorArgs);
