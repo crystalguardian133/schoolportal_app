@@ -54,6 +54,7 @@ export default function MusicPlayer() {
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<Track[]>([]);
     const [searching, setSearching] = useState(false);
+    const [searchError, setSearchError] = useState('');
 
     const {
         queue,
@@ -89,6 +90,7 @@ return;
 }
 
         setSearching(true);
+        setSearchError('');
 
         try {
             const res = await fetch('/developer/music/search', {
@@ -101,9 +103,18 @@ return;
                 body: JSON.stringify({ query: q }),
             });
             const data = await res.json();
+
+            if (!res.ok) {
+                setResults([]);
+                setSearchError(data.error ?? 'Search failed.');
+
+                return;
+            }
+
             setResults(data.results ?? []);
         } catch {
             setResults([]);
+            setSearchError('Search failed. Check your connection and try again.');
         } finally {
             setSearching(false);
         }
@@ -176,6 +187,11 @@ return;
                             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                                 <Loader2 className="mb-3 size-8 animate-spin" />
                                 <p className="text-sm">Searching...</p>
+                            </div>
+                        ) : searchError ? (
+                            <div className="flex flex-col items-center justify-center rounded-xl bg-destructive/5 px-6 py-10 text-center text-destructive">
+                                <Music className="mb-3 size-12 opacity-40" />
+                                <p className="text-sm font-medium">{searchError}</p>
                             </div>
                         ) : results.length > 0 ? (
                             <div className="space-y-2">

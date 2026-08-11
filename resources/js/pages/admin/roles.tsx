@@ -1,6 +1,6 @@
 import { Head, router, usePage, Link } from '@inertiajs/react';
 import { Trash2, ShieldCheck } from 'lucide-react';
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import IconPicker from '@/components/icon-picker';
 import { PageLoader } from '@/components/page-loader';
@@ -79,11 +79,16 @@ export default function AdminRoles() {
         selectedRole?.permissions || [],
     );
 
-    useEffect(() => {
+    const [previousRoleId, setPreviousRoleId] = useState(
+        selectedRole?.id || '',
+    );
+
+    if (selectedRole?.id !== previousRoleId) {
+        setPreviousRoleId(selectedRole?.id || '');
         setRoleName(selectedRole?.name || '');
         setSelectedIcon(selectedRole?.icon || '');
         setSelectedPermissions(selectedRole?.permissions || []);
-    }, [selectedRole?.id]);
+    }
 
     /* ── Role CRUD ── */
     function saveRole(e: React.FormEvent) {
@@ -133,9 +138,10 @@ return;
 
         setDeleting(true);
         router.delete(`/admin/roles/${selectedRole.id}`, {
-            onFinish: () => setDeleting(true),
+            onFinish: () => setDeleting(false),
             onSuccess: () => {
                 setConfirmDelete(false);
+                setSelectedRoleId('');
                 router.reload();
             },
         });

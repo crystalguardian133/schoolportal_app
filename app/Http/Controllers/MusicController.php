@@ -46,6 +46,24 @@ class MusicController extends Controller
             "ytsearch{$count}:{$query}",
         ]);
 
+        if ($result->exitCode() !== 0) {
+            \Log::error('Music search failed', [
+                'query' => $query,
+                'exit_code' => $result->exitCode(),
+                'stderr' => substr($result->errorOutput(), 0, 1000),
+            ]);
+
+            $isMissing = str_contains($result->errorOutput(), 'not found')
+                || str_contains($result->errorOutput(), 'No such file');
+
+            return response()->json([
+                'error' => $isMissing
+                    ? 'yt-dlp is not installed in this environment. Add it to the Docker image to enable music search.'
+                    : 'Music search failed. Check the server logs for details.',
+                'results' => [],
+            ], 500);
+        }
+
         $lines = array_filter(explode("\n", trim($result->output())));
         $results = [];
 

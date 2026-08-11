@@ -13,7 +13,6 @@
 /vendor
 /resources/assets/profile_pictures/*/*
 !/resources/assets/profile_pictures/*/.gitkeep
-README.md
 supabase.txt
 .DS_Store
 .env
