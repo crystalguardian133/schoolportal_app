@@ -123,21 +123,13 @@ Route::delete('admin/subjects/teachers/{teacherUuid}/{subjectUuid}', [AdminSubje
         ->name('developer.reports.update-status');
 
     // Developer Music Player
-    Route::get('developer/music', [\App\Http\Controllers\MusicController::class, 'index'])
-        ->middleware('permission:access music player')
-        ->name('developer.music');
-    Route::post('developer/music/search', [\App\Http\Controllers\MusicController::class, 'search'])
-        ->middleware('permission:access music player')
-        ->name('developer.music.search');
-    Route::get('developer/music/stream', [\App\Http\Controllers\MusicController::class, 'stream'])
-        ->middleware('permission:access music player')
-        ->name('developer.music.stream');
-    Route::post('developer/music/pre-cache', [\App\Http\Controllers\MusicController::class, 'preCache'])
-        ->middleware('permission:access music player')
-        ->name('developer.music.pre-cache');
-    Route::post('developer/music/check-cached', [\App\Http\Controllers\MusicController::class, 'checkCached'])
-        ->middleware('permission:access music player')
-        ->name('developer.music.check-cached');
+    Route::prefix('developer/music')->middleware('permission:access music player')->group(function () {
+        Route::get('/', [\App\Http\Controllers\MusicController::class, 'index'])->name('developer.music');
+        Route::post('search', [\App\Http\Controllers\MusicController::class, 'search'])->name('developer.music.search');
+        Route::get('stream', [\App\Http\Controllers\MusicController::class, 'stream'])->name('developer.music.stream');
+        Route::post('pre-cache', [\App\Http\Controllers\MusicController::class, 'preCache'])->name('developer.music.pre-cache');
+        Route::post('check-cached', [\App\Http\Controllers\MusicController::class, 'checkCached'])->name('developer.music.check-cached');
+    });
 
     // Push notification subscriptions
     Route::post('push/subscriptions', [PushSubscriptionController::class, 'store'])
