@@ -54,7 +54,7 @@ class MusicController extends Controller
         ]));
 
         if ($result->exitCode() !== 0) {
-            Log::error('Music search failed', [
+            Log::channel('stderr')->error('Music search failed', [
                 'query' => $data['query'],
                 'exit_code' => $result->exitCode(),
                 'stderr' => substr($result->errorOutput(), 0, 1000),
@@ -95,46 +95,58 @@ class MusicController extends Controller
 
     public function stream(Request $request)
     {
-        $data = $request->validate([
-            'video_id' => ['required', 'string', 'max:20'],
-        ]);
+        try {
+            $data = $request->validate([
+                'video_id' => ['required', 'string', 'max:20'],
+            ]);
 
-        $safeId = preg_replace('/[^a-zA-Z0-9_-]/', '', $data['video_id']);
+            $safeId = preg_replace('/[^a-zA-Z0-9_-]/', '', $data['video_id']);
 
-        $this->cleanupExpiredFiles();
+            $this->cleanupExpiredFiles();
 
-        $file = $this->getCachedFile($safeId) ?? $this->downloadAudio($safeId);
+            $file = $this->getCachedFile($safeId) ?? $this->downloadAudio($safeId);
 
-        if (! $file) {
-            return response()->json(['error' => 'Failed to download audio.'], 500);
+            if (! $file) {
+                return response()->json(['error' => 'Failed to download audio.'], 500);
+            }
+
+            $this->touchTimestamp($safeId);
+
+            return $this->serveFile($request, $file);
+        } catch (\Throwable $e) {
+            Log::channel('stderr')->error('Music stream exception: '.$e);
+
+            return response()->json(['error' => 'Failed to stream audio.'], 500);
         }
-
-        $this->touchTimestamp($safeId);
-
-        return $this->serveFile($request, $file);
     }
 
     public function preCache(Request $request)
     {
-        $data = $request->validate([
-            'video_id' => ['required', 'string', 'max:20'],
-        ]);
+        try {
+            $data = $request->validate([
+                'video_id' => ['required', 'string', 'max:20'],
+            ]);
 
-        $safeId = preg_replace('/[^a-zA-Z0-9_-]/', '', $data['video_id']);
+            $safeId = preg_replace('/[^a-zA-Z0-9_-]/', '', $data['video_id']);
 
-        if ($file = $this->getCachedFile($safeId)) {
+            if ($file = $this->getCachedFile($safeId)) {
+                $this->touchTimestamp($safeId);
+
+                return response()->json(['status' => 'cached', 'video_id' => $safeId]);
+            }
+
+            if (! $this->downloadAudio($safeId)) {
+                return response()->json(['status' => 'error', 'error' => 'Failed to download audio.'], 500);
+            }
+
             $this->touchTimestamp($safeId);
 
-            return response()->json(['status' => 'cached', 'video_id' => $safeId]);
-        }
+            return response()->json(['status' => 'downloaded', 'video_id' => $safeId]);
+        } catch (\Throwable $e) {
+            Log::channel('stderr')->error('Music pre-cache exception: '.$e);
 
-        if (! $this->downloadAudio($safeId)) {
             return response()->json(['status' => 'error', 'error' => 'Failed to download audio.'], 500);
         }
-
-        $this->touchTimestamp($safeId);
-
-        return response()->json(['status' => 'downloaded', 'video_id' => $safeId]);
     }
 
     public function checkCached(Request $request)
@@ -173,9 +185,15 @@ class MusicController extends Controller
             }
         }
 
-        // Fallback: glob search
+        // Fallback: glob search (excludes in-progress ".part" downloads and metadata)
         foreach (glob($this->cacheDir.'/'.$videoId.'.*') as $f) {
-            if (is_file($f) && ! str_ends_with($f, '.meta') && filesize($f) > 0) {
+            if (
+                is_file($f)
+                && ! str_ends_with($f, '.meta')
+                && ! str_ends_with($f, '.part')
+                && ! str_ends_with($f, '.ytdl')
+                && filesize($f) > 0
+            ) {
                 return $f;
             }
         }
@@ -229,7 +247,7 @@ class MusicController extends Controller
         try {
             $result = Process::timeout(120)->run($args);
         } catch (\Throwable $e) {
-            Log::error('Music download process error', ['video_id' => $safeId, 'error' => $e->getMessage()]);
+            Log::channel('stderr')->error('Music download process error', ['video_id' => $safeId, 'error' => $e->getMessage()]);
 
             return null;
         }
@@ -237,11 +255,11 @@ class MusicController extends Controller
         $file = $this->getCachedFile($safeId);
 
         if ($result->exitCode() !== 0 || ! $file) {
-            Log::error('Music download failed', [
+            Log::channel('stderr')->error('Music download failed', [
                 'video_id' => $safeId,
                 'exit_code' => $result->exitCode(),
                 'extractor_args' => $extractorArgs,
-                'stderr' => $result->errorOutput(),
+                'stderr' => substr($result->errorOutput(), 0, 2000),
                 'stdout' => substr($result->output(), 0, 500),
             ]);
 
