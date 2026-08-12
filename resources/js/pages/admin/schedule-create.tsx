@@ -1,7 +1,8 @@
 import { Head, router } from '@inertiajs/react';
-import { CalendarDays, Plus, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { CalendarDays, Plus, Trash2, Printer, X, User, MapPin, Users } from 'lucide-react';
+import { useState, useMemo } from 'react';
 import { PortalPageShell } from '@/components/portal-page-shell';
+import SearchableSelect from '@/components/searchable-select';
 
 type SubjectTeacher = {
     uuid: string;
@@ -17,7 +18,11 @@ type Subject = {
 
 type ScheduleEntry = {
     id: number;
+    class_section_uuid: string;
+    section_name?: string;
     subject: string;
+    subject_code?: string;
+    teacher_uuid: string;
     teacher: string;
     day: string;
     start_time: string;
@@ -32,90 +37,84 @@ type Section = {
 };
 
 type Props = {
-    section: Section;
+    section?: Section | null;
     subjects: Subject[];
-    schedules: ScheduleEntry[];
+    allSchedules: ScheduleEntry[];
+    allTeachers: {uuid: string; name: string}[];
+    allRooms: string[];
     allSections?: Section[];
     hasAccessAdmin?: boolean;
     schoolYear?: string | null;
+    flash?: { success?: string; error?: string };
 };
 
-const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
-type QueuedEntry = {
-    day: string;
-    start_time: string;
-    end_time: string;
-    room: string;
-};
-
-const blankEntry = (): QueuedEntry => ({
-    day: 'Monday',
-    start_time: '08:00',
-    end_time: '10:00',
-    room: '',
-});
+// Generate time slots from 07:00 to 17:00
+const TIME_SLOTS: string[] = [];
+for (let i = 7; i <= 17; i++) {
+    TIME_SLOTS.push(`${i.toString().padStart(2, '0')}:00`);
+    if (i !== 17) TIME_SLOTS.push(`${i.toString().padStart(2, '0')}:30`);
+}
 
 export default function ScheduleCreate({
     section: initialSection,
     subjects,
-    schedules,
+    allSchedules = [],
+    allTeachers = [],
+    allRooms = [],
     allSections = [],
     hasAccessAdmin = false,
     schoolYear,
+    flash,
 }: Props) {
-    const [currentSection, setCurrentSection] = useState(initialSection);
-    const [selectedSubjectUuid, setSelectedSubjectUuid] = useState(subjects[0]?.uuid ?? '');
-    const [queue, setQueue] = useState<QueuedEntry[]>([blankEntry()]);
+    const [currentSection] = useState(initialSection);
+    
+    // View state
+    const [viewMode, setViewMode] = useState<'section' | 'teacher' | 'room'>('section');
+    const [selectedTeacherUuid, setSelectedTeacherUuid] = useState('');
+    const [selectedRoom, setSelectedRoom] = useState('');
+    
+    // Modal state
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [subjectUuid, setSubjectUuid] = useState(subjects[0]?.uuid ?? '');
+    const [scheduleDay, setScheduleDay] = useState('Monday');
+    const [startTime, setStartTime] = useState('08:00');
+    const [endTime, setEndTime] = useState('09:00');
+    const [room, setRoom] = useState('');
 
     function switchSection(sectionUuid: string) {
         router.get(
             '/admin/schedules',
             { section_uuid: sectionUuid },
-            { only: ['section', 'subjects', 'schedules', 'allSections'] },
+            { only: ['section', 'subjects', 'allSchedules', 'allSections', 'allTeachers', 'allRooms'] },
         );
     }
 
-    function updateQueue(index: number, field: keyof QueuedEntry, value: string) {
-        setQueue((prev) => prev.map((e, i) => (i === index ? { ...e, [field]: value } : e)));
-    }
+    function submitSchedule(e: React.FormEvent) {
+        e.preventDefault();
+        if (!subjectUuid || !currentSection) return;
 
-    function addQueueRow() {
-        setQueue((prev) => [...prev, blankEntry()]);
-    }
-
-    function removeQueueRow(index: number) {
-        setQueue((prev) => prev.filter((_, i) => i !== index));
-    }
-
-    function submitSchedule() {
-        if (!selectedSubjectUuid || queue.length === 0) {
-return;
-}
-
-        const subject = subjects.find((s) => s.uuid === selectedSubjectUuid);
-
-        if (!subject || !subject.teacher) {
-return;
-}
+        const subject = subjects.find((s) => s.uuid === subjectUuid);
+        if (!subject || !subject.teacher) return;
 
         router.post(
             '/admin/schedules',
             {
                 section_uuid: currentSection.uuid,
-                subject_uuid: selectedSubjectUuid,
+                subject_uuid: subjectUuid,
                 teacher_uuid: subject.teacher.uuid,
-                entries: queue.map((e) => ({
-                    day: e.day,
-                    start_time: e.start_time,
-                    end_time: e.end_time,
-                    room: e.room || null,
-                })),
+                entries: [{
+                    day: scheduleDay,
+                    start_time: startTime,
+                    end_time: endTime,
+                    room: room || null,
+                }],
             },
             {
                 onSuccess: () => {
-                    setQueue([blankEntry()]);
-                    router.reload({ only: ['schedules'] });
+                    setIsModalOpen(false);
+                    router.reload({ only: ['allSchedules', 'allRooms'] });
                 },
             },
         );
@@ -124,231 +123,271 @@ return;
     function removeSchedule(id: number) {
         router.delete(`/admin/schedules/${id}`, {
             onSuccess: () => {
-                router.reload({ only: ['schedules'] });
+                router.reload({ only: ['allSchedules', 'allRooms'] });
             },
         });
     }
 
-    const selectedSubject = subjects.find((s) => s.uuid === selectedSubjectUuid);
+    const filteredSchedules = useMemo(() => {
+        return allSchedules.filter((s) => {
+            if (viewMode === 'section') return s.class_section_uuid === currentSection?.uuid;
+            if (viewMode === 'teacher') return s.teacher_uuid === selectedTeacherUuid;
+            if (viewMode === 'room') return s.room === selectedRoom;
+            return false;
+        });
+    }, [allSchedules, viewMode, currentSection, selectedTeacherUuid, selectedRoom]);
+
+    const titleText = useMemo(() => {
+        if (viewMode === 'section') return currentSection ? `Section: ${currentSection.name}` : 'Section Schedule';
+        if (viewMode === 'teacher') {
+            const t = allTeachers.find((x) => x.uuid === selectedTeacherUuid);
+            return t ? `Teacher: ${t.name}` : 'Teacher Schedule';
+        }
+        if (viewMode === 'room') return selectedRoom ? `Room: ${selectedRoom}` : 'Room Schedule';
+        return 'Schedule';
+    }, [viewMode, currentSection, selectedTeacherUuid, selectedRoom, allTeachers]);
+
+    // Check if a schedule block falls into a cell
+    function getScheduleForSlot(day: string, time: string) {
+        return filteredSchedules.filter(s => {
+            return s.day === day && time >= s.start_time && time < s.end_time;
+        });
+    }
+
+    if (!currentSection) {
+        return (
+            <>
+                <Head title="Manage Schedules" />
+                <PortalPageShell title="Manage Schedules" description="Create and manage class schedules for sections.">
+                    <div className="rounded-2xl border border-sidebar-border/70 bg-white p-12 text-center shadow-sm dark:border-sidebar-border dark:bg-sidebar">
+                        <CalendarDays className="mx-auto h-12 w-12 text-muted-foreground/50" />
+                        <h3 className="mt-4 text-lg font-medium text-foreground">No class sections found</h3>
+                        <p className="mt-2 text-sm text-muted-foreground">
+                            {hasAccessAdmin
+                                ? "Please create a class section first before creating schedules."
+                                : "You have not been assigned to a class section."}
+                        </p>
+                    </div>
+                </PortalPageShell>
+            </>
+        );
+    }
 
     return (
         <>
             <Head title="Manage Schedules" />
+            
+            {/* Modal */}
+            {isModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm print:hidden">
+                    <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-sidebar">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-semibold">Plot Schedule Block</h3>
+                            <button onClick={() => setIsModalOpen(false)} className="text-muted-foreground hover:text-foreground">
+                                <X className="size-5" />
+                            </button>
+                        </div>
+                        <form onSubmit={submitSchedule} className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-medium text-muted-foreground uppercase mb-1">Subject</label>
+                                <select value={subjectUuid} onChange={(e) => setSubjectUuid(e.target.value)} required className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring">
+                                    {subjects.map((s) => (
+                                        <option key={s.uuid} value={s.uuid} disabled={!s.teacher}>
+                                            {s.name} {s.teacher ? `(${s.teacher.name})` : '(No Teacher)'}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-medium text-muted-foreground uppercase mb-1">Day</label>
+                                    <select value={scheduleDay} onChange={(e) => setScheduleDay(e.target.value)} required className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring">
+                                        {DAYS.map(d => <option key={d} value={d}>{d}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-muted-foreground uppercase mb-1">Room (Optional)</label>
+                                    <input type="text" value={room} onChange={(e) => setRoom(e.target.value)} className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring" placeholder="e.g. Rm 101" />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-medium text-muted-foreground uppercase mb-1">Start Time</label>
+                                    <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} required className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-muted-foreground uppercase mb-1">End Time</label>
+                                    <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} required className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring" />
+                                </div>
+                            </div>
+                            <button type="submit" className="w-full rounded-xl bg-primary py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90">
+                                Save Schedule Block
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
+
             <PortalPageShell
                 title="Manage Schedules"
-                description={
-                    hasAccessAdmin
-                        ? 'Create and manage class schedules for sections.'
-                        : `Manage schedules for section ${currentSection.name}.`
-                }
+                description={hasAccessAdmin ? 'Interactive timetable grid for sections, teachers, and rooms.' : `Manage schedules for section ${currentSection.name}.`}
             >
-                <section className="rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
-                    {hasAccessAdmin && allSections.length > 0 && (
-                        <div className="mb-4">
-                            <label className="block text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                                Section
-                            </label>
-                            <select
-                                value={currentSection.uuid}
-                                onChange={(e) => switchSection(e.target.value)}
-                                className="mt-1 w-full max-w-md rounded-2xl border border-input bg-background px-3 py-3 text-sm transition outline-none focus:border-ring focus:ring-4 focus:ring-ring/15"
-                            >
-                                {allSections.map((s) => (
-                                    <option key={s.uuid} value={s.uuid}>
-                                        {s.name}
-                                        {s.grade_level ? ` — ${s.grade_level}` : ''}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                    )}
+                {/* Print Header (Only visible when printing) */}
+                <div className="hidden print:block mb-8 text-center">
+                    <h1 className="text-2xl font-bold uppercase tracking-widest text-black">Dulag National High School</h1>
+                    <h2 className="text-lg font-semibold text-gray-800">{schoolYear} Schedule</h2>
+                    <h3 className="text-md text-gray-600 mt-2 font-medium">{titleText}</h3>
+                </div>
+
+                {flash?.error && (
+                    <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800 print:hidden">
+                        {flash.error}
+                    </div>
+                )}
+                {flash?.success && (
+                    <div className="mb-4 rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800 print:hidden">
+                        {flash.success}
+                    </div>
+                )}
+
+                <div className="print:hidden mb-6 flex flex-wrap items-end justify-between gap-4 rounded-2xl border border-border bg-white p-4 shadow-sm dark:bg-sidebar">
+                    <div className="flex items-center gap-2 rounded-xl bg-muted/50 p-1">
+                        <button onClick={() => setViewMode('section')} className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition ${viewMode === 'section' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
+                            <Users className="size-4" /> Section
+                        </button>
+                        {hasAccessAdmin && (
+                            <>
+                                <button onClick={() => setViewMode('teacher')} className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition ${viewMode === 'teacher' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
+                                    <User className="size-4" /> Teacher
+                                </button>
+                                <button onClick={() => setViewMode('room')} className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition ${viewMode === 'room' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
+                                    <MapPin className="size-4" /> Room
+                                </button>
+                            </>
+                        )}
+                    </div>
 
                     <div className="flex items-center gap-3">
-                        <CalendarDays className="size-5 text-sky-600" />
-                        <div>
-                            <h2 className="text-lg font-semibold">
-                                {currentSection.name}
-                            </h2>
-                            <p className="text-sm text-muted-foreground">
-                                {currentSection.grade_level ?? 'Section'} ·{' '}
-                                {subjects.length} subject{subjects.length !== 1 ? 's' : ''}
-                                {schoolYear ? ` · ${schoolYear}` : ''}
-                            </p>
-                        </div>
-                    </div>
-
-                    {/* Add schedule form */}
-                    <div className="mt-5 space-y-4 rounded-2xl border border-border bg-muted/50 p-4">
-                        <div>
-                            <label className="block text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                                Subject
-                            </label>
-                            <select
-                                value={selectedSubjectUuid}
-                                onChange={(e) => setSelectedSubjectUuid(e.target.value)}
-                                className="mt-1 w-full rounded-2xl border border-input bg-background px-3 py-3 text-sm transition outline-none focus:border-ring focus:ring-4 focus:ring-ring/15"
-                            >
-                                {subjects.map((subject) => (
-                                    <option key={subject.uuid} value={subject.uuid}>
-                                        {subject.name}
-                                        {subject.code ? ` (${subject.code})` : ''}
-                                        {subject.teacher ? ` — ${subject.teacher.name}` : ' — No teacher'}
-                                    </option>
-                                ))}
+                        {viewMode === 'section' && hasAccessAdmin && (
+                            <select value={currentSection.uuid} onChange={(e) => switchSection(e.target.value)} className="rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring">
+                                {allSections.map(s => <option key={s.uuid} value={s.uuid}>{s.name} {s.grade_level ? `(${s.grade_level})` : ''}</option>)}
                             </select>
-                        </div>
-
-                        {selectedSubject && !selectedSubject.teacher && (
-                            <div className="rounded-md border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800">
-                                No teacher assigned to this subject yet. Please assign a teacher first via the Assign Subjects page.
+                        )}
+                        {viewMode === 'teacher' && (
+                            <div className="w-56">
+                                <SearchableSelect
+                                    value={selectedTeacherUuid}
+                                    onChange={setSelectedTeacherUuid}
+                                    placeholder="Select Teacher"
+                                    options={allTeachers.map(t => ({ value: t.uuid, label: t.name }))}
+                                />
                             </div>
                         )}
+                        {viewMode === 'room' && (
+                            <select value={selectedRoom} onChange={(e) => setSelectedRoom(e.target.value)} className="rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring w-48">
+                                <option value="" disabled>Select Room</option>
+                                {allRooms.map(r => <option key={r} value={r}>{r}</option>)}
+                            </select>
+                        )}
 
-                        {/* Queued day+time entries */}
-                        <div className="space-y-3">
-                            {queue.map((entry, idx) => (
-                                <div key={idx} className="flex flex-wrap items-end gap-3 rounded-xl border border-border bg-background p-3">
-                                    <div className="min-w-[140px] flex-1">
-                                        <label className="block text-xs font-medium tracking-wide text-muted-foreground uppercase">Day</label>
-                                        <select
-                                            value={entry.day}
-                                            onChange={(e) => updateQueue(idx, 'day', e.target.value)}
-                                            className="mt-1 w-full rounded-2xl border border-input bg-background px-3 py-2.5 text-sm transition outline-none focus:border-ring focus:ring-4 focus:ring-ring/15"
-                                        >
-                                            {DAYS.map((d) => (
-                                                <option key={d} value={d}>{d}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div className="min-w-[130px] flex-1">
-                                        <label className="block text-xs font-medium tracking-wide text-muted-foreground uppercase">Start</label>
-                                        <input
-                                            type="time"
-                                            value={entry.start_time}
-                                            onChange={(e) => updateQueue(idx, 'start_time', e.target.value)}
-                                            className="mt-1 w-full rounded-2xl border border-input bg-background px-3 py-2.5 text-sm transition outline-none focus:border-ring focus:ring-4 focus:ring-ring/15"
-                                        />
-                                    </div>
-                                    <div className="min-w-[130px] flex-1">
-                                        <label className="block text-xs font-medium tracking-wide text-muted-foreground uppercase">End</label>
-                                        <input
-                                            type="time"
-                                            value={entry.end_time}
-                                            onChange={(e) => updateQueue(idx, 'end_time', e.target.value)}
-                                            className="mt-1 w-full rounded-2xl border border-input bg-background px-3 py-2.5 text-sm transition outline-none focus:border-ring focus:ring-4 focus:ring-ring/15"
-                                        />
-                                    </div>
-                                    <div className="min-w-[120px] flex-1">
-                                        <label className="block text-xs font-medium tracking-wide text-muted-foreground uppercase">Room</label>
-                                        <input
-                                            type="text"
-                                            value={entry.room}
-                                            onChange={(e) => updateQueue(idx, 'room', e.target.value)}
-                                            placeholder="Optional"
-                                            className="mt-1 w-full rounded-2xl border border-input bg-background px-3 py-2.5 text-sm transition outline-none focus:border-ring focus:ring-4 focus:ring-ring/15"
-                                        />
-                                    </div>
-                                    {queue.length > 1 && (
-                                        <button
-                                            type="button"
-                                            onClick={() => removeQueueRow(idx)}
-                                            className="rounded-2xl border border-border bg-background p-2.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
-                                        >
-                                            <Trash2 className="size-4" />
-                                        </button>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-
-                        <div className="flex flex-wrap gap-3">
-                            <button
-                                type="button"
-                                onClick={addQueueRow}
-                                className="rounded-2xl border border-border bg-background px-4 py-2.5 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
-                            >
-                                <Plus className="mr-1.5 inline h-4 w-4" />
-                                Add Day
+                        {viewMode === 'section' && (
+                            <button onClick={() => setIsModalOpen(true)} className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:opacity-90 transition">
+                                <Plus className="size-4" /> Add Block
                             </button>
-                            <button
-                                type="button"
-                                onClick={submitSchedule}
-                                disabled={!selectedSubjectUuid || !selectedSubject?.teacher || queue.length === 0}
-                                className="rounded-2xl bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition hover:opacity-90 focus:ring-4 focus:ring-ring/20 focus:outline-none disabled:opacity-50"
-                            >
-                                <Plus className="mr-1.5 inline h-4 w-4" />
-                                Save {queue.length} {queue.length === 1 ? 'Entry' : 'Entries'}
-                            </button>
-                        </div>
+                        )}
+                        <button onClick={() => window.print()} className="inline-flex items-center gap-1.5 rounded-xl border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-muted transition">
+                            <Printer className="size-4" /> Print PDF
+                        </button>
                     </div>
+                </div>
 
-                    {/* Current schedules table */}
-                    <div className="mt-5">
-                        <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                            Current Schedule
-                        </h3>
-                        <div className="table-scroll-container table-scroll-small mt-3 rounded-xl border border-sidebar-border/70">
-                            <table className="min-w-full divide-y divide-sidebar-border/70 text-sm">
-                                <thead className="bg-sidebar/60 text-left text-muted-foreground">
-                                    <tr>
-                                        <th className="px-4 py-3 font-medium">Subject</th>
-                                        <th className="px-4 py-3 font-medium">Teacher</th>
-                                        <th className="px-4 py-3 font-medium">Day</th>
-                                        <th className="px-4 py-3 font-medium">Time</th>
-                                        <th className="px-4 py-3 font-medium">Room</th>
-                                        <th className="px-4 py-3 font-medium">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-sidebar-border/70 bg-white dark:bg-sidebar">
-                                    {schedules.length > 0 ? (
-                                        schedules.map((item) => (
-                                            <tr
-                                                key={item.id}
-                                                className="hover:bg-sidebar-accent/40"
-                                            >
-                                                <td className="px-4 py-3 font-medium text-sidebar-foreground">
-                                                    {item.subject}
-                                                </td>
-                                                <td className="px-4 py-3 text-sidebar-foreground">
-                                                    {item.teacher}
-                                                </td>
-                                                <td className="px-4 py-3 text-muted-foreground">
-                                                    {item.day}
-                                                </td>
-                                                <td className="px-4 py-3 text-muted-foreground">
-                                                    {item.start_time} - {item.end_time}
-                                                </td>
-                                                <td className="px-4 py-3 text-muted-foreground">
-                                                    {item.room ?? '—'}
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => removeSchedule(item.id)}
-                                                        className="inline-flex items-center gap-2 rounded-2xl border border-border bg-background px-3 py-2 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
-                                                    >
-                                                        <Trash2 className="size-3.5" />
-                                                        Remove
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    ) : (
-                                        <tr>
-                                            <td
-                                                colSpan={6}
-                                                className="px-4 py-10 text-center text-sm text-muted-foreground"
-                                            >
-                                                No schedule entries yet for this section.
+                {/* Timetable Grid */}
+                <div className="rounded-2xl border border-sidebar-border bg-white shadow-sm dark:bg-sidebar print:border-none print:shadow-none print:bg-transparent">
+                    <div className="p-4 border-b border-border print:hidden">
+                        <h2 className="text-lg font-semibold">{titleText}</h2>
+                        <p className="text-sm text-muted-foreground">{schoolYear} · DepEd Administrative View</p>
+                    </div>
+                    <div className="overflow-x-auto print:overflow-visible">
+                        <table className="min-w-[800px] w-full border-collapse text-sm print:min-w-full">
+                            <thead>
+                                <tr>
+                                    <th className="w-24 border-b border-r border-border p-3 text-center font-semibold text-muted-foreground uppercase tracking-wider text-xs print:border-black print:text-black">Time</th>
+                                    {DAYS.map(day => (
+                                        <th key={day} className="border-b border-r border-border p-3 text-center font-semibold text-muted-foreground uppercase tracking-wider text-xs last:border-r-0 print:border-black print:text-black">{day}</th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {TIME_SLOTS.map((time, idx) => {
+                                    if (idx === TIME_SLOTS.length - 1) return null; // Skip last one as it's an end boundary
+                                    const nextTime = TIME_SLOTS[idx + 1];
+                                    
+                                    return (
+                                        <tr key={time} className="h-14">
+                                            <td className="border-b border-r border-border p-2 text-center text-xs text-muted-foreground align-top print:border-black print:text-black">
+                                                {time} - {nextTime}
                                             </td>
+                                            {DAYS.map(day => {
+                                                const schedulesInSlot = getScheduleForSlot(day, time);
+                                                
+                                                return (
+                                                    <td key={`${day}-${time}`} className="border-b border-r border-border p-1 align-top last:border-r-0 print:border-black">
+                                                        <div className="flex flex-col gap-1 h-full">
+                                                            {schedulesInSlot.map(sched => (
+                                                                <div key={sched.id} className="relative group rounded-lg bg-sky-50 p-2 border border-sky-100 dark:bg-sky-950/30 dark:border-sky-900 print:bg-transparent print:border-black">
+                                                                    {viewMode === 'section' && hasAccessAdmin && (
+                                                                        <button 
+                                                                            onClick={() => removeSchedule(sched.id)}
+                                                                            className="absolute top-1 right-1 hidden group-hover:flex size-5 items-center justify-center rounded-full bg-red-100 text-red-600 hover:bg-red-200 print:hidden"
+                                                                        >
+                                                                            <Trash2 className="size-3" />
+                                                                        </button>
+                                                                    )}
+                                                                    <div className="font-semibold text-sky-800 dark:text-sky-300 print:text-black leading-tight text-xs">
+                                                                        {sched.subject} {sched.subject_code ? `(${sched.subject_code})` : ''}
+                                                                    </div>
+                                                                    {viewMode !== 'section' && (
+                                                                        <div className="text-[10px] text-muted-foreground mt-0.5 print:text-gray-800">
+                                                                            <span className="font-medium">Sec:</span> {sched.section_name}
+                                                                        </div>
+                                                                    )}
+                                                                    {viewMode !== 'teacher' && (
+                                                                        <div className="text-[10px] text-muted-foreground mt-0.5 print:text-gray-800">
+                                                                            <span className="font-medium">Tr:</span> {sched.teacher}
+                                                                        </div>
+                                                                    )}
+                                                                    {viewMode !== 'room' && sched.room && (
+                                                                        <div className="text-[10px] text-muted-foreground mt-0.5 print:text-gray-800">
+                                                                            <span className="font-medium">Rm:</span> {sched.room}
+                                                                        </div>
+                                                                    )}
+                                                                    <div className="text-[10px] text-sky-600 dark:text-sky-400 mt-1 print:text-gray-600">
+                                                                        {sched.start_time} - {sched.end_time}
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </td>
+                                                );
+                                            })}
                                         </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
                     </div>
-                </section>
+                </div>
             </PortalPageShell>
+
+            <style dangerouslySetInnerHTML={{__html: `
+                @media print {
+                    @page { size: landscape; margin: 10mm; }
+                    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: white; }
+                    /* Hide sidebar and navigation dynamically */
+                    nav, header, aside, .sidebar { display: none !important; }
+                    main { padding: 0 !important; margin: 0 !important; }
+                }
+            `}} />
         </>
     );
 }

@@ -29,7 +29,7 @@ class AdminSubjectController extends Controller
         $perPage = (int) $request->query('per_page', 25);
 
         $subjectsQuery = Subject::query()
-            ->select(['uuid', 'name', 'code', 'description', 'time_schedule'])
+            ->select(['uuid', 'name', 'code', 'description', 'time_schedule', 'units'])
             ->with('teachers')
             ->when($q, fn ($query, $search) => $query->where(function ($query) use ($search) {
                 $query->where('name', 'like', "%{$search}%")
@@ -63,6 +63,7 @@ class AdminSubjectController extends Controller
                 'code' => $subject->code,
                 'description' => $subject->description,
                 'time_schedule' => $subject->time_schedule,
+                'units' => $subject->units,
                 'teachers' => $subject->teachers->map(fn ($teacher) => [
                     'uuid' => $teacher->uuid,
                     'name' => $teacher->name,
@@ -107,6 +108,7 @@ class AdminSubjectController extends Controller
             'code' => 'nullable|string|max:50',
             'description' => 'nullable|string',
             'time_schedule' => 'nullable|string|max:255',
+            'units' => 'nullable|numeric|min:0|max:100',
         ]);
 
         $subject = Subject::query()->create([
@@ -114,6 +116,7 @@ class AdminSubjectController extends Controller
             'code' => $data['code'] ? strtoupper(trim($data['code'])) : null,
             'description' => $data['description'] ?? null,
             'time_schedule' => $data['time_schedule'] ?? null,
+            'units' => $data['units'] ?? 0,
         ]);
 
         return back()->with('success', 'Subject created successfully.');
@@ -136,6 +139,7 @@ class AdminSubjectController extends Controller
             'code' => 'nullable|string|max:50',
             'description' => 'nullable|string',
             'time_schedule' => 'nullable|string|max:255',
+            'units' => 'nullable|numeric|min:0|max:100',
         ]);
 
         $subject = Subject::query()->where('uuid', $data['subject_uuid'])->first();
@@ -149,6 +153,7 @@ class AdminSubjectController extends Controller
             'code' => $data['code'] ? strtoupper(trim($data['code'])) : null,
             'description' => $data['description'] ?? null,
             'time_schedule' => $data['time_schedule'] ?? null,
+            'units' => $data['units'] ?? 0,
         ]);
 
         return back()->with('success', 'Subject updated successfully.');
