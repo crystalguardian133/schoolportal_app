@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Events\AnnouncementCreated;
+use App\Events\AnnouncementPublished;
 use App\Models\Announcement;
 use App\Models\ClassSection;
 use App\Models\Student;
@@ -322,6 +323,8 @@ class AnnouncementController extends Controller
         } catch (\Throwable $e) {
             // broadcast failures should not break the request
         }
+
+        AnnouncementPublished::dispatch($announcement);
 
         $this->notifyAnnouncement($announcement);
 
@@ -669,6 +672,8 @@ class AnnouncementController extends Controller
         } catch (\Throwable $e) {
             // broadcast failures should not break the request
         }
+
+        AnnouncementPublished::dispatch($announcement);
 
         $this->notifyAnnouncement($announcement);
 

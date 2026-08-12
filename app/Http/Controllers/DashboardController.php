@@ -188,10 +188,12 @@ class DashboardController extends Controller
             'key' => 'staff',
             'label' => 'Staff Portal',
             'tools' => [
+                ['label' => 'Assignments', 'href' => '/admin/assignments'],
+                ['label' => 'Enrollments', 'href' => '/admin/enrollments'],
+                ['label' => 'Manage Users', 'href' => '/admin/users'],
                 ['label' => 'Classes', 'href' => '/teacher/classes'],
                 ['label' => 'Schedule', 'href' => '/teacher/schedule'],
                 ['label' => 'Announcements', 'href' => '/teacher/announcements'],
-                ['label' => 'Subjects', 'href' => '/student/subjects-enrolled'],
             ],
             'recentAnnouncements' => $this->recentAnnouncements(),
         ];

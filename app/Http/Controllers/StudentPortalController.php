@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Student;
 use App\Models\StudentSubject;
+use App\Models\Attendance;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -108,6 +109,19 @@ class StudentPortalController extends Controller
         ]);
     }
 
+    public function profile(Request $request): Response
+    {
+        $student = $this->student($request);
+
+        if (! $student) {
+            abort(404, 'Student profile not found.');
+        }
+
+        return Inertia::render('student/profile', [
+            'student' => $student,
+        ]);
+    }
+
     private function getVisibleAnnouncements(Request $request)
     {
         $user = $request->user();
@@ -173,8 +187,9 @@ class StudentPortalController extends Controller
                                     (int) ($enrollment->q1 ?? 0),
                                     (int) ($enrollment->q2 ?? 0),
                                     (int) ($enrollment->q3 ?? 0),
+                                    (int) ($enrollment->q4 ?? 0),
                                 ],
-                                'total' => (int) ($enrollment->total ?? round(((int) ($enrollment->q1 ?? 0) + (int) ($enrollment->q2 ?? 0) + (int) ($enrollment->q3 ?? 0)) / 3)),
+                                'total' => (int) ($enrollment->total ?? round(((int) ($enrollment->q1 ?? 0) + (int) ($enrollment->q2 ?? 0) + (int) ($enrollment->q3 ?? 0) + (int) ($enrollment->q4 ?? 0)) / 4)),
                             ])
                             ->all(),
                     ];
@@ -194,6 +209,85 @@ class StudentPortalController extends Controller
                 'schoolYear' => $student->school_year,
             ] : null,
             'yearLevelGroups' => $yearLevelGroups,
+        ]);
+    }
+
+    public function attendance(Request $request): Response
+    {
+        $student = $this->student($request);
+
+        if (! $student) {
+            abort(403, 'Student profile not found.');
+        }
+
+        // Get overall stats
+        $totalClasses = Attendance::where('student_uuid', $student->uuid)->count();
+        $presentCount = Attendance::where('student_uuid', $student->uuid)->where('status', 'present')->count();
+        $lateCount = Attendance::where('student_uuid', $student->uuid)->where('status', 'late')->count();
+        $absentCount = Attendance::where('student_uuid', $student->uuid)->where('status', 'absent')->count();
+
+        $overallRate = $totalClasses > 0 ? round((($presentCount + $lateCount) / $totalClasses) * 100) : 0;
+
+        // Group attendance by subject
+        $attendanceBySubject = \App\Models\Subject::whereHas('attendanceSessions', function ($q) use ($student) {
+            $q->whereHas('attendances', function ($q2) use ($student) {
+                $q2->where('student_uuid', $student->uuid);
+            });
+        })->with(['attendanceSessions' => function ($q) use ($student) {
+            $q->whereHas('attendances', function ($q2) use ($student) {
+                $q2->where('student_uuid', $student->uuid);
+            })->with(['attendances' => function ($q2) use ($student) {
+                $q2->where('student_uuid', $student->uuid);
+            }]);
+        }])->get()->map(function ($subject) {
+            $total = $subject->attendanceSessions->count();
+            $present = 0;
+            $late = 0;
+            $absent = 0;
+            
+            $history = $subject->attendanceSessions->map(function ($session) use (&$present, &$late, &$absent) {
+                $attendance = $session->attendances->first();
+                if ($attendance) {
+                    if ($attendance->status === 'present') $present++;
+                    if ($attendance->status === 'late') $late++;
+                    if ($attendance->status === 'absent') $absent++;
+                }
+                
+                return [
+                    'date' => $session->date->format('Y-m-d'),
+                    'time' => $session->start_time,
+                    'status' => $attendance ? $attendance->status : 'unknown',
+                    'notes' => $attendance ? $attendance->notes : null,
+                ];
+            })->sortByDesc('date')->values();
+            
+            return [
+                'subjectName' => $subject->name,
+                'subjectCode' => $subject->code,
+                'stats' => [
+                    'total' => $total,
+                    'present' => $present,
+                    'late' => $late,
+                    'absent' => $absent,
+                    'rate' => $total > 0 ? round((($present + $late) / $total) * 100) : 0,
+                ],
+                'history' => $history,
+            ];
+        });
+
+        return Inertia::render('student/attendance', [
+            'student' => [
+                'name' => $student->full_name ?: $student->name,
+                'lrn' => $student->lrn,
+            ],
+            'stats' => [
+                'overallRate' => $overallRate,
+                'present' => $presentCount,
+                'late' => $lateCount,
+                'absent' => $absentCount,
+                'total' => $totalClasses,
+            ],
+            'attendanceBySubject' => $attendanceBySubject,
         ]);
     }
 }

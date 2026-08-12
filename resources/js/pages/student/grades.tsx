@@ -1,8 +1,9 @@
 import { Head } from '@inertiajs/react';
-import { GraduationCap } from 'lucide-react';
+import { GraduationCap, FileText } from 'lucide-react';
 import { StudentPageShell } from '@/components/student-page-shell';
+import { exportPdf } from '@/lib/pdf-export';
 
-const quarterLabels = ['Q1', 'Q2', 'Q3'];
+const quarterLabels = ['Q1', 'Q2', 'Q3', 'Q4'];
 
 function roundToHundredth(n: number): number {
     return Math.round(n * 100) / 100;
@@ -41,6 +42,32 @@ type GradesPageProps = {
 };
 
 export default function Grades({ student, yearLevelGroups }: GradesPageProps) {
+    function downloadReportCard(group: YearLevelGroup) {
+        const headers = ['Subject Code', 'Subject Name', ...quarterLabels, 'Total'];
+        const rows = group.rows.map(row => [
+            row.subjectCode || '—',
+            row.subjectName || '—',
+            ...row.quarters.map(q => formatGrade(q)),
+            formatGrade(row.total)
+        ]);
+
+        const generalAverage = formatGrade(
+            roundToHundredth(
+                group.rows.reduce((sum, r) => sum + (r.total ?? 0), 0) / (group.rows.length || 1),
+            )
+        );
+
+        rows.push(['', 'GENERAL AVERAGE', '', '', '', '', generalAverage]);
+
+        exportPdf({
+            title: `Report Card - ${group.yearLevel}`,
+            subtitle: `Name: ${student?.name} | Section: ${group.section} | S.Y.: ${group.schoolYear}`,
+            headers,
+            rows,
+            filename: `report-card-${student?.name?.replace(/\s+/g, '-').toLowerCase()}-${group.yearLevel.replace(/\s+/g, '-').toLowerCase()}`
+        });
+    }
+
     return (
         <>
             <Head title="Grades" />
@@ -62,14 +89,24 @@ export default function Grades({ student, yearLevelGroups }: GradesPageProps) {
                             key={`${group.yearLevel}-${group.schoolYear}`}
                             className="rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm dark:border-sidebar-border dark:bg-sidebar"
                         >
-                            <div className="flex items-center gap-3">
-                                <GraduationCap className="size-5 text-violet-600" />
-                                <h2 className="text-lg font-semibold">
-                                    {group.yearLevel}{' '}
-                                    <span className="ml-3 text-sm font-medium text-violet-700 dark:text-violet-300">
-                                        {group.schoolYear}
-                                    </span>
-                                </h2>
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                                <div className="flex items-center gap-3">
+                                    <GraduationCap className="size-5 text-violet-600" />
+                                    <h2 className="text-lg font-semibold">
+                                        {group.yearLevel}{' '}
+                                        <span className="ml-3 text-sm font-medium text-violet-700 dark:text-violet-300">
+                                            {group.schoolYear}
+                                        </span>
+                                    </h2>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => downloadReportCard(group)}
+                                    className="inline-flex items-center gap-1.5 rounded-2xl border border-violet-200 bg-violet-50 px-3 py-1.5 text-sm font-medium text-violet-700 transition hover:bg-violet-100 dark:border-violet-900/50 dark:bg-violet-900/20 dark:text-violet-400 dark:hover:bg-violet-900/40"
+                                >
+                                    <FileText className="size-4" />
+                                    Export PDF
+                                </button>
                             </div>
                             <p className="mt-3 text-sm leading-6 text-muted-foreground">
                                 This container shows the quarterly grades for{' '}
@@ -142,7 +179,7 @@ export default function Grades({ student, yearLevelGroups }: GradesPageProps) {
                                             <td className="px-4 py-3 text-center text-sm font-bold text-sidebar-foreground">
                                                 {formatGrade(
                                                     roundToHundredth(
-                                                        group.rows.reduce((sum, r) => sum + (r.total ?? 0), 0) / group.rows.filter((r) => r.total != null).length,
+                                                        group.rows.reduce((sum, r) => sum + (r.total ?? 0), 0) / (group.rows.length || 1),
                                                     ),
                                                 )}
                                             </td>

@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('push_subscriptions', function (Blueprint $table) {
             $table->id();
             $table->string('user_uuid')->index();
-            $table->text('endpoint')->unique();
+            $table->string('endpoint', 500)->unique();
             $table->text('keys_auth');
             $table->text('keys_p256dh');
             $table->string('user_agent')->nullable();

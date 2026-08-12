@@ -22,7 +22,9 @@ Route::get('/assets/profile_pictures/{folder}/{filename}', [AdminAssetController
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', [\App\Http\Controllers\DashboardController::class, '__invoke'])->name('dashboard');
     Route::get('student/pre-registration', fn () => inertia('student/pre-registration'))->name('student.pre-registration');
+    Route::get('student/profile', [StudentPortalController::class, 'profile'])->name('student.profile');
     Route::get('student/grades', [StudentPortalController::class, 'grades'])->name('student.grades');
+    Route::get('student/attendance', [StudentPortalController::class, 'attendance'])->name('student.attendance');
     Route::get('student/subjects-enrolled', [\App\Http\Controllers\ScheduleController::class, 'studentSubjectsEnrolled'])->name('student.subjects-enrolled');
     Route::get('student/announcements', [AnnouncementController::class, 'studentIndex'])->name('student.announcements');
     Route::get('teacher/classes', [\App\Http\Controllers\ScheduleController::class, 'teacherClasses'])->name('teacher.classes');
@@ -89,6 +91,7 @@ Route::delete('admin/subjects/teachers/{teacherUuid}/{subjectUuid}', [AdminSubje
     Route::patch('teacher/announcements/{uuid}', [AnnouncementController::class, 'update'])->name('teacher.announcements.update');
     Route::delete('teacher/announcements/{uuid}', [AnnouncementController::class, 'destroy'])->name('teacher.announcements.destroy');
     Route::get('announcements/new-count', [AnnouncementController::class, 'newCount'])->name('announcements.new-count');
+    Route::get('adviser/dashboard', [\App\Http\Controllers\AdviserDashboardController::class, 'index'])->name('adviser.dashboard');
     Route::get('adviser/assign-subjects', [\App\Http\Controllers\AdviserAssignmentController::class, 'index'])->name('adviser.assign-subjects');
     Route::post('adviser/assign-subjects', [\App\Http\Controllers\AdviserAssignmentController::class, 'assignTeacher'])->name('adviser.assign-subjects.store');
     Route::delete('adviser/assign-subjects/{teacherUuid}/{subjectUuid}', [\App\Http\Controllers\AdviserAssignmentController::class, 'removeTeacher'])->name('adviser.assign-subjects.remove');

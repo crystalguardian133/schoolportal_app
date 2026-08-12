@@ -1,8 +1,9 @@
 import { Head, router } from '@inertiajs/react';
-import { ArrowLeft, Camera, CameraOff, Save, UserCheck, UserX, Clock, Minus, Search, ShieldAlert } from 'lucide-react';
+import { ArrowLeft, Camera, CameraOff, Save, UserCheck, UserX, Clock, Minus, Search, ShieldAlert, FileSpreadsheet, FileText } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { PortalPageShell } from '@/components/portal-page-shell';
 import { QrScanner } from '@/components/qr-scanner';
+import { exportPdf } from '@/lib/pdf-export';
 
 type Student = {
     student_uuid: string;
@@ -107,8 +108,8 @@ export default function AttendanceSession({ session, students, enrolledUuids }: 
 
     function confirmOverride() {
         if (!overrideStudent) {
-return;
-}
+            return;
+        }
 
         fetch(`/teacher/attendance/sessions/${session.id}/override`, {
             method: 'POST',
@@ -170,10 +171,49 @@ return;
             .map((s) => ({ student_uuid: s.student_uuid, status: records[s.student_uuid] }));
 
         if (changedStudents.length === 0) {
-return;
-}
+            return;
+        }
 
         router.post(`/teacher/attendance/sessions/${session.id}/bulk-manual`, { records: changedStudents });
+    }
+
+    function downloadCsv() {
+        const headers = ['Student', 'LRN', 'Status', 'Recorded By', 'Scanned At', 'Notes'];
+        const csvContent = [
+            headers.join(','),
+            ...students.map(s => {
+                const status = records[s.student_uuid] || 'absent';
+                return `"${s.student_name}","${s.lrn || ''}","${status.toUpperCase()}","${s.recorded_by || ''}","${s.scanned_at || ''}","${s.notes || ''}"`;
+            })
+        ].join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `attendance-${session.subject}-${session.date}.csv`.replace(/\s+/g, '-').toLowerCase();
+        link.click();
+    }
+
+    function downloadPdf() {
+        const headers = ['Student', 'LRN', 'Status', 'Scanned At', 'Notes'];
+        const rows = students.map(s => {
+            const status = records[s.student_uuid] || 'absent';
+            return [
+                s.student_name,
+                s.lrn || '—',
+                status.toUpperCase(),
+                s.scanned_at || '—',
+                s.notes || '—'
+            ];
+        });
+
+        exportPdf({
+            title: `Attendance: ${session.subject}`,
+            subtitle: `Section: ${session.section} | Date: ${session.date}`,
+            headers,
+            rows,
+            filename: `attendance-${session.subject}-${session.date}`.replace(/\s+/g, '-').toLowerCase()
+        });
     }
 
     const presentCount = Object.values(records).filter((s) => s === 'present' || s === 'late').length;
@@ -272,6 +312,23 @@ return;
                                 <Save className="size-4" />
                                 Save
                             </button>
+                            <div className="h-6 w-px bg-border my-auto mx-1"></div>
+                            <button
+                                type="button"
+                                onClick={downloadCsv}
+                                className="inline-flex items-center gap-1.5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-900/50 dark:bg-emerald-900/20 dark:text-emerald-400 dark:hover:bg-emerald-900/40"
+                            >
+                                <FileSpreadsheet className="size-4" />
+                                CSV
+                            </button>
+                            <button
+                                type="button"
+                                onClick={downloadPdf}
+                                className="inline-flex items-center gap-1.5 rounded-2xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700 transition hover:bg-red-100 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40"
+                            >
+                                <FileText className="size-4" />
+                                PDF
+                            </button>
                         </div>
                     </div>
 
@@ -286,18 +343,38 @@ return;
                             {scanResult && (
                                 <div className={`flex-1 rounded-xl border p-3 text-sm ${
                                     scanResult.type === 'success'
-                                        ? 'border-green-200 bg-green-50 text-green-800'
+                                        ? 'border-green-200 bg-green-50 text-green-800 dark:border-green-900/50 dark:bg-green-900/20 dark:text-green-400'
                                         : scanResult.type === 'wrong_section'
-                                            ? 'border-amber-200 bg-amber-50 text-amber-800'
-                                            : 'border-red-200 bg-red-50 text-red-800'
+                                            ? 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900/50 dark:bg-amber-900/20 dark:text-amber-400'
+                                            : 'border-red-200 bg-red-50 text-red-800 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-400'
                                 }`}>
-                                    <span>{scanResult.message}</span>
-                                    {scanResult.status && (
-                                        <span className={`ml-2 rounded-full px-2 py-0.5 text-xs font-medium ${
-                                            scanResult.status === 'present' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-                                        }`}>
-                                            {scanResult.status}
-                                        </span>
+                                    <div className="font-semibold mb-1 flex items-center gap-1.5">
+                                        {scanResult.type === 'success' ? (
+                                            <><UserCheck className="size-4" /> Recorded</>
+                                        ) : scanResult.type === 'wrong_section' ? (
+                                            <><ShieldAlert className="size-4" /> Cross-Section Scan</>
+                                        ) : (
+                                            <><UserX className="size-4" /> Error</>
+                                        )}
+                                    </div>
+                                    
+                                    {scanResult.type === 'wrong_section' && scanResult.student ? (
+                                        <div className="space-y-1 mt-2">
+                                            <p>
+                                                <strong>{scanResult.student.name}</strong> is not enrolled in this section.
+                                            </p>
+                                            {scanResult.student.sections && scanResult.student.sections.length > 0 ? (
+                                                <p className="text-amber-700 dark:text-amber-300">
+                                                    They belong to: <strong>{scanResult.student.sections.join(', ')}</strong>
+                                                </p>
+                                            ) : (
+                                                <p className="text-amber-700 dark:text-amber-300">
+                                                    This student is not enrolled in any sections for this subject.
+                                                </p>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <p>{scanResult.message}</p>
                                     )}
                                 </div>
                             )}

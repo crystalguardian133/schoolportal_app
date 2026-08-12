@@ -16,10 +16,10 @@ import {
     Eye,
     Bug,
     Lightbulb,
-    MessageSquare,
     Check,
     X,
     ArrowRight,
+    UserCircle,
 } from 'lucide-react';
 import { useState } from 'react';
 import { PortalPageShell } from '@/components/portal-page-shell';
@@ -237,6 +237,14 @@ function StudentSectionBlock({
                     icon={Megaphone}
                     color="amber"
                     href="/student/announcements"
+                />
+                <MetricCard
+                    label="My Profile"
+                    value="View"
+                    subtitle="Student Information"
+                    icon={UserCircle}
+                    color="blue"
+                    href="/student/profile"
                 />
                 <MetricCard
                     label="QR Code"
