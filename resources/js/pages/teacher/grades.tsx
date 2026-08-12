@@ -1,5 +1,5 @@
 import { Head, router } from '@inertiajs/react';
-import { Pencil, Save, Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Download } from 'lucide-react';
+import { Pencil, Save, Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Download, AlertTriangle } from 'lucide-react';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { PortalPageShell } from '@/components/portal-page-shell';
 import { exportPdf } from '@/lib/pdf-export';
@@ -22,6 +22,7 @@ type StudentRow = {
     q1: number | null;
     q2: number | null;
     q3: number | null;
+    q4: number | null;
     total: number | null;
 };
 
@@ -58,7 +59,7 @@ export default function TeacherGrades({
     const [selectedSchoolYear, setSelectedSchoolYear] = useState(serverSchoolYear);
     const [selectedSectionUuid, setSelectedSectionUuid] = useState<string | null>(serverSectionUuid);
     const [gradeRows, setGradeRows] = useState<(number | null)[][]>(() =>
-        students.map((s) => [s.q1 ?? null, s.q2 ?? null, s.q3 ?? null]),
+        students.map((s) => [s.q1 ?? null, s.q2 ?? null, s.q3 ?? null, s.q4 ?? null]),
     );
     const [submitting, setSubmitting] = useState(false);
     const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -66,7 +67,7 @@ export default function TeacherGrades({
     const totalPages = Math.max(1, Math.ceil(totalStudents / perPage));
 
     useEffect(() => {
-        setGradeRows(students.map((s) => [s.q1 ?? null, s.q2 ?? null, s.q3 ?? null]));
+        setGradeRows(students.map((s) => [s.q1 ?? null, s.q2 ?? null, s.q3 ?? null, s.q4 ?? null]));
     }, [students]);
 
     useEffect(() => {
@@ -210,7 +211,7 @@ return;
         });
     }
 
-    function setGrade(idx: number, field: 0 | 1 | 2, value: number | null) {
+    function setGrade(idx: number, field: 0 | 1 | 2 | 3, value: number | null) {
         setGradeRows((prev) => {
             const copy = [...prev];
             copy[idx] = [...(copy[idx] ?? [null, null, null])];
@@ -231,6 +232,7 @@ return;
             q1: gradeRows[i]?.[0] ?? null,
             q2: gradeRows[i]?.[1] ?? null,
             q3: gradeRows[i]?.[2] ?? null,
+            q4: gradeRows[i]?.[3] ?? null,
         }));
         router.post(
             `/teacher/grades/${selectedSubjectUuid}`,
@@ -260,13 +262,14 @@ return;
 return;
 }
 
-        const headers = ['Student', 'LRN', 'Q1', 'Q2', 'Q3', 'Total'];
+        const headers = ['Student', 'LRN', 'Q1', 'Q2', 'Q3', 'Q4', 'Total'];
         const rows = students.map((s) => [
             s.name,
             s.lrn ?? '—',
             s.q1 ?? '—',
             s.q2 ?? '—',
             s.q3 ?? '—',
+            s.q4 ?? '—',
             s.total ?? '—',
         ]);
         exportPdf({
@@ -281,6 +284,8 @@ return;
     const startItem = totalStudents === 0 ? 0 : (currentPage - 1) * perPage + 1;
     const endItem = Math.min(currentPage * perPage, totalStudents);
 
+    const isPastYear = selectedSchoolYear && schoolYears.find((sy) => sy.name === selectedSchoolYear)?.is_active === false;
+
     return (
         <>
             <Head title="Edit Grades" />
@@ -288,6 +293,20 @@ return;
                 title="Edit Grades"
                 description="Select a subject to view and edit student grades."
             >
+                {isPastYear && (
+                    <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900 shadow-sm dark:border-amber-900/50 dark:bg-amber-900/20 dark:text-amber-400">
+                        <div className="flex items-start gap-3">
+                            <AlertTriangle className="size-5 shrink-0" />
+                            <div>
+                                <h3 className="text-sm font-semibold">Historical Data Archive</h3>
+                                <p className="mt-1 text-sm opacity-90">
+                                    You are viewing grades from a past school year ({selectedSchoolYear}). This is historical data and cannot be modified unless you have administrative override privileges.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <section className="rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
                     <div className="flex items-center gap-3">
                         <Pencil className="size-5 text-sky-600" />
@@ -378,6 +397,7 @@ return;
                                                     <th className="px-4 py-3 text-center font-medium">Q1</th>
                                                     <th className="px-4 py-3 text-center font-medium">Q2</th>
                                                     <th className="px-4 py-3 text-center font-medium">Q3</th>
+                                                    <th className="px-4 py-3 text-center font-medium">Q4</th>
                                                     <th className="px-4 py-3 text-center font-medium">Total</th>
                                                 </tr>
                                             </thead>
@@ -386,9 +406,11 @@ return;
                                                     const q1 = gradeRows[idx]?.[0];
                                                     const q2 = gradeRows[idx]?.[1];
                                                     const q3 = gradeRows[idx]?.[2];
+                                                    const q4 = gradeRows[idx]?.[3];
+                                                    const filledQuarters = [q1, q2, q3, q4].filter((v) => v != null);
                                                     const total =
-                                                        q1 != null && q2 != null && q3 != null
-                                                            ? Math.round((q1 + q2 + q3) / 3)
+                                                        filledQuarters.length > 0
+                                                            ? Math.round(filledQuarters.reduce((s, v) => s + v!, 0) / filledQuarters.length)
                                                             : '—';
 
                                                     return (
@@ -396,7 +418,7 @@ return;
                                                             <td className="px-4 py-3 font-medium text-sidebar-foreground">{student.name}</td>
                                                             <td className="px-4 py-3 text-muted-foreground">{student.lrn ?? '—'}</td>
                                                             <td className="px-4 py-3 text-muted-foreground">{student.studentId ?? '—'}</td>
-                                                            {([0, 1, 2] as const).map((fi) => (
+                                                            {([0, 1, 2, 3] as const).map((fi) => (
                                                                 <td key={fi} className="px-4 py-3 text-center text-sidebar-foreground">
                                                                     <input
                                                                         type="number"

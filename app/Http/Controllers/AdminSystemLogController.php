@@ -43,7 +43,10 @@ class AdminSystemLogController extends Controller
         $sortDir = $sortDir === 'asc' ? 'asc' : 'desc';
         $sortColumn = $sortBy === 'created_at' ? 'logs.id' : "logs.{$sortBy}";
 
-        $logs = DB::table('system_logs as logs')
+        $dateFrom = $request->query('date_from');
+        $dateTo = $request->query('date_to');
+
+        $query = DB::table('system_logs as logs')
             ->leftJoin('users as users', 'users.uuid', '=', 'logs.user_uuid')
             ->select([
                 'logs.id',
@@ -60,8 +63,8 @@ class AdminSystemLogController extends Controller
                 'logs.metadata',
                 'logs.created_at',
             ])
-            ->when($search !== '', function ($query) use ($search) {
-                $query->where(function ($inner) use ($search) {
+            ->when($search !== '', function ($q) use ($search) {
+                $q->where(function ($inner) use ($search) {
                     $inner->where('logs.action', 'like', '%'.$search.'%')
                         ->orWhere('logs.route_name', 'like', '%'.$search.'%')
                         ->orWhere('logs.path', 'like', '%'.$search.'%')
@@ -69,9 +72,50 @@ class AdminSystemLogController extends Controller
                         ->orWhere('users.email', 'like', '%'.$search.'%');
                 });
             })
-            ->orderBy($sortColumn, $sortDir)
-            ->paginate($perPage)
-            ->withQueryString();
+            ->when($dateFrom, function ($q) use ($dateFrom) {
+                $q->whereDate('logs.created_at', '>=', $dateFrom);
+            })
+            ->when($dateTo, function ($q) use ($dateTo) {
+                $q->whereDate('logs.created_at', '<=', $dateTo);
+            })
+            ->orderBy($sortColumn, $sortDir);
+
+        if ($request->query('export') === 'csv') {
+            $logsForExport = $query->get();
+            
+            $headers = [
+                'Content-type' => 'text/csv',
+                'Content-Disposition' => 'attachment; filename=system_logs_' . date('Y-m-d_H-i-s') . '.csv',
+                'Pragma' => 'no-cache',
+                'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+                'Expires' => '0',
+            ];
+
+            $callback = function () use ($logsForExport) {
+                $file = fopen('php://output', 'w');
+                fputcsv($file, ['ID', 'User Name', 'User Email', 'Action', 'Route', 'Method', 'Path', 'Status', 'IP Address', 'Date']);
+
+                foreach ($logsForExport as $log) {
+                    fputcsv($file, [
+                        $log->id,
+                        $log->user_name ?? 'System',
+                        $log->user_email ?? 'N/A',
+                        $log->action,
+                        $log->route_name,
+                        $log->method,
+                        $log->path,
+                        $log->status_code,
+                        $log->ip_address,
+                        $log->created_at,
+                    ]);
+                }
+                fclose($file);
+            };
+
+            return response()->stream($callback, 200, $headers);
+        }
+
+        $logs = $query->paginate($perPage)->withQueryString();
 
         return inertia('admin/system-logs', [
             'logs' => $logs,
@@ -80,6 +124,8 @@ class AdminSystemLogController extends Controller
                 'per_page' => $perPage,
                 'sort_by' => $sortBy,
                 'sort_dir' => $sortDir,
+                'date_from' => $dateFrom,
+                'date_to' => $dateTo,
             ],
         ]);
     }

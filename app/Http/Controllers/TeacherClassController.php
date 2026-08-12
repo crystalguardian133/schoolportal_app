@@ -162,6 +162,12 @@ class TeacherClassController extends Controller
                     'name' => $st->name,
                     'lrn' => $st->lrn ?? null,
                     'studentId' => $st->student_id ?? null,
+                    'uuid' => $st->uuid ?? null,
+                    'qr_token' => $st->qr_token ?? null,
+                    'profile_picture' => $st->profile_picture ?? null,
+                    'grade_level' => $st->grade_level ?? null,
+                    'section' => $st->section ?? null,
+                    'email' => $st->email ?? null,
                 ];
 
                 // collect per-subject grades
@@ -309,6 +315,12 @@ class TeacherClassController extends Controller
                 'name' => $r->student?->name ?? 'Unknown',
                 'lrn' => $r->student?->lrn ?? null,
                 'studentId' => $r->student?->student_id ?? null,
+                'uuid' => $r->student?->uuid ?? null,
+                'qr_token' => $r->student?->qr_token ?? null,
+                'profile_picture' => $r->student?->profile_picture ?? null,
+                'grade_level' => $r->student?->grade_level ?? null,
+                'section' => $r->student?->section ?? null,
+                'email' => $r->student?->email ?? null,
                 'q1' => $r->q1 ?? 0,
                 'q2' => $r->q2 ?? 0,
                 'q3' => $r->q3 ?? 0,

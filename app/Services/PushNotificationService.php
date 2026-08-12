@@ -4,123 +4,96 @@ namespace App\Services;
 
 use App\Models\Announcement;
 use App\Models\PushSubscription;
-use Minishlink\WebPush\Subscription;
+use Illuminate\Support\Facades\Log;
 use Minishlink\WebPush\WebPush;
-use Throwable;
+use Minishlink\WebPush\Subscription;
 
 class PushNotificationService
 {
-    public function sendToUser(string $userUuid, string $title, string $body, array $options = []): void
+    private ?WebPush $webPush = null;
+
+    public function __construct()
     {
-        $subscriptions = PushSubscription::query()
-            ->where('user_uuid', $userUuid)
-            ->get();
+        $publicKey = config('services.webpush.public_key');
+        $privateKey = config('services.webpush.private_key');
+        $subject = config('services.webpush.subject', 'mailto:admin@dnhs.edu.ph');
 
-        $this->send($subscriptions, $title, $body, $options);
-    }
-
-    public function sendAnnouncement(Announcement $announcement): void
-    {
-        $title = $announcement->scope === 'system'
-            ? 'New announcement'
-            : 'New announcement for your section';
-
-        $options = [
-            'url' => '/student/announcements',
-            'tag' => 'announcement-'.$announcement->uuid,
-        ];
-
-        match ($announcement->scope) {
-            'system' => $this->sendToAll($title, $announcement->title, $options),
-            'section' => $this->sendToSections([$announcement->section_name], $title, $announcement->title, $options),
-            'class' => $this->sendToSections([$announcement->classSection?->name], $title, $announcement->title, $options),
-            default => null,
-        };
-    }
-
-    public function sendToSections(array $sectionNames, string $title, string $body, array $options = []): void
-    {
-        $subscriptions = PushSubscription::query()
-            ->whereIn('user_uuid', function ($query) use ($sectionNames) {
-                $query->select('user_uuid')
-                    ->from('students')
-                    ->whereIn('section', $sectionNames);
-            })
-            ->get();
-
-        $this->send($subscriptions, $title, $body, $options);
-    }
-
-    public function sendToAll(string $title, string $body, array $options = []): void
-    {
-        $this->send(PushSubscription::query()->get(), $title, $body, $options);
-    }
-
-    /**
-     * @param  \Illuminate\Support\Collection<int, PushSubscription>  $subscriptions
-     */
-    private function send($subscriptions, string $title, string $body, array $options): void
-    {
-        if (! config('push.enabled')) {
-            return;
-        }
-
-        $publicKey = config('push.vapid.public_key');
-        $privateKey = config('push.vapid.private_key');
-
-        if (! $publicKey || ! $privateKey || $subscriptions->isEmpty()) {
-            return;
-        }
-
-        try {
-            $webPush = new WebPush([
+        if ($publicKey && $privateKey) {
+            $this->webPush = new WebPush([
                 'VAPID' => [
-                    'subject' => config('push.vapid.subject'),
+                    'subject' => $subject,
                     'publicKey' => $publicKey,
                     'privateKey' => $privateKey,
-                ],
-                'timeout' => 10,
+                ]
             ]);
+        }
+    }
 
-            $payload = json_encode([
-                'title' => $title,
-                'body' => $body,
-                'url' => $options['url'] ?? '/dashboard',
-                'tag' => $options['tag'] ?? 'announcement',
-                'icon' => '/pwa-icons/icon-192x192.png',
-                'badge' => '/pwa-icons/icon-192x192.png',
-            ]);
+    public function sendForAnnouncement(Announcement $announcement): void
+    {
+        if (! $this->webPush) {
+            Log::warning('[PUSH] WebPush not configured, skipping announcement push.');
+            return;
+        }
 
-            foreach ($subscriptions as $subscription) {
-                try {
-                    $webPush->queueNotification(
-                        Subscription::create([
-                            'endpoint' => $subscription->endpoint,
-                            'publicKey' => $subscription->keys_p256dh,
-                            'authToken' => $subscription->keys_auth,
-                            'contentEncoding' => 'aes128gcm',
-                        ]),
-                        $payload
-                    );
-                } catch (Throwable $e) {
-                    report($e);
+        $payload = json_encode([
+            'title' => 'New Announcement: ' . $announcement->title,
+            'body' => str()->limit(strip_tags($announcement->content), 100),
+            'url' => '/dashboard',
+        ]);
+
+        // Find relevant subscriptions based on scope
+        $query = PushSubscription::query();
+
+        if ($announcement->scope === 'system') {
+            // all subscriptions
+        } elseif ($announcement->scope === 'teacher') {
+            $query->whereHas('user', fn($q) => $q->whereHas('roles', fn($r) => $r->where('name', 'teacher')));
+        } elseif ($announcement->scope === 'student') {
+            $query->whereHas('user', fn($q) => $q->whereHas('roles', fn($r) => $r->where('name', 'student')));
+        } elseif ($announcement->scope === 'section' && $announcement->section_name) {
+             $query->whereHas('user', fn($q) => $q->whereHas('student', fn($s) => $s->where('section', $announcement->section_name)));
+        } elseif ($announcement->scope === 'class' && $announcement->class_section_uuid) {
+             $query->whereHas('user', fn($q) => $q->whereHas('student', fn($s) => $s->where('section_uuid', $announcement->class_section_uuid)));
+        } else {
+            return; // Unknown scope or missing target
+        }
+
+        $subscriptions = $query->get();
+        $count = 0;
+
+        foreach ($subscriptions as $sub) {
+            try {
+                $pushSubscription = Subscription::create(json_decode($sub->data, true));
+                $this->webPush->queueNotification($pushSubscription, $payload);
+                $count++;
+            } catch (\Throwable $e) {
+                Log::warning('[PUSH] Invalid subscription data for user ' . $sub->user_uuid);
+            }
+        }
+
+        if ($count > 0) {
+            $reports = $this->webPush->flush();
+            $success = 0;
+            $failed = 0;
+            
+            if (is_iterable($reports)) {
+                foreach ($reports as $report) {
+                    if ($report->isSuccess()) {
+                        $success++;
+                    } else {
+                        $failed++;
+                        // Optionally, if $report->isSubscriptionExpired(), we could delete it from the DB
+                    }
                 }
             }
 
-            $expiredEndpoints = [];
-            foreach ($webPush->flush() as $report) {
-                if ($report->isSubscriptionExpired()) {
-                    $expiredEndpoints[] = $report->getEndpoint();
-                }
-            }
-
-            if (! empty($expiredEndpoints)) {
-                PushSubscription::query()
-                    ->whereIn('endpoint', $expiredEndpoints)
-                    ->delete();
-            }
-        } catch (Throwable $e) {
-            report($e);
+            Log::info('[PUSH] Announcement push sent', [
+                'announcement' => $announcement->uuid,
+                'attempted' => $count,
+                'success' => $success,
+                'failed' => $failed
+            ]);
         }
     }
 }

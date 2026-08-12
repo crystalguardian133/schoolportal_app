@@ -58,7 +58,13 @@ class AdviserAssignmentController extends Controller
         }
 
         if (! $section) {
-            abort(404);
+            return Inertia::render('adviser/assign-subjects', [
+                'section' => null,
+                'subjects' => [],
+                'assignableTeachersPerSubject' => [],
+                'allSections' => [],
+                'hasAccessAdmin' => $canSwitchSections,
+            ]);
         }
 
         // Get subjects linked to this section
@@ -73,7 +79,7 @@ class AdviserAssignmentController extends Controller
             ->keyBy(fn ($row) => $row->subject_uuid);
 
         $subjects = Subject::query()
-            ->select(['uuid', 'name', 'code'])
+            ->select(['uuid', 'name', 'code', 'units'])
             ->whereIn('uuid', $subjectUuids)
             ->orderBy('name')
             ->get()
@@ -97,6 +103,7 @@ class AdviserAssignmentController extends Controller
                     'uuid' => $subject->uuid,
                     'name' => $subject->name,
                     'code' => $subject->code,
+                    'units' => (float) $subject->units,
                     'teachers' => $teachers,
                 ];
             })
@@ -142,6 +149,14 @@ class AdviserAssignmentController extends Controller
                 ->toArray();
         }
 
+        $teacherWorkloads = DB::table('class_section_subject_teacher')
+            ->join('subjects', 'class_section_subject_teacher.subject_uuid', '=', 'subjects.uuid')
+            ->select('class_section_subject_teacher.teacher_uuid', DB::raw('SUM(subjects.units) as total_units'))
+            ->groupBy('class_section_subject_teacher.teacher_uuid')
+            ->get()
+            ->keyBy('teacher_uuid')
+            ->map(fn($row) => (float)$row->total_units);
+
         return Inertia::render('adviser/assign-subjects', [
             'section' => [
                 'uuid' => $section->uuid,
@@ -152,6 +167,7 @@ class AdviserAssignmentController extends Controller
             'assignableTeachersPerSubject' => $assignableTeachersPerSubject,
             'allSections' => $canSwitchSections ? ClassSection::query()->select(['uuid', 'name', 'grade_level'])->orderBy('name')->get() : [],
             'hasAccessAdmin' => $canSwitchSections,
+            'teacherWorkloads' => $teacherWorkloads,
         ]);
     }
 

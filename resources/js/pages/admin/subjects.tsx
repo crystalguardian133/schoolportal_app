@@ -30,6 +30,7 @@ type SubjectRow = {
     code?: string | null;
     description?: string | null;
     time_schedule?: string | null;
+    units?: number;
     teachers: Teacher[];
 };
 
@@ -62,6 +63,7 @@ export default function AdminSubjects() {
         code: '',
         description: '',
         time_schedule: '',
+        units: 0,
     });
 
     const [editSubject, setEditSubject] = useState<SubjectRow | null>(null);
@@ -70,6 +72,7 @@ export default function AdminSubjects() {
         code: '',
         description: '',
         time_schedule: '',
+        units: 0,
     });
 
     const [submitting, setSubmitting] = useState(false);
@@ -113,12 +116,13 @@ return assignableTeachers;
                 code: form.code || null,
                 description: form.description || null,
                 time_schedule: form.time_schedule || null,
+                units: form.units || 0,
             },
             {
                 onFinish: () => setSubmitting(false),
                 onSuccess: () => {
                     showToast('Subject created successfully.', 'success');
-                    setForm({ name: '', code: '', description: '', time_schedule: '' });
+                    setForm({ name: '', code: '', description: '', time_schedule: '', units: 0 });
                     router.reload({ only: ['subjects'] });
                 },
                 onError: (errors) => {
@@ -139,6 +143,7 @@ return assignableTeachers;
             code: subject.code ?? '',
             description: subject.description ?? '',
             time_schedule: subject.time_schedule ?? '',
+            units: subject.units ?? 0,
         });
     }
 
@@ -202,6 +207,7 @@ return;
                 code: editForm.code || null,
                 description: editForm.description || null,
                 time_schedule: editForm.time_schedule || null,
+                units: editForm.units || 0,
             },
             {
                 onFinish: () => setSubmitting(false),
@@ -296,6 +302,19 @@ return;
                                 placeholder="e.g. Mon-Fri 8:00AM - 10:00AM"
                             />
 
+                            <Label className="mt-3 text-xs">Units / Hours</Label>
+                            <Input
+                                type="number"
+                                step="0.5"
+                                min="0"
+                                max="100"
+                                value={form.units}
+                                onChange={(e) =>
+                                    setForm({ ...form, units: parseFloat(e.target.value) || 0 })
+                                }
+                                placeholder="e.g. 3.0"
+                            />
+
                             <div className="mt-4 text-right">
                                 <Button
                                     type="submit"
@@ -331,6 +350,9 @@ return;
                                             Schedule
                                         </th>
                                         <th className="px-4 py-3 font-medium">
+                                            Units
+                                        </th>
+                                        <th className="px-4 py-3 font-medium">
                                             Teachers
                                         </th>
                                         <th className="px-4 py-3 font-medium">
@@ -355,6 +377,9 @@ return;
                                             </td>
                                             <td className="px-4 py-3 text-muted-foreground text-xs">
                                                 {subject.time_schedule || '-'}
+                                            </td>
+                                            <td className="px-4 py-3 text-muted-foreground text-xs">
+                                                {subject.units || '0'}
                                             </td>
                                             <td className="px-4 py-3 text-muted-foreground">
                                                 <div className="flex flex-col gap-1">
@@ -574,6 +599,23 @@ return;
                                     })
                                 }
                                 placeholder="e.g. Mon-Fri 8:00AM - 10:00AM"
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label className="text-xs">Units / Hours</Label>
+                            <Input
+                                type="number"
+                                step="0.5"
+                                min="0"
+                                max="100"
+                                value={editForm.units}
+                                onChange={(e) =>
+                                    setEditForm({
+                                        ...editForm,
+                                        units: parseFloat(e.target.value) || 0,
+                                    })
+                                }
+                                placeholder="e.g. 3.0"
                             />
                         </div>
                         <DialogFooter>

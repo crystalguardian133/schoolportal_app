@@ -1,5 +1,14 @@
 <?php
 
+// Suppress PHP warnings originating from vendor files (e.g. thecodingmachine/safe
+// uses legacy type names like "resource" and "integer" that trigger E_WARNING on PHP 8.3+).
+set_error_handler(function (int $errno, string $errstr, string $errfile): bool {
+    if ($errno === E_WARNING && str_contains($errfile, DIRECTORY_SEPARATOR.'vendor'.DIRECTORY_SEPARATOR)) {
+        return true; // Suppress: silently ignore warnings from vendor packages
+    }
+    return false; // Let PHP handle all other errors normally
+});
+
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\LogSystemActivity;

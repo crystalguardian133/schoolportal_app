@@ -52,7 +52,14 @@ class ScheduleController extends Controller
         }
 
         if (! $section) {
-            abort(404);
+            return Inertia::render('admin/schedule-create', [
+                'section' => null,
+                'subjects' => [],
+                'schedules' => [],
+                'allSections' => [],
+                'hasAccessAdmin' => $canSwitchSections,
+                'schoolYear' => null,
+            ]);
         }
 
         $subjectUuids = DB::table('class_section_subjects')
@@ -85,24 +92,44 @@ class ScheduleController extends Controller
             })
             ->values();
 
-        $currentSchedules = Schedule::query()
-            ->where('class_section_uuid', $section->uuid)
-            ->with(['subject', 'teacher'])
-            ->get()
-            ->map(fn (Schedule $s) => [
-                'id' => $s->id,
-                'subject' => $s->subject?->name,
-                'teacher' => $s->teacher?->name,
-                'day' => $s->day,
-                'start_time' => $s->start_time,
-                'end_time' => $s->end_time,
-                'room' => $s->room,
-            ])
-            ->values();
-
         $schoolYear = DB::table('school_years')
             ->where('status', 'active')
             ->value('name');
+
+        $allSchedules = Schedule::query()
+            ->where('school_year', $schoolYear)
+            ->with(['subject', 'teacher'])
+            ->get()
+            ->map(function(Schedule $s) {
+                $sectionName = ClassSection::query()->where('uuid', $s->class_section_uuid)->value('name');
+                return [
+                    'id' => $s->id,
+                    'class_section_uuid' => $s->class_section_uuid,
+                    'section_name' => $sectionName,
+                    'subject' => $s->subject?->name,
+                    'subject_code' => $s->subject?->code,
+                    'teacher_uuid' => $s->teacher_uuid,
+                    'teacher' => $s->teacher?->name,
+                    'day' => $s->day,
+                    'start_time' => $s->start_time,
+                    'end_time' => $s->end_time,
+                    'room' => $s->room,
+                ];
+            })
+            ->values();
+
+        $allTeachers = User::query()
+            ->whereIn('uuid', DB::table('class_section_subject_teacher')->pluck('teacher_uuid'))
+            ->orderBy('name')
+            ->get(['uuid', 'name']);
+
+        $allRooms = Schedule::query()
+            ->where('school_year', $schoolYear)
+            ->whereNotNull('room')
+            ->where('room', '!=', '')
+            ->distinct()
+            ->orderBy('room')
+            ->pluck('room');
 
         return Inertia::render('admin/schedule-create', [
             'section' => [
@@ -111,7 +138,9 @@ class ScheduleController extends Controller
                 'grade_level' => $section->grade_level,
             ],
             'subjects' => $subjects,
-            'schedules' => $currentSchedules,
+            'allSchedules' => $allSchedules,
+            'allTeachers' => $allTeachers,
+            'allRooms' => $allRooms,
             'allSections' => $canSwitchSections
                 ? ClassSection::query()->select(['uuid', 'name', 'grade_level'])->orderBy('name')->get()
                 : [],
@@ -159,6 +188,36 @@ class ScheduleController extends Controller
             ->value('name');
 
         foreach ($entries['entries'] as $entry) {
+            $teacherOverlap = Schedule::query()
+                ->where('teacher_uuid', $entries['teacher_uuid'])
+                ->where('school_year', $schoolYear)
+                ->where('day', $entry['day'])
+                ->where(function ($query) use ($entry) {
+                    $query->where('start_time', '<', $entry['end_time'])
+                          ->where('end_time', '>', $entry['start_time']);
+                })
+                ->exists();
+
+            if ($teacherOverlap) {
+                return back()->with('error', "Teacher has a schedule overlap on {$entry['day']} between {$entry['start_time']} and {$entry['end_time']}.");
+            }
+
+            if (!empty($entry['room'])) {
+                $roomOverlap = Schedule::query()
+                    ->where('room', $entry['room'])
+                    ->where('school_year', $schoolYear)
+                    ->where('day', $entry['day'])
+                    ->where(function ($query) use ($entry) {
+                        $query->where('start_time', '<', $entry['end_time'])
+                              ->where('end_time', '>', $entry['start_time']);
+                    })
+                    ->exists();
+
+                if ($roomOverlap) {
+                    return back()->with('error', "Room {$entry['room']} is already booked on {$entry['day']} between {$entry['start_time']} and {$entry['end_time']}.");
+                }
+            }
+
             Schedule::create([
                 'class_section_uuid' => $entries['section_uuid'],
                 'subject_uuid' => $entries['subject_uuid'],

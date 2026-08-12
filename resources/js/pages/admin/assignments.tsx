@@ -11,7 +11,7 @@ import {
     DialogClose,
 } from '@/components/ui/dialog';
 
-function toArray(value) {
+function toArray(value: any) {
     if (Array.isArray(value)) {
         return value;
     }
@@ -106,7 +106,7 @@ return null;
     );
 }
 
-export default function Assignments({ subjects, teachers }) {
+export default function Assignments({ subjects, teachers }: any) {
     const subjectList: Subject[] = (toArray(subjects) || []).map((s: any) => ({
         ...s,
         teachers: s.teachers || [],
@@ -119,7 +119,11 @@ export default function Assignments({ subjects, teachers }) {
     const [selectedTeacherUuids, setSelectedTeacherUuids] = useState<string[]>([]);
     const [isSubstitute, setIsSubstitute] = useState(false);
     const [teacherListModalOpen, setTeacherListModalOpen] = useState(false);
-    const [reassignState, setReassignState] = useState({
+    const [reassignState, setReassignState] = useState<{
+        open: boolean;
+        teacher: Teacher | null;
+        sourceSubject: Subject | null;
+    }>({
         open: false,
         teacher: null,
         sourceSubject: null,
@@ -516,7 +520,7 @@ export default function Assignments({ subjects, teachers }) {
 
             <ReassignAssignmentModal
                 open={reassignState.open}
-                onOpenChange={(open) =>
+                onOpenChange={(open: boolean) =>
                     setReassignState((current) => ({ ...current, open }))
                 }
                 teacher={reassignState.teacher}

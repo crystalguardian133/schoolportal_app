@@ -7,6 +7,7 @@ import {
     FileText,
     Search,
     UserRound,
+    Download,
 } from 'lucide-react';
 import { useState } from 'react';
 import { PageLoader } from '@/components/page-loader';
@@ -17,7 +18,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 
-function toArray(value) {
+function toArray(value: any) {
     if (Array.isArray(value)) {
         return value;
     }
@@ -29,7 +30,7 @@ function toArray(value) {
     return [];
 }
 
-function formatMetadata(metadata) {
+function formatMetadata(metadata: any) {
     if (!metadata) {
         return null;
     }
@@ -45,7 +46,7 @@ function formatMetadata(metadata) {
     return metadata;
 }
 
-function statusTone(statusCode) {
+function statusTone(statusCode: any) {
     if (!statusCode) {
         return 'bg-muted text-muted-foreground';
     }
@@ -82,7 +83,7 @@ type LogRow = {
     ip_address?: string | null;
     user_agent?: string | null;
     status_code: number;
-    metadata?: unknown;
+    metadata?: any;
     created_at: string;
 };
 
@@ -171,7 +172,7 @@ function LogRowComponent({
 }
 
 export default function SystemLogs() {
-    const { props } = usePage();
+    const { props } = usePage<any>();
     const logsProp = props.logs || {
         data: [],
         current_page: 1,
@@ -184,9 +185,13 @@ export default function SystemLogs() {
         per_page: 25,
         sort_by: 'created_at',
         sort_dir: 'desc',
+        date_from: '',
+        date_to: '',
     };
     const [query, setQuery] = useState(filters.q ?? '');
     const [perPage, setPerPage] = useState(String(filters.per_page ?? 25));
+    const [dateFrom, setDateFrom] = useState(filters.date_from ?? '');
+    const [dateTo, setDateTo] = useState(filters.date_to ?? '');
     const [sortBy, setSortBy] = useState<SortableColumn>(
         (filters.sort_by as SortableColumn) ?? 'created_at',
     );
@@ -202,15 +207,29 @@ export default function SystemLogs() {
         });
     }
 
-    function handleSubmit(event) {
+    function handleSubmit(event: React.FormEvent) {
         event.preventDefault();
         reload({
             q: query,
             per_page: perPage,
             sort_by: sortBy,
             sort_dir: sortDir,
+            date_from: dateFrom,
+            date_to: dateTo,
             page: 1,
         });
+    }
+
+    function handleExport() {
+        const params = new URLSearchParams({
+            q: query,
+            sort_by: sortBy,
+            sort_dir: sortDir,
+            ...(dateFrom && { date_from: dateFrom }),
+            ...(dateTo && { date_to: dateTo }),
+            export: 'csv',
+        });
+        window.location.href = `/admin/system-logs?${params.toString()}`;
     }
 
     function handleSort(column: SortableColumn) {
@@ -223,6 +242,8 @@ export default function SystemLogs() {
             per_page: perPage,
             sort_by: column,
             sort_dir: nextDir,
+            date_from: dateFrom,
+            date_to: dateTo,
             page: 1,
         });
     }
@@ -284,6 +305,17 @@ export default function SystemLogs() {
                                     </div>
                                 </div>
                             </div>
+                            
+                            <div className="mt-6 flex justify-end">
+                                <button
+                                    type="button"
+                                    onClick={handleExport}
+                                    className="inline-flex items-center gap-2 rounded-2xl border border-border bg-card px-4 py-2.5 text-sm font-medium shadow-sm transition hover:bg-muted"
+                                >
+                                    <Download className="size-4" />
+                                    Export CSV
+                                </button>
+                            </div>
                         </div>
                     </section>
 
@@ -326,6 +358,30 @@ export default function SystemLogs() {
                                         </option>
                                     ))}
                                 </select>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="block text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                                    From Date
+                                </label>
+                                <input
+                                    type="date"
+                                    value={dateFrom}
+                                    onChange={(e) => setDateFrom(e.target.value)}
+                                    className="w-full rounded-2xl border border-input bg-background px-3 py-3 text-sm transition outline-none focus:border-ring focus:ring-4 focus:ring-ring/15"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="block text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                                    To Date
+                                </label>
+                                <input
+                                    type="date"
+                                    value={dateTo}
+                                    onChange={(e) => setDateTo(e.target.value)}
+                                    className="w-full rounded-2xl border border-input bg-background px-3 py-3 text-sm transition outline-none focus:border-ring focus:ring-4 focus:ring-ring/15"
+                                />
                             </div>
 
                             <button
@@ -436,6 +492,8 @@ export default function SystemLogs() {
                                             per_page: perPage,
                                             sort_by: sortBy,
                                             sort_dir: sortDir,
+                                            date_from: dateFrom,
+                                            date_to: dateTo,
                                             page:
                                                 (logsProp.current_page || 1) -
                                                 1,
@@ -457,6 +515,8 @@ export default function SystemLogs() {
                                             per_page: perPage,
                                             sort_by: sortBy,
                                             sort_dir: sortDir,
+                                            date_from: dateFrom,
+                                            date_to: dateTo,
                                             page:
                                                 (logsProp.current_page || 1) +
                                                 1,

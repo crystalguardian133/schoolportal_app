@@ -197,8 +197,12 @@ export default function AdminUsers() {
 
     function deleteUser(uuid: string) {
         router.delete(`/admin/users/${uuid}`, {
-            onSuccess: () => {
-                showToast('User deleted successfully.', 'success');
+            onSuccess: (page) => {
+                if (page.props.flash?.error) {
+                    showToast(page.props.flash.error, 'error');
+                } else {
+                    showToast('User deleted successfully.', 'success');
+                }
                 router.reload();
             },
             onError: (errors) => {

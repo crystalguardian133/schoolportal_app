@@ -21,6 +21,7 @@ class StudentSubject extends Model
         'q1',
         'q2',
         'q3',
+        'q4',
         'total',
     ];
 
@@ -28,6 +29,7 @@ class StudentSubject extends Model
         'q1' => 'integer',
         'q2' => 'integer',
         'q3' => 'integer',
+        'q4' => 'integer',
         'total' => 'integer',
     ];
 

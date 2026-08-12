@@ -802,6 +802,11 @@ export default function CreateStudentEnroll() {
                                 }
                                 className={inputClass}
                             />
+                            {props.errors['new_student.lrn'] && (
+                                <div className="mt-1 text-sm text-destructive">
+                                    {props.errors['new_student.lrn']}
+                                </div>
+                            )}
                         </label>
 
                         <label className="space-y-2 text-sm">

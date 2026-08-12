@@ -102,7 +102,7 @@ export default function TeacherAnnouncements() {
     });
 
     const { unreadCount, markAsRead } = useAnnouncementRealtime(() => {
-        router.reload({ only: ['announcements'], preserveState: true });
+        router.reload({ only: ['announcements'] });
     });
 
     useEffect(() => {

@@ -2,6 +2,7 @@ import type { PageProps } from '@inertiajs/core';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
 import { PortalPageShell } from '@/components/portal-page-shell';
+import { PageLoader } from '@/components/page-loader';
 
 type Student = {
     uuid: string;
@@ -100,6 +101,7 @@ export default function ManageStudents() {
         <>
             <Head title="Manage Students" />
             <PortalPageShell title="Manage Students" description="View and edit student information.">
+                <PageLoader skeleton="table">
                 <div className="rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
                     <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                         <div className="text-sm text-muted-foreground">
@@ -200,6 +202,7 @@ export default function ManageStudents() {
                         </button>
                     </div>
                 </div>
+                </PageLoader>
             </PortalPageShell>
         </>
     );

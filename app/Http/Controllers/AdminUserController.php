@@ -10,6 +10,8 @@ use App\Models\ClassSection;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\UserCredentialsMail;
 
 class AdminUserController extends Controller
 {
@@ -18,7 +20,7 @@ class AdminUserController extends Controller
         $this->authorizeAdmin($request);
 
         $query = User::query()
-            ->select(['uuid', 'name', 'email', 'profile_picture', 'is_adviser', 'adviser_section', 'created_at']);
+            ->select(['id', 'uuid', 'name', 'email', 'profile_picture', 'is_adviser', 'adviser_section', 'created_at']);
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -213,6 +215,12 @@ class AdminUserController extends Controller
             $user->assignRole($data['role']);
         }
 
+        try {
+            Mail::to($user->email)->queue(new UserCredentialsMail($user->name, $user->email, $data['password'], $data['role'] ?? 'staff'));
+        } catch (\Throwable $mailEx) {
+            \Log::warning('[ADMIN_USER] credentials email failed: ' . $mailEx->getMessage());
+        }
+
         return redirect()->route('admin.users')->with('success', 'User created successfully.');
     }
 
@@ -262,6 +270,13 @@ class AdminUserController extends Controller
             $user->assignRole($data['role']);
         }
 
+        try {
+            $role = ! empty($data['role']) ? $data['role'] : 'teacher';
+            Mail::to($user->email)->queue(new UserCredentialsMail($user->name, $user->email, $data['password'], $role));
+        } catch (\Throwable $mailEx) {
+            \Log::warning('[ADMIN_USER] credentials email failed: ' . $mailEx->getMessage());
+        }
+
         return redirect()->route('admin.users')->with('success', 'Teacher account created successfully.');
     }
 
@@ -269,7 +284,10 @@ class AdminUserController extends Controller
     {
         $this->authorizeAdmin($request);
 
-        $user = User::query()->where('uuid', $uuid)->firstOrFail();
+        $user = User::query()
+            ->where('uuid', $uuid)
+            ->orWhere('id', $uuid)
+            ->firstOrFail();
 
         $sections = ClassSection::query()
             ->select(['uuid', 'name', 'grade_level'])
@@ -306,7 +324,10 @@ class AdminUserController extends Controller
     {
         $this->authorizeAdmin($request);
 
-        $user = User::query()->where('uuid', $uuid)->firstOrFail();
+        $user = User::query()
+            ->where('uuid', $uuid)
+            ->orWhere('id', $uuid)
+            ->firstOrFail();
 
         $data = $request->validate([
             'first_name' => 'nullable|string|max:50',
@@ -320,7 +341,10 @@ class AdminUserController extends Controller
         ]);
 
         // ensure email is unique except for current user
-        $exists = DB::table('users')->where('email', $data['email'])->where('uuid', '<>', $user->uuid)->exists();
+        $exists = DB::table('users')
+            ->where('email', $data['email'])
+            ->where('id', '<>', $user->id)
+            ->exists();
         if ($exists) {
             return back()->with('error', 'Email already in use by another account.');
         }
@@ -385,16 +409,26 @@ class AdminUserController extends Controller
     {
         $this->authorizeAdmin($request);
 
-        $user = User::query()->where('uuid', $uuid)->firstOrFail();
+        $user = User::query()
+            ->where('uuid', $uuid)
+            ->orWhere('id', $uuid)
+            ->first();
+
+        if (! $user) {
+            return back()->with('error', 'User not found or already deleted.');
+        }
 
         // prevent deleting self
-        if ($request->user() && method_exists($request->user(), 'uuid') && $request->user()->uuid === $user->uuid) {
+        if ($request->user() && ($request->user()->id === $user->id || ($request->user()->uuid && $request->user()->uuid === $user->uuid))) {
             return back()->with('error', 'You cannot delete your own account.');
         }
 
-        // detach roles and delete via query builder
+        // detach roles and delete push subscriptions
         $user->roles()->detach();
-        DB::table('users')->where('uuid', $uuid)->delete();
+        if ($user->uuid) {
+            DB::table('push_subscriptions')->where('user_uuid', $user->uuid)->delete();
+        }
+        $user->delete();
 
         return redirect()->route('admin.users')->with('success', 'User deleted successfully.');
     }

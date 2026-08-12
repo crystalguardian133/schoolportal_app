@@ -8,6 +8,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\Event;
+use App\Events\AnnouncementPublished;
+use App\Listeners\SendAnnouncementPushNotification;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -25,8 +28,13 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         if ($this->app->environment('local') && str_contains(config('app.url'), 'ngrok')) {
-        URL::forceScheme('https');
-    }
+            URL::forceScheme('https');
+        }
+
+        Event::listen(
+            AnnouncementPublished::class,
+            SendAnnouncementPushNotification::class,
+        );
     }
 
     /**

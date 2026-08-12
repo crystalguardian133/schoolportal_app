@@ -1,5 +1,5 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { Users } from 'lucide-react';
+import { Users, QrCode } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 import { PortalPageShell } from '@/components/portal-page-shell';
 
@@ -16,6 +16,11 @@ type StudentRow = {
     lrn: string;
     studentId: string;
     uuid?: string;
+    qr_token?: string | null;
+    profile_picture?: string | null;
+    grade_level?: string | null;
+    section?: string | null;
+    email?: string | null;
     q1: number | null;
     q2: number | null;
     q3: number | null;
@@ -56,10 +61,10 @@ export default function ManageClass({
     studentAverages,
     canEdit = false,
 }: Props) {
-    const classList = Array.isArray(classes)
+    const classList: TeacherClass[] = Array.isArray(classes)
         ? classes
         : classes
-          ? Object.values(classes)
+          ? (Object.values(classes) as TeacherClass[])
           : [];
 
     const [gradeRows, setGradeRows] = useState(() =>
@@ -119,6 +124,104 @@ export default function ManageClass({
         );
     }
 
+    function printCards() {
+        if (!students.length) return;
+        
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) return;
+
+        let cardsHtml = '';
+        students.forEach(student => {
+            cardsHtml += `
+                <div class="id-card">
+                    <div class="id-card-header">SCHOOL ID CARD</div>
+                    <div class="id-card-content">
+                        <div class="id-card-photo">
+                            ${student.profile_picture ? 
+                                `<img src="/assets/profile_pictures/${student.profile_picture.split('/')[1] || 'students'}/${student.profile_picture.split('/').pop()}" />` : 
+                                `<div>No Photo</div>`}
+                        </div>
+                        <div class="id-card-info">
+                            <div><span class="font-semibold">Name:</span> ${student.name}</div>
+                            ${student.studentId ? `<div><span class="font-semibold">ID:</span> ${student.studentId}</div>` : ''}
+                            ${student.lrn ? `<div><span class="font-semibold">LRN:</span> ${student.lrn}</div>` : ''}
+                            ${student.section ? `<div><span class="font-semibold">Section:</span> ${student.section}</div>` : ''}
+                            ${student.grade_level ? `<div><span class="font-semibold">Grade:</span> ${student.grade_level}</div>` : ''}
+                        </div>
+                        <div class="id-card-qr">
+                            ${student.qr_token ? `<img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${student.qr_token}" />` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>ID Cards - ${selectedClass.section}</title>
+                <style>
+                    @page { size: letter; margin: 0.5in; }
+                    body { font-family: system-ui, sans-serif; margin: 0; padding: 0; }
+                    .print-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5in; }
+                    .id-card { 
+                        border: 2px solid #000; 
+                        border-radius: 8px; 
+                        padding: 16px; 
+                        height: 2.75in; 
+                        box-sizing: border-box;
+                        page-break-inside: avoid;
+                    }
+                    .id-card-header { 
+                        text-align: center; 
+                        font-size: 12px; 
+                        font-weight: bold; 
+                        border-bottom: 1px solid #ccc; 
+                        padding-bottom: 8px; 
+                        margin-bottom: 8px;
+                    }
+                    .id-card-content { display: flex; gap: 12px; }
+                    .id-card-photo { 
+                        width: 70px; 
+                        height: 80px; 
+                        background: #eee; 
+                        border-radius: 4px; 
+                        flex-shrink: 0;
+                        overflow: hidden;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 10px;
+                        color: #888;
+                    }
+                    .id-card-photo img { width: 100%; height: 100%; object-fit: cover; }
+                    .id-card-info { flex: 1; font-size: 12px; }
+                    .id-card-info div { margin-bottom: 4px; }
+                    .font-semibold { font-weight: 600; color: #555; }
+                    .id-card-qr {
+                        width: 80px;
+                        height: 80px;
+                        flex-shrink: 0;
+                    }
+                    .id-card-qr img { width: 100%; height: 100%; }
+                </style>
+            </head>
+            <body>
+                <div class="print-container">${cardsHtml}</div>
+                <script>
+                    window.onload = () => {
+                        window.print();
+                        setTimeout(() => window.close(), 500);
+                    };
+                </script>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.focus();
+    }
+
     const hasChanges = useMemo(() => {
         if (!students || students.length !== gradeRows.length) {
             return true;
@@ -154,17 +257,28 @@ export default function ManageClass({
                 description="Choose a class first, then enter grades for the students in that class."
             >
                 <section className="rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
-                    <div className="flex items-center gap-3">
-                        <Users className="size-5 text-sky-600" />
-                        <div>
-                            <h2 className="text-lg font-semibold">
-                                {selectedClass.section}
-                            </h2>
-                            <p className="text-sm text-muted-foreground">
-                                {selectedClass.subject} ·{' '}
-                                {selectedClass.timeSchedule}
-                            </p>
+                    <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                            <Users className="size-5 text-sky-600" />
+                            <div>
+                                <h2 className="text-lg font-semibold">
+                                    {selectedClass.section}
+                                </h2>
+                                <p className="text-sm text-muted-foreground">
+                                    {selectedClass.subject} ·{' '}
+                                    {selectedClass.timeSchedule}
+                                </p>
+                            </div>
                         </div>
+                        {students.length > 0 && (
+                            <button
+                                onClick={printCards}
+                                className="inline-flex items-center gap-2 rounded-md border border-sidebar-border bg-sidebar px-3 py-2 text-sm font-medium text-sidebar-foreground shadow-sm hover:bg-sidebar-accent transition-colors"
+                            >
+                                <QrCode className="size-4" />
+                                Download ID Cards
+                            </button>
+                        )}
                     </div>
 
                     <div className="mt-4 flex flex-wrap gap-2">
@@ -227,7 +341,7 @@ export default function ManageClass({
                                                                     expandedStudent ===
                                                                         student.uuid
                                                                         ? null
-                                                                        : student.uuid,
+                                                                        : (student.uuid ?? null),
                                                                 )
                                                             }
                                                             className="rounded p-1 text-muted-foreground hover:text-sidebar-foreground"
@@ -453,9 +567,9 @@ export default function ManageClass({
                                 <tbody className="divide-y divide-sidebar-border/70 bg-white dark:bg-sidebar">
                                     {students.map((student, idx) => {
                                         const total = Math.round(
-                                            (gradeRows[idx].q1 +
-                                                gradeRows[idx].q2 +
-                                                gradeRows[idx].q3) /
+                                            ((gradeRows[idx].q1 ?? 0) +
+                                                (gradeRows[idx].q2 ?? 0) +
+                                                (gradeRows[idx].q3 ?? 0)) /
                                                 3,
                                         );
 

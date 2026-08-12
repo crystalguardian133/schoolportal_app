@@ -13,7 +13,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
+use App\Mail\StudentCredentialsMail;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class EnrollmentController extends Controller
 {
@@ -237,8 +239,6 @@ class EnrollmentController extends Controller
                 'class_section_uuid' => 'required_with:new_student|string',
                 'new_student' => 'nullable|array',
                 'new_student.name' => 'required_with:new_student|string|max:255',
-                'new_student.email' => 'required_with:new_student|email|max:255|unique:users,email',
-                'new_student.password' => 'required_with:new_student|string|min:8|confirmed',
                 'new_student.student_id' => 'nullable|string|max:100|unique:students,student_id',
                 'new_student.lrn' => 'nullable|string|max:100|unique:students,lrn',
                 'new_student.grade_level' => 'nullable|string|max:100',
@@ -332,14 +332,32 @@ class EnrollmentController extends Controller
 
             Log::info('[ENROLLMENT] inside transaction - found students', ['count' => $students->count()]);
 
-            if (is_array($newStudentData) && ! empty($newStudentData['name']) && ! empty($newStudentData['email'])) {
-                $password = $newStudentData['password'] ?? \Illuminate\Support\Str::random(10);
-                $newUser = User::create([
-                    'name' => $newStudentData['name'],
-                    'email' => $newStudentData['email'],
-                    'password' => Hash::make($password),
-                ]);
-                $newUser->assignRole('student');
+            if (is_array($newStudentData) && ! empty($newStudentData['name'])) {
+                // Auto-generate email and password from LRN (or student_id as fallback)
+                $identifier = $newStudentData['lrn'] ?? $newStudentData['student_id'] ?? \Illuminate\Support\Str::random(10);
+                $autoEmail  = preg_replace('/\s+/', '', strtolower($identifier)) . '@dnhs.edu.ph';
+                $password   = $identifier; // temporary password = LRN
+
+                // Check if a user with this email already exists (re-enrollment)
+                $existingUser = User::where('email', $autoEmail)->first();
+
+                if ($existingUser) {
+                    $newUser = $existingUser;
+                } else {
+                    $newUser = User::create([
+                        'name'     => $newStudentData['name'],
+                        'email'    => $autoEmail,
+                        'password' => Hash::make($password),
+                    ]);
+                    $newUser->assignRole('student');
+
+                    // Queue credentials email (only on first creation)
+                    try {
+                        Mail::to($autoEmail)->queue(new StudentCredentialsMail($newStudentData['name'], $autoEmail, $password));
+                    } catch (\Throwable $mailEx) {
+                        Log::warning('[ENROLLMENT] credentials email failed: ' . $mailEx->getMessage());
+                    }
+                }
 
                 // handle uploaded avatar for new student (if any)
                 $avatarFile = $request->file('new_student.avatar');
@@ -461,7 +479,9 @@ class EnrollmentController extends Controller
             'has_new_student' => ! empty($newStudentData),
         ]);
 
-        return redirect()->back()->with('success', $enrolledCount > 0
+        return redirect()->route('admin.enrollments', [
+            'section_uuid' => $classSectionUuid
+        ])->with('success', $enrolledCount > 0
             ? ($newStudentData ? 'Student account created and enrolled successfully.' : 'Students enrolled successfully.')
             : 'No students were enrolled.');
     }
