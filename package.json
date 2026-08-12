@@ -3,7 +3,7 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "build": "set PATH=C:\\laragon\\bin\\php\\php-8.3.30-Win32-vs16-x64;%PATH% && vite build && node scripts/copy-pwa-manifest.mjs",
+        "build": "node scripts/build.mjs",
         "build:ssr": "vite build && vite build --ssr",
         "dev": "vite",
         "format": "prettier --write resources/",
