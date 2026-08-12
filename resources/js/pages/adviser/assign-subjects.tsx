@@ -111,9 +111,9 @@ return;
 
         const params = new URLSearchParams();
 
-        if (hasAccessAdmin) {
-params.set('section_uuid', currentSection.uuid);
-}
+        if (hasAccessAdmin && currentSection) {
+            params.set('section_uuid', currentSection.uuid);
+        }
 
         router.delete(
             `/adviser/assign-subjects/${oldTeacherUuid}/${subjectUuid}?${params.toString()}`,

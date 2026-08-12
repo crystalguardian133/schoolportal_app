@@ -14,6 +14,7 @@ import {
     FileText,
     Clock,
     Eye,
+    MessageSquare,
     Bug,
     Lightbulb,
     Check,

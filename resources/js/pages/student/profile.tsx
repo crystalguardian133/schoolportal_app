@@ -45,7 +45,7 @@ export default function StudentProfile({ student }: Props) {
     return (
         <>
             <Head title="My Profile" />
-            <StudentPageShell title="My Profile">
+            <StudentPageShell title="My Profile" description="Manage your student profile.">
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     <div className="col-span-full md:col-span-2 lg:col-span-1 space-y-6">
                         <div className="rounded-2xl border border-sidebar-border/70 bg-white p-6 shadow-sm dark:border-sidebar-border dark:bg-sidebar text-center">

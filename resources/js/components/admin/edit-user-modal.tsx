@@ -115,9 +115,13 @@ export default function EditUserModal({ user, sections, takenAdviserSections = [
             formData.append('avatar', avatarFile);
 
             router.post(`/admin/users/${user.uuid}`, formData, {
-                onSuccess: () => {
-                    setOpen(false);
-                    showToast('User updated successfully.', 'success');
+                onSuccess: (page) => {
+                    if (page.props.flash?.error) {
+                        showToast(page.props.flash.error, 'error');
+                    } else {
+                        setOpen(false);
+                        showToast('User updated successfully.', 'success');
+                    }
                     router.reload();
                 },
                 onError: (errors) => {
@@ -139,9 +143,13 @@ export default function EditUserModal({ user, sections, takenAdviserSections = [
                 name,
             },
             {
-                onSuccess: () => {
-                    setOpen(false);
-                    showToast('User updated successfully.', 'success');
+                onSuccess: (page) => {
+                    if (page.props.flash?.error) {
+                        showToast(page.props.flash.error, 'error');
+                    } else {
+                        setOpen(false);
+                        showToast('User updated successfully.', 'success');
+                    }
                     router.reload();
                 },
                 onError: (errors) => {

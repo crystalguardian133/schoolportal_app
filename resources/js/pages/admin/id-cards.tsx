@@ -18,7 +18,7 @@ type UserRow = {
 };
 
 export default function AdminIdCards() {
-    const { props } = usePage();
+    const { props } = usePage<any>();
     const usersProp = props.users || {
         data: [],
         current_page: 1,

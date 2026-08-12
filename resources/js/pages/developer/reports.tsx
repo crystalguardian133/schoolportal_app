@@ -76,8 +76,7 @@ export default function DeveloperReports({ reports, stats, filters }: Props) {
         handleFilter('search', search);
     }
 
-    function deleteReport(e: React.MouseEvent) {
-        e.preventDefault();
+    function deleteReport() {
 
         if (!deleteTarget) {
 return;
@@ -303,7 +302,7 @@ return;
 
                 <ConfirmDialog
                     open={!!deleteTarget}
-                    onClose={() => setDeleteTarget(null)}
+                    onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
                     onConfirm={deleteReport}
                     title="Delete Report"
                     description="This will permanently delete this report and all its images. This action cannot be undone."

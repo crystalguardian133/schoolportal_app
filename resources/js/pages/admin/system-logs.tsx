@@ -18,7 +18,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 
-function toArray(value) {
+function toArray(value: any) {
     if (Array.isArray(value)) {
         return value;
     }
@@ -30,7 +30,7 @@ function toArray(value) {
     return [];
 }
 
-function formatMetadata(metadata) {
+function formatMetadata(metadata: any) {
     if (!metadata) {
         return null;
     }
@@ -46,7 +46,7 @@ function formatMetadata(metadata) {
     return metadata;
 }
 
-function statusTone(statusCode) {
+function statusTone(statusCode: any) {
     if (!statusCode) {
         return 'bg-muted text-muted-foreground';
     }
@@ -83,7 +83,7 @@ type LogRow = {
     ip_address?: string | null;
     user_agent?: string | null;
     status_code: number;
-    metadata?: unknown;
+    metadata?: any;
     created_at: string;
 };
 
@@ -172,7 +172,7 @@ function LogRowComponent({
 }
 
 export default function SystemLogs() {
-    const { props } = usePage();
+    const { props } = usePage<any>();
     const logsProp = props.logs || {
         data: [],
         current_page: 1,
@@ -207,7 +207,7 @@ export default function SystemLogs() {
         });
     }
 
-    function handleSubmit(event) {
+    function handleSubmit(event: React.FormEvent) {
         event.preventDefault();
         reload({
             q: query,

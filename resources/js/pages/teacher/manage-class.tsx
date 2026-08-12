@@ -61,10 +61,10 @@ export default function ManageClass({
     studentAverages,
     canEdit = false,
 }: Props) {
-    const classList = Array.isArray(classes)
+    const classList: TeacherClass[] = Array.isArray(classes)
         ? classes
         : classes
-          ? Object.values(classes)
+          ? (Object.values(classes) as TeacherClass[])
           : [];
 
     const [gradeRows, setGradeRows] = useState(() =>
@@ -341,7 +341,7 @@ export default function ManageClass({
                                                                     expandedStudent ===
                                                                         student.uuid
                                                                         ? null
-                                                                        : student.uuid,
+                                                                        : (student.uuid ?? null),
                                                                 )
                                                             }
                                                             className="rounded p-1 text-muted-foreground hover:text-sidebar-foreground"
@@ -567,9 +567,9 @@ export default function ManageClass({
                                 <tbody className="divide-y divide-sidebar-border/70 bg-white dark:bg-sidebar">
                                     {students.map((student, idx) => {
                                         const total = Math.round(
-                                            (gradeRows[idx].q1 +
-                                                gradeRows[idx].q2 +
-                                                gradeRows[idx].q3) /
+                                            ((gradeRows[idx].q1 ?? 0) +
+                                                (gradeRows[idx].q2 ?? 0) +
+                                                (gradeRows[idx].q3 ?? 0)) /
                                                 3,
                                         );
 

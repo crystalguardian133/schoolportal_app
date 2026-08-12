@@ -47,7 +47,7 @@ const YEAR_LEVEL_OPTIONS = [
 ];
 
 export default function AdminSections() {
-    const { props } = usePage();
+    const { props } = usePage<any>();
     const classSections: ClassSection[] = props.sections || [];
     const subjects: Subject[] = props.subjects || [];
     const assignedSubjectUuids: string[] = props.assignedSubjectUuids || [];

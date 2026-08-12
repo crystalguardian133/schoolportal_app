@@ -40,8 +40,8 @@ type Props = {
 export default function StudentAttendance({ student, stats, attendanceBySubject }: Props) {
     return (
         <StudentPageShell
-            pageTitle="Attendance History"
-            breadcrumbs={[{ title: 'Attendance', href: '/student/attendance' }]}
+            title="Attendance History"
+            description="View your attendance records across all subjects."
         >
             <Head title="Attendance - DNHS School Portal" />
 

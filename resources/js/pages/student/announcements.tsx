@@ -28,7 +28,7 @@ export default function Announcements() {
     const [currentSort, setCurrentSort] = useState(sort);
 
     const { unreadCount, markAsRead } = useAnnouncementRealtime(() => {
-        router.reload({ only: ['announcements'], preserveState: true });
+        router.reload({ only: ['announcements'] });
     });
 
     useEffect(() => {

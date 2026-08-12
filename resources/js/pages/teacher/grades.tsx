@@ -211,7 +211,7 @@ return;
         });
     }
 
-    function setGrade(idx: number, field: 0 | 1 | 2, value: number | null) {
+    function setGrade(idx: number, field: 0 | 1 | 2 | 3, value: number | null) {
         setGradeRows((prev) => {
             const copy = [...prev];
             copy[idx] = [...(copy[idx] ?? [null, null, null])];

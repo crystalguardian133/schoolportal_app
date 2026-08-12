@@ -52,7 +52,7 @@ const protectedRoles = [
 ];
 
 export default function AdminRoles() {
-    const { props } = usePage();
+    const { props } = usePage<any>();
     const roles: RoleRow[] = props.roles || [];
     const permissions: PermissionRow[] = props.permissions || [];
     const hasAccessAdmin: boolean = props.hasAccessAdmin || false;
