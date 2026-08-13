@@ -187,9 +187,8 @@ class StudentPortalController extends Controller
                                     (int) ($enrollment->q1 ?? 0),
                                     (int) ($enrollment->q2 ?? 0),
                                     (int) ($enrollment->q3 ?? 0),
-                                    (int) ($enrollment->q4 ?? 0),
                                 ],
-                                'total' => (int) ($enrollment->total ?? round(((int) ($enrollment->q1 ?? 0) + (int) ($enrollment->q2 ?? 0) + (int) ($enrollment->q3 ?? 0) + (int) ($enrollment->q4 ?? 0)) / 4)),
+                                'total' => (int) ($enrollment->total ?? round(((int) ($enrollment->q1 ?? 0) + (int) ($enrollment->q2 ?? 0) + (int) ($enrollment->q3 ?? 0)) / 3)),
                             ])
                             ->all(),
                     ];

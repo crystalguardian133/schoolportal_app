@@ -20,7 +20,6 @@ class Subject extends Model
         'name',
         'code',
         'description',
-        'units',
         'time_schedule',
     ];
 

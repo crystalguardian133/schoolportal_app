@@ -3,7 +3,7 @@ import { GraduationCap, FileText } from 'lucide-react';
 import { StudentPageShell } from '@/components/student-page-shell';
 import { exportPdf } from '@/lib/pdf-export';
 
-const quarterLabels = ['Q1', 'Q2', 'Q3', 'Q4'];
+const quarterLabels = ['Q1', 'Q2', 'Q3'];
 
 function roundToHundredth(n: number): number {
     return Math.round(n * 100) / 100;
@@ -57,7 +57,7 @@ export default function Grades({ student, yearLevelGroups }: GradesPageProps) {
             )
         );
 
-        rows.push(['', 'GENERAL AVERAGE', '', '', '', '', generalAverage]);
+        rows.push(['', 'GENERAL AVERAGE', '', '', '', generalAverage]);
 
         exportPdf({
             title: `Report Card - ${group.yearLevel}`,

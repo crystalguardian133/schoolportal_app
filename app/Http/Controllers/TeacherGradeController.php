@@ -192,7 +192,6 @@ class TeacherGradeController extends Controller
                     'q1' => $enr->q1,
                     'q2' => $enr->q2,
                     'q3' => $enr->q3,
-                    'q4' => $enr->q4,
                     'total' => $enr->total,
                 ];
             })->toArray();
@@ -286,7 +285,6 @@ class TeacherGradeController extends Controller
             'grades.*.q1' => 'nullable|integer|min:0|max:100',
             'grades.*.q2' => 'nullable|integer|min:0|max:100',
             'grades.*.q3' => 'nullable|integer|min:0|max:100',
-            'grades.*.q4' => 'nullable|integer|min:0|max:100',
         ]);
 
         DB::beginTransaction();
@@ -310,8 +308,7 @@ class TeacherGradeController extends Controller
                 $enr->q1 = $row['q1'] ?? $enr->q1;
                 $enr->q2 = $row['q2'] ?? $enr->q2;
                 $enr->q3 = $row['q3'] ?? $enr->q3;
-                $enr->q4 = $row['q4'] ?? $enr->q4;
-                $quarters = array_filter([$enr->q1, $enr->q2, $enr->q3, $enr->q4], fn($v) => $v !== null);
+                $quarters = array_filter([$enr->q1, $enr->q2, $enr->q3], fn($v) => $v !== null);
                 $enr->total = count($quarters) > 0 ? (int) round(array_sum($quarters) / count($quarters)) : null;
                 $enr->save();
             }

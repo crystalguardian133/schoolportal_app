@@ -308,7 +308,7 @@ export default function ScheduleCreate({
                         <p className="text-sm text-muted-foreground">{schoolYear} · DepEd Administrative View</p>
                     </div>
                     <div className="overflow-x-auto print:overflow-visible">
-                        <table className="min-w-[800px] w-full border-collapse text-sm print:min-w-full">
+                        <table className="min-w-[800px] w-full table-fixed border-collapse text-sm print:min-w-full">
                             <thead>
                                 <tr>
                                     <th className="w-24 border-b border-r border-border p-3 text-center font-semibold text-muted-foreground uppercase tracking-wider text-xs print:border-black print:text-black">Time</th>
@@ -324,17 +324,17 @@ export default function ScheduleCreate({
                                     
                                     return (
                                         <tr key={time} className="h-14">
-                                            <td className="border-b border-r border-border p-2 text-center text-xs text-muted-foreground align-top print:border-black print:text-black">
+                                            <td className="border-b border-r border-border p-2 text-center text-xs text-muted-foreground align-top whitespace-nowrap print:border-black print:text-black">
                                                 {time} - {nextTime}
                                             </td>
                                             {DAYS.map(day => {
                                                 const schedulesInSlot = getScheduleForSlot(day, time);
                                                 
                                                 return (
-                                                    <td key={`${day}-${time}`} className="border-b border-r border-border p-1 align-top last:border-r-0 print:border-black">
-                                                        <div className="flex flex-col gap-1 h-full">
+                                                    <td key={`${day}-${time}`} className="border-b border-r border-border p-1 align-top last:border-r-0 min-w-0 print:border-black">
+                                                        <div className="flex flex-col gap-1 h-full min-w-0">
                                                             {schedulesInSlot.map(sched => (
-                                                                <div key={sched.id} className="relative group rounded-lg bg-sky-50 p-2 border border-sky-100 dark:bg-sky-950/30 dark:border-sky-900 print:bg-transparent print:border-black">
+                                                                <div key={sched.id} className="relative group min-w-0 rounded-lg bg-sky-50 p-2 border border-sky-100 dark:bg-sky-950/30 dark:border-sky-900 print:bg-transparent print:border-black">
                                                                     {viewMode === 'section' && hasAccessAdmin && (
                                                                         <button 
                                                                             onClick={() => removeSchedule(sched.id)}
@@ -343,25 +343,25 @@ export default function ScheduleCreate({
                                                                             <Trash2 className="size-3" />
                                                                         </button>
                                                                     )}
-                                                                    <div className="font-semibold text-sky-800 dark:text-sky-300 print:text-black leading-tight text-xs">
+                                                                    <div className="font-semibold text-sky-800 dark:text-sky-300 print:text-black leading-tight text-xs truncate">
                                                                         {sched.subject} {sched.subject_code ? `(${sched.subject_code})` : ''}
                                                                     </div>
                                                                     {viewMode !== 'section' && (
-                                                                        <div className="text-[10px] text-muted-foreground mt-0.5 print:text-gray-800">
+                                                                        <div className="text-[10px] text-muted-foreground mt-0.5 truncate print:text-gray-800">
                                                                             <span className="font-medium">Sec:</span> {sched.section_name}
                                                                         </div>
                                                                     )}
                                                                     {viewMode !== 'teacher' && (
-                                                                        <div className="text-[10px] text-muted-foreground mt-0.5 print:text-gray-800">
+                                                                        <div className="text-[10px] text-muted-foreground mt-0.5 truncate print:text-gray-800">
                                                                             <span className="font-medium">Tr:</span> {sched.teacher}
                                                                         </div>
                                                                     )}
                                                                     {viewMode !== 'room' && sched.room && (
-                                                                        <div className="text-[10px] text-muted-foreground mt-0.5 print:text-gray-800">
+                                                                        <div className="text-[10px] text-muted-foreground mt-0.5 truncate print:text-gray-800">
                                                                             <span className="font-medium">Rm:</span> {sched.room}
                                                                         </div>
                                                                     )}
-                                                                    <div className="text-[10px] text-sky-600 dark:text-sky-400 mt-1 print:text-gray-600">
+                                                                    <div className="text-[10px] text-sky-600 dark:text-sky-400 mt-1 whitespace-nowrap print:text-gray-600">
                                                                         {sched.start_time} - {sched.end_time}
                                                                     </div>
                                                                 </div>

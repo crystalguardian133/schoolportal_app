@@ -15,7 +15,6 @@ type Subject = {
     uuid: string;
     name: string;
     code?: string | null;
-    units: number;
     teachers: Teacher[];
 };
 
@@ -29,7 +28,6 @@ type Props = {
     section?: Section | null;
     subjects: Subject[];
     assignableTeachersPerSubject: Record<string, any[]>;
-    teacherWorkloads?: Record<string, number>;
     allSections?: Section[];
     hasAccessAdmin?: boolean;
 };
@@ -38,7 +36,6 @@ export default function AssignSubjects({
     section: initialSection,
     subjects,
     assignableTeachersPerSubject,
-    teacherWorkloads = {},
     allSections = [],
     hasAccessAdmin = false,
 }: Props) {
@@ -218,7 +215,6 @@ return;
                                 <tr>
                                     <th className="px-4 py-3 font-medium">Code</th>
                                     <th className="px-4 py-3 font-medium">Subject</th>
-                                    <th className="px-4 py-3 font-medium text-center">Units</th>
                                     <th className="px-4 py-3 font-medium">Assigned Teacher</th>
                                     <th className="px-4 py-3 font-medium text-right">Actions</th>
                                 </tr>
@@ -234,7 +230,6 @@ return;
                                         <tr key={subject.uuid} className={hasNoTeacher ? 'bg-red-50/50 dark:bg-red-950/20' : 'hover:bg-sidebar-accent/40'}>
                                             <td className="px-4 py-3 font-medium text-muted-foreground whitespace-nowrap">{subject.code || '-'}</td>
                                             <td className="px-4 py-3 font-semibold text-foreground">{subject.name}</td>
-                                            <td className="px-4 py-3 text-center text-muted-foreground">{subject.units}</td>
                                             <td className="px-4 py-3">
                                                 {assignedTeachers.length > 0 ? (
                                                     <div className="flex flex-col gap-3">
@@ -270,15 +265,10 @@ return;
                                                                                     value={replaceTeacherUuid}
                                                                                     onChange={setReplaceTeacherUuid}
                                                                                     placeholder="Select replacement"
-                                                                                    options={(assignableMap[subject.uuid] ?? []).filter((t: any) => t.uuid !== teacher.uuid).map((t: any) => {
-                                                                                        const currentUnits = teacherWorkloads[t.uuid] || 0;
-                                                                                        const overloaded = currentUnits + subject.units > 30;
-                                                                                        return {
-                                                                                            value: t.uuid,
-                                                                                            label: overloaded ? `⚠️ ${t.name}` : t.name,
-                                                                                            sublabel: `${currentUnits} units assigned. ${overloaded ? 'Overload warning.' : ''}`,
-                                                                                        };
-                                                                                    })}
+                                            options={(assignableMap[subject.uuid] ?? []).filter((t: any) => t.uuid !== teacher.uuid).map((t: any) => ({
+                                                value: t.uuid,
+                                                label: t.name,
+                                            }))}
                                                                                 />
                                                                             </div>
                                                                             <button type="button" onClick={() => replaceTeacher(subject.uuid, teacher.uuid)} disabled={!replaceTeacherUuid} className="rounded bg-sky-600 px-3 py-2 text-xs font-medium text-white hover:bg-sky-700 disabled:opacity-50 transition">Confirm</button>
@@ -300,15 +290,10 @@ return;
                                                             value={addTeacherUuid}
                                                             onChange={setAddTeacherUuid}
                                                             placeholder="Select teacher..."
-                                                            options={(assignableMap[subject.uuid] ?? []).filter((t: any) => !assignedTeachers.some((a: any) => a.uuid === t.uuid)).map((t: any) => {
-                                                                const currentUnits = teacherWorkloads[t.uuid] || 0;
-                                                                const overloaded = currentUnits + subject.units > 30;
-                                                                return {
-                                                                    value: t.uuid,
-                                                                    label: overloaded ? `⚠️ ${t.name}` : t.name,
-                                                                    sublabel: `${currentUnits} units assigned. ${overloaded ? 'Overload warning.' : ''}`,
-                                                                };
-                                                            })}
+                                                            options={(assignableMap[subject.uuid] ?? []).filter((t: any) => !assignedTeachers.some((a: any) => a.uuid === t.uuid)).map((t: any) => ({
+                                                                value: t.uuid,
+                                                                label: t.name,
+                                                            }))}
                                                         />
                                                         <div className="mt-3 flex items-center gap-2 text-xs">
                                                             <input type="checkbox" checked={isSubstitute} onChange={(e) => setIsSubstitute(e.target.checked)} className="h-4 w-4 rounded border-input" />
@@ -334,11 +319,7 @@ return;
                             </tbody>
                             <tfoot className="bg-sidebar/30">
                                 <tr>
-                                    <td colSpan={2} className="px-4 py-3 font-semibold text-right text-muted-foreground uppercase tracking-wider text-xs">Total Units:</td>
-                                    <td className="px-4 py-3 font-bold text-center text-lg text-sky-700 dark:text-sky-400">
-                                        {subjectList.reduce((sum, s) => sum + (s.units || 0), 0)}
-                                    </td>
-                                    <td colSpan={2}></td>
+                                    <td colSpan={4}></td>
                                 </tr>
                             </tfoot>
                         </table>

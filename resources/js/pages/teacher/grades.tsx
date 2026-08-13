@@ -22,7 +22,6 @@ type StudentRow = {
     q1: number | null;
     q2: number | null;
     q3: number | null;
-    q4: number | null;
     total: number | null;
 };
 
@@ -59,7 +58,7 @@ export default function TeacherGrades({
     const [selectedSchoolYear, setSelectedSchoolYear] = useState(serverSchoolYear);
     const [selectedSectionUuid, setSelectedSectionUuid] = useState<string | null>(serverSectionUuid);
     const [gradeRows, setGradeRows] = useState<(number | null)[][]>(() =>
-        students.map((s) => [s.q1 ?? null, s.q2 ?? null, s.q3 ?? null, s.q4 ?? null]),
+        students.map((s) => [s.q1 ?? null, s.q2 ?? null, s.q3 ?? null]),
     );
     const [submitting, setSubmitting] = useState(false);
     const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -67,7 +66,7 @@ export default function TeacherGrades({
     const totalPages = Math.max(1, Math.ceil(totalStudents / perPage));
 
     useEffect(() => {
-        setGradeRows(students.map((s) => [s.q1 ?? null, s.q2 ?? null, s.q3 ?? null, s.q4 ?? null]));
+        setGradeRows(students.map((s) => [s.q1 ?? null, s.q2 ?? null, s.q3 ?? null]));
     }, [students]);
 
     useEffect(() => {
@@ -211,7 +210,7 @@ return;
         });
     }
 
-    function setGrade(idx: number, field: 0 | 1 | 2 | 3, value: number | null) {
+    function setGrade(idx: number, field: 0 | 1 | 2, value: number | null) {
         setGradeRows((prev) => {
             const copy = [...prev];
             copy[idx] = [...(copy[idx] ?? [null, null, null])];
@@ -232,7 +231,6 @@ return;
             q1: gradeRows[i]?.[0] ?? null,
             q2: gradeRows[i]?.[1] ?? null,
             q3: gradeRows[i]?.[2] ?? null,
-            q4: gradeRows[i]?.[3] ?? null,
         }));
         router.post(
             `/teacher/grades/${selectedSubjectUuid}`,
@@ -262,14 +260,13 @@ return;
 return;
 }
 
-        const headers = ['Student', 'LRN', 'Q1', 'Q2', 'Q3', 'Q4', 'Total'];
+        const headers = ['Student', 'LRN', 'Q1', 'Q2', 'Q3', 'Total'];
         const rows = students.map((s) => [
             s.name,
             s.lrn ?? '—',
             s.q1 ?? '—',
             s.q2 ?? '—',
             s.q3 ?? '—',
-            s.q4 ?? '—',
             s.total ?? '—',
         ]);
         exportPdf({
@@ -397,7 +394,6 @@ return;
                                                     <th className="px-4 py-3 text-center font-medium">Q1</th>
                                                     <th className="px-4 py-3 text-center font-medium">Q2</th>
                                                     <th className="px-4 py-3 text-center font-medium">Q3</th>
-                                                    <th className="px-4 py-3 text-center font-medium">Q4</th>
                                                     <th className="px-4 py-3 text-center font-medium">Total</th>
                                                 </tr>
                                             </thead>
@@ -406,8 +402,7 @@ return;
                                                     const q1 = gradeRows[idx]?.[0];
                                                     const q2 = gradeRows[idx]?.[1];
                                                     const q3 = gradeRows[idx]?.[2];
-                                                    const q4 = gradeRows[idx]?.[3];
-                                                    const filledQuarters = [q1, q2, q3, q4].filter((v) => v != null);
+                                                    const filledQuarters = [q1, q2, q3].filter((v) => v != null);
                                                     const total =
                                                         filledQuarters.length > 0
                                                             ? Math.round(filledQuarters.reduce((s, v) => s + v!, 0) / filledQuarters.length)
@@ -418,7 +413,7 @@ return;
                                                             <td className="px-4 py-3 font-medium text-sidebar-foreground">{student.name}</td>
                                                             <td className="px-4 py-3 text-muted-foreground">{student.lrn ?? '—'}</td>
                                                             <td className="px-4 py-3 text-muted-foreground">{student.studentId ?? '—'}</td>
-                                                            {([0, 1, 2, 3] as const).map((fi) => (
+                                                            {([0, 1, 2] as const).map((fi) => (
                                                                 <td key={fi} className="px-4 py-3 text-center text-sidebar-foreground">
                                                                     <input
                                                                         type="number"
