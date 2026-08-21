@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use App\Models\ClassSection;
 use App\Models\Subject;
 use App\Models\StudentSubject;
 use Illuminate\Support\Facades\DB;
@@ -251,15 +252,14 @@ class TeacherClassController extends Controller
         }
 
         // Regular subject handling
-        // classId may be "{subjectUuid}-{sectionUuid}" or just "{subjectUuid}"
-        $parts = explode('-', $classId);
+        // classId may be "{subjectUuid}-{sectionUuid}" or just "{subjectUuid}".
+        // ULIDs contain hyphens, so split on the fixed 36-char UUID boundaries.
         $sectionUuid = null;
         $subjectUuid = $classId;
 
-        // UUIDs are 36 chars; if we have 2 parts and the last part is a UUID, treat as subject+section
-        if (count($parts) === 2 && strlen($parts[1]) === 36) {
-            $subjectUuid = $parts[0];
-            $sectionUuid = $parts[1];
+        if (preg_match('/^(.{36})-(.{36})$/', $classId, $matches)) {
+            $subjectUuid = $matches[1];
+            $sectionUuid = $matches[2];
         }
 
         $subject = Subject::query()->where('uuid', $subjectUuid)->first();

@@ -4,9 +4,11 @@ import {
     ChevronRight,
     GraduationCap,
     LayoutGrid,
+    LockKeyhole,
     Search,
     ShieldCheck,
     Trash2,
+    Unlock,
     UserPlus,
     Users,
 } from 'lucide-react';
@@ -35,6 +37,8 @@ type UserRow = {
     profile_picture?: string | null;
     is_adviser?: boolean;
     adviser_section?: string | null;
+    failed_login_attempts?: number;
+    locked_at?: string | null;
     created_at?: string | null;
 };
 
@@ -213,6 +217,17 @@ export default function AdminUsers() {
                 );
             },
         });
+    }
+
+    function unlockUser(uuid: string, name: string) {
+        router.post(
+            `/admin/users/${uuid}/unlock`,
+            {},
+            {
+                onSuccess: () => showToast(`Account unlocked for ${name}.`, 'success'),
+                onError: () => showToast('Unable to unlock account.', 'error'),
+            },
+        );
     }
 
     function handleSearch(value: string) {
@@ -440,8 +455,16 @@ export default function AdminUsers() {
                                                     </AvatarFallback>
                                                 </Avatar>
                                                 <div className="min-w-0">
-                                                    <div className="truncate font-medium text-sidebar-foreground">
-                                                        {user.name}
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="truncate font-medium text-sidebar-foreground">
+                                                            {user.name}
+                                                        </span>
+                                                        {user.locked_at && (
+                                                            <Badge className="border-transparent bg-rose-50 text-rose-700 dark:bg-rose-950/70 dark:text-rose-300">
+                                                                <LockKeyhole className="mr-1 size-3" />
+                                                                Locked
+                                                            </Badge>
+                                                        )}
                                                     </div>
                                                     <div className="truncate text-xs text-muted-foreground">
                                                         {user.email}
@@ -479,6 +502,22 @@ export default function AdminUsers() {
                                         </td>
                                         <td className="px-4 py-3 text-muted-foreground">
                                             <div className="flex items-center gap-2">
+                                                {user.locked_at && (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="h-9 gap-1.5 text-emerald-700 dark:text-emerald-400"
+                                                        onClick={() =>
+                                                            unlockUser(
+                                                                user.uuid,
+                                                                user.name,
+                                                            )
+                                                        }
+                                                    >
+                                                        <Unlock className="size-4" />
+                                                        Unlock
+                                                    </Button>
+                                                )}
                                                 <EditUserModal
                                                     user={user}
                                                     sections={sections}

@@ -115,7 +115,10 @@ return [
     */
 
     'limiters' => [
-        'login' => 'login',
+        // Disabled: login throttling is handled inside FortifyServiceProvider's
+        // authenticateUsing callback so failures surface as Inertia validation
+        // errors (enables the lockout / rate-limit modals) instead of raw 429s.
+        'login' => null,
         'two-factor' => 'two-factor',
         'passkeys' => 'passkeys',
     ],

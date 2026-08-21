@@ -5,6 +5,8 @@ namespace App\Providers;
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
 use App\Models\User;
+use App\Services\CaptchaService;
+use App\Services\LoginThrottleService;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -91,13 +93,84 @@ class FortifyServiceProvider extends ServiceProvider
                 'password' => ['required', 'string'],
             ]);
 
-            $user = User::query()
-                ->where('email', $request->input(Fortify::username()))
-                ->first();
+            $throttle = app(LoginThrottleService::class);
+            $captcha = app(CaptchaService::class);
+
+            // Per-IP flood guard (independent of email)
+            $ipKey = 'login-ip:' . $request->ip();
+            if (RateLimiter::tooManyAttempts($ipKey, 20)) {
+                $seconds = RateLimiter::availableIn($ipKey);
+
+                throw ValidationException::withMessages([
+                    'rate_limited' => __('Too many login attempts from this device. Please try again in :seconds seconds.', ['seconds' => $seconds]),
+                ]);
+            }
+            RateLimiter::hit($ipKey, 60);
+
+            // Per-email flood guard (stops rapid-fire retries before lockout)
+            $emailKey = 'login-email:' . Str::lower($request->input(Fortify::username()));
+            if (RateLimiter::tooManyAttempts($emailKey, 10)) {
+                $seconds = RateLimiter::availableIn($emailKey);
+
+                throw ValidationException::withMessages([
+                    'rate_limited' => __('Too many login attempts for this email. Please try again in :seconds seconds.', ['seconds' => $seconds]),
+                ]);
+            }
+            RateLimiter::hit($emailKey, 60);
+
+            $email = Str::lower($request->input(Fortify::username()));
+            $user = User::query()->where('email', $email)->first();
+
+            if ($throttle->isLocked($user)) {
+                throw ValidationException::withMessages([
+                    'locked' => __('This account has been locked after too many failed sign-in attempts. An administrator must unlock it before you can sign in again.'),
+                ]);
+            }
+
+            $needsCaptcha = $throttle->requiresCaptcha($user);
+
+            if ($needsCaptcha) {
+                if (!$captcha->verify($request->input('captcha_token'), $request->input('captcha_answer'))) {
+                    // Failed challenges count toward lockout too
+                    if ($user) {
+                        $throttle->recordFailure($user);
+                    }
+
+                    if ($user && $throttle->isLocked($user)) {
+                        throw ValidationException::withMessages([
+                            'locked' => __('This account has been locked after too many failed sign-in attempts. An administrator must unlock it before you can sign in again.'),
+                        ]);
+                    }
+
+                    $challenge = $captcha->challenge();
+
+                    throw ValidationException::withMessages([
+                        'captcha' => __('Please solve the security check to continue.'),
+                        'captcha_token' => $challenge['token'],
+                        'captcha_question' => $challenge['question'],
+                    ]);
+                }
+            }
 
             if (!$user || !Hash::check($request->input('password'), $user->password)) {
-                return null;
+                if ($user) {
+                    $throttle->recordFailure($user);
+                }
+
+                $messages = [
+                    Fortify::username() => __('These credentials do not match our records.'),
+                ];
+
+                if ($user && $throttle->requiresCaptcha($user)) {
+                    $challenge = $captcha->challenge();
+                    $messages['captcha_token'] = $challenge['token'];
+                    $messages['captcha_question'] = $challenge['question'];
+                }
+
+                throw ValidationException::withMessages($messages);
             }
+
+            $throttle->recordSuccess($user);
 
             return $user;
         });

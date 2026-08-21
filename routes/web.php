@@ -19,6 +19,20 @@ use Illuminate\Support\Facades\Route;
 Route::redirect('/', '/login');
 Route::get('/assets/profile_pictures/{folder}/{filename}', [AdminAssetController::class, 'serveProfilePicture']);
 
+// Public support tickets (locked-out users, guests)
+Route::post('support/tickets', [\App\Http\Controllers\SupportTicketController::class, 'store'])->name('support.tickets.store');
+Route::get('support/tickets/{report}', [\App\Http\Controllers\SupportTicketController::class, 'show'])->name('support.tickets.show');
+Route::post('support/tickets/{report}/reply', [\App\Http\Controllers\SupportTicketController::class, 'reply'])->name('support.tickets.reply');
+
+// Account unlock (public page; manual table gated by "Unlock Accounts" permission)
+Route::get('account-unlock', [\App\Http\Controllers\AccountUnlockController::class, 'page'])->name('account-unlock.page');
+Route::post('account-unlock/request', [\App\Http\Controllers\AccountUnlockController::class, 'sendLink'])->name('account-unlock.request');
+Route::get('account-unlock/{user}', [\App\Http\Controllers\AccountUnlockController::class, 'unlockViaLink'])
+    ->middleware('signed')
+    ->name('account-unlock.link');
+Route::post('account-unlock/{uuid}/manual', [\App\Http\Controllers\AccountUnlockController::class, 'unlockManual'])
+    ->name('account-unlock.manual');
+
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', [\App\Http\Controllers\DashboardController::class, '__invoke'])->name('dashboard');
     Route::get('student/pre-registration', fn () => inertia('student/pre-registration'))->name('student.pre-registration');
@@ -47,6 +61,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('admin/users/{uuid}/edit', [AdminUserController::class, 'edit'])->name('admin.users.edit');
     Route::patch('admin/users/{uuid}', [AdminUserController::class, 'update'])->name('admin.users.update');
     Route::delete('admin/users/{uuid}', [AdminUserController::class, 'destroy'])->name('admin.users.destroy');
+    Route::post('admin/users/{uuid}/unlock', [AdminUserController::class, 'unlock'])->name('admin.users.unlock');
     Route::get('admin/manage-students', [AdminStudentController::class, 'index'])->name('admin.manage-students.index');
     Route::get('admin/manage-students/{uuid}/edit', [AdminStudentController::class, 'edit'])->name('admin.manage-students.edit');
     Route::put('admin/manage-students/{uuid}', [AdminStudentController::class, 'update'])->name('admin.manage-students.update');
@@ -139,6 +154,16 @@ Route::delete('admin/subjects/teachers/{teacherUuid}/{subjectUuid}', [AdminSubje
         ->name('push.subscriptions.store');
     Route::delete('push/subscriptions', [PushSubscriptionController::class, 'destroy'])
         ->name('push.subscriptions.destroy');
+
+    // Departments
+    Route::get('admin/departments', [\App\Http\Controllers\DepartmentController::class, 'index'])->name('admin.departments');
+    Route::post('admin/departments', [\App\Http\Controllers\DepartmentController::class, 'store'])->name('admin.departments.store');
+    Route::patch('admin/departments/{uuid}', [\App\Http\Controllers\DepartmentController::class, 'update'])->name('admin.departments.update');
+    Route::delete('admin/departments/{uuid}', [\App\Http\Controllers\DepartmentController::class, 'destroy'])->name('admin.departments.destroy');
+    Route::post('admin/departments/{uuid}/assign-teacher', [\App\Http\Controllers\DepartmentController::class, 'assignTeacher'])->name('admin.departments.assign-teacher');
+    Route::post('admin/departments/{uuid}/remove-teacher', [\App\Http\Controllers\DepartmentController::class, 'removeTeacher'])->name('admin.departments.remove-teacher');
+    Route::get('admin/departments/{uuid}/subject-teachers', [\App\Http\Controllers\DepartmentController::class, 'subjectTeachers'])->name('admin.departments.subject-teachers');
+    Route::get('department-head/dashboard', [\App\Http\Controllers\DepartmentController::class, 'headView'])->name('department-head.dashboard');
 });
 
 require __DIR__.'/settings.php';
