@@ -20,7 +20,7 @@ class AdminUserController extends Controller
         $this->authorizeAdmin($request);
 
         $query = User::query()
-            ->select(['id', 'uuid', 'name', 'email', 'profile_picture', 'is_adviser', 'adviser_section', 'created_at']);
+            ->select(['id', 'uuid', 'name', 'email', 'profile_picture', 'is_adviser', 'adviser_section', 'failed_login_attempts', 'locked_at', 'created_at']);
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -113,6 +113,16 @@ class AdminUserController extends Controller
         if (! $user || (! $hasPermission && ! $hasRole)) {
             abort(403);
         }
+    }
+
+    public function unlock(Request $request, string $uuid)
+    {
+        $this->authorizeAdmin($request);
+
+        $user = User::where('uuid', $uuid)->firstOrFail();
+        app(\App\Services\LoginThrottleService::class)->unlock($user);
+
+        return back()->with('success', "Account unlocked for {$user->name}.");
     }
 
     private function authorizeCreateTeacher(Request $request): void

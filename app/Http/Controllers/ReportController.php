@@ -14,7 +14,10 @@ class ReportController extends Controller
     {
         $user = auth()->user();
 
-        $reports = Report::where('user_id', $user->id)
+        $reports = Report::where(function ($q) use ($user) {
+                $q->where('user_id', $user->id)
+                    ->orWhere('contact_email', Str::lower($user->email));
+            })
             ->with(['user', 'replies.user'])
             ->latest()
             ->get();
@@ -29,7 +32,9 @@ class ReportController extends Controller
         $user = auth()->user();
 
         // Only the report owner or a developer can view
-        if ($report->user_id !== $user->id && !$user->hasPermission('Access Developer Dashboard')) {
+        if ($report->user_id !== $user->id
+            && $report->contact_email !== Str::lower($user->email)
+            && !$user->hasPermission('Access Developer Dashboard')) {
             abort(403);
         }
 
@@ -74,7 +79,7 @@ class ReportController extends Controller
     {
         $user = $request->user();
 
-        if ($report->user_id !== $user->id && !$user->hasPermission('Access Developer Dashboard')) {
+        if ($report->user_id !== $user->id && $report->contact_email !== Str::lower($user->email) && !$user->hasPermission('Access Developer Dashboard')) {
             abort(403);
         }
 
@@ -111,7 +116,7 @@ class ReportController extends Controller
     {
         $user = auth()->user();
 
-        if (!$user->hasPermission('Access Developer Dashboard') && $report->user_id !== $user->id) {
+        if (!$user->hasPermission('Access Developer Dashboard') && $report->user_id !== $user->id && $report->contact_email !== Str::lower($user->email)) {
             abort(403);
         }
 
@@ -124,7 +129,7 @@ class ReportController extends Controller
     {
         $user = auth()->user();
 
-        if (!$user->hasPermission('Access Developer Dashboard') && $report->user_id !== $user->id) {
+        if (!$user->hasPermission('Access Developer Dashboard') && $report->user_id !== $user->id && $report->contact_email !== Str::lower($user->email)) {
             abort(403);
         }
 

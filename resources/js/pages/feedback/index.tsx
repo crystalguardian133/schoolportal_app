@@ -1,5 +1,5 @@
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
-import { Bug, Lightbulb, MessageSquare, X, Send, ImagePlus, Lock } from 'lucide-react';
+import { Bug, Lightbulb, MessageSquare, X, Send, ImagePlus, Lock, LifeBuoy } from 'lucide-react';
 import { useState } from 'react';
 import { PortalPageShell } from '@/components/portal-page-shell';
 import { formatDate } from '@/lib/dates';
@@ -25,6 +25,7 @@ const typeConfig = {
     bug: { label: 'Bug Report', icon: Bug, bg: 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300' },
     suggestion: { label: 'Suggestion', icon: Lightbulb, bg: 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300' },
     feedback: { label: 'Feedback', icon: MessageSquare, bg: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300' },
+    support: { label: 'Support', icon: LifeBuoy, bg: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300' },
 };
 
 const statusConfig: Record<string, { label: string; bg: string }> = {
@@ -37,7 +38,7 @@ const statusConfig: Record<string, { label: string; bg: string }> = {
 export default function FeedbackIndex({ reports }: Props) {
     const { props } = usePage();
     const flash: any = props.flash || {};
-    const [activeTab, setActiveTab] = useState<'send' | 'history'>('send');
+    const [activeTab, setActiveTab] = useState<'send' | 'history' | 'support'>('send');
     const [selectedType, setSelectedType] = useState<'bug' | 'suggestion' | 'feedback'>('bug');
     const [images, setImages] = useState<File[]>([]);
     const [imagePreviews, setImagePreviews] = useState<string[]>([]);
@@ -87,6 +88,9 @@ return;
         });
     }
 
+    const supportReports = reports.filter((r) => r.type === 'support');
+    const myReports = reports.filter((r) => r.type !== 'support');
+
     return (
         <>
             <Head title="Reports & Feedback" />
@@ -118,7 +122,16 @@ return;
                             activeTab === 'history' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted',
                         )}
                     >
-                        My Reports ({reports.length})
+                        My Reports ({myReports.length})
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('support')}
+                        className={cn(
+                            'rounded-lg px-4 py-2 text-sm font-medium transition',
+                            activeTab === 'support' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted',
+                        )}
+                    >
+                        Support ({supportReports.length})
                     </button>
                 </div>
 
@@ -128,7 +141,7 @@ return;
                             <div>
                                 <label className="text-sm font-medium">Type</label>
                                 <div className="mt-2 flex gap-3">
-                                    {(Object.keys(typeConfig) as Array<keyof typeof typeConfig>).map((type) => {
+                                    {(Object.keys(typeConfig) as Array<'bug' | 'suggestion' | 'feedback'>).map((type) => {
                                         const cfg = typeConfig[type];
                                         const Icon = cfg.icon;
 
@@ -226,15 +239,76 @@ return;
 
                 {activeTab === 'history' && (
                     <div className="space-y-4">
-                        {reports.length === 0 && (
+                        {myReports.length === 0 && (
                             <div className="rounded-2xl border border-sidebar-border/70 bg-white p-12 text-center shadow-sm dark:border-sidebar-border dark:bg-sidebar">
                                 <MessageSquare className="mx-auto size-10 text-muted-foreground" />
                                 <p className="mt-3 text-sm text-muted-foreground">No reports yet. Submit your first report!</p>
                             </div>
                         )}
 
-                        {reports.map((report) => {
+                        {myReports.map((report) => {
                             const cfg = typeConfig[report.type as keyof typeof typeConfig] ?? typeConfig.feedback;
+                            const status = statusConfig[report.status] ?? statusConfig.pending;
+                            const Icon = cfg.icon;
+                            const replyCount = report.replies?.length ?? 0;
+
+                            return (
+                                <Link
+                                    key={report.id}
+                                    href={`/feedback/${report.id}`}
+                                    className="block rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm transition hover:ring-2 hover:ring-primary/20 dark:border-sidebar-border dark:bg-sidebar"
+                                >
+                                    <div className="flex items-start justify-between">
+                                        <div className="flex items-start gap-3">
+                                            <div className={cn('mt-0.5 rounded-lg p-2', cfg.bg)}>
+                                                <Icon className="size-4" />
+                                            </div>
+                                            <div>
+                                                <h3 className="font-semibold">{report.subject}</h3>
+                                                <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{report.message}</p>
+                                                <div className="mt-2 flex items-center gap-3">
+                                                    <span className={cn('rounded-full px-2.5 py-0.5 text-xs font-medium', status.bg)}>
+                                                        {status.label}
+                                                    </span>
+                                                    {report.closed && (
+                                                        <span className="inline-flex items-center gap-1 rounded-full bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                                                            <Lock className="size-3" />
+                                                            Closed
+                                                        </span>
+                                                    )}
+                                                    {replyCount > 0 && (
+                                                        <span className="text-xs text-muted-foreground">
+                                                            {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <p className="mt-3 text-xs text-muted-foreground">
+                                        {formatDate(report.created_at, 'MMM d, yyyy h:mm a')}
+                                    </p>
+                                </Link>
+                            );
+                        })}
+                    </div>
+                )}
+
+                {activeTab === 'support' && (
+                    <div className="space-y-4">
+                        {supportReports.length === 0 && (
+                            <div className="rounded-2xl border border-sidebar-border/70 bg-white p-12 text-center shadow-sm dark:border-sidebar-border dark:bg-sidebar">
+                                <LifeBuoy className="mx-auto size-10 text-muted-foreground" />
+                                <p className="mt-3 text-sm text-muted-foreground">
+                                    No support requests yet. If you ever get locked out of your account, use the
+                                    &ldquo;Need help signing in?&rdquo; link on the login page.
+                                </p>
+                            </div>
+                        )}
+
+                        {supportReports.map((report) => {
+                            const cfg = typeConfig.support;
                             const status = statusConfig[report.status] ?? statusConfig.pending;
                             const Icon = cfg.icon;
                             const replyCount = report.replies?.length ?? 0;

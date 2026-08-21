@@ -41,6 +41,8 @@ class User extends Authenticatable implements PasskeyUser
             'two_factor_confirmed_at' => 'datetime',
             'is_adviser' => 'boolean',
             'adviser_section' => 'string',
+            'failed_login_attempts' => 'integer',
+            'locked_at' => 'datetime',
         ];
     }
 

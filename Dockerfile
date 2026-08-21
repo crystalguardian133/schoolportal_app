@@ -22,6 +22,7 @@ WORKDIR /var/www/html
 # Copy composer files first for better layer caching
 COPY composer.json composer.lock ./
 RUN composer install --no-dev --no-scripts --optimize-autoloader
+RUN composer global require 
 
 # Copy package files for better layer caching
 COPY package.json package-lock.json ./

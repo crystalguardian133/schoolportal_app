@@ -4,6 +4,7 @@ import {
     Book,
     BookOpenText,
     Bug,
+    Building2,
     CalendarCheck,
     CalendarClock,
     CalendarDays,
@@ -12,6 +13,7 @@ import {
     CreditCard,
     GraduationCap,
     LayoutGrid,
+    LockKeyhole,
     MessageSquare,
     Music,
     Pencil,
@@ -159,6 +161,12 @@ const adminNavItems: NavItem[] = [
         permission: 'manage schedules',
     },
     {
+        title: 'Departments',
+        href: '/admin/departments',
+        icon: UserCog,
+        permission: 'access admin',
+    },
+    {
         title: 'School Year',
         href: '/admin/school-years',
         icon: CalendarClock,
@@ -181,6 +189,12 @@ const adminNavItems: NavItem[] = [
         href: '/admin/users',
         icon: UserCog,
         permission: 'manage users',
+    },
+    {
+        title: 'Unlock Accounts',
+        href: '/account-unlock',
+        icon: LockKeyhole,
+        permission: 'unlock accounts',
     },
     {
         title: 'Create Teacher',
@@ -279,6 +293,11 @@ const deptHeadNavItems: NavItem[] = [
         title: 'Dashboard',
         href: dashboard().url,
         icon: LayoutGrid,
+    },
+    {
+        title: 'My Department',
+        href: '/department-head/dashboard',
+        icon: Building2,
     },
     {
         title: 'Subjects',
@@ -518,17 +537,19 @@ export function useNavItems(): { navItems: NavItem[]; sectionLabel: string | nul
         allNavArrays.push(musicPlayerNavItem);
     }
 
-    const seen = new Set<string>();
+    const seenHrefs = new Set<string>();
     let navItems: NavItem[] = [];
 
     for (const arr of allNavArrays) {
         for (const item of arr) {
             const hrefKey = toUrl(item.href);
 
-            if (!seen.has(hrefKey)) {
-                seen.add(hrefKey);
-                navItems.push(item);
+            if (seenHrefs.has(hrefKey)) {
+                continue;
             }
+
+            seenHrefs.add(hrefKey);
+            navItems.push(item);
         }
     }
 
