@@ -13,7 +13,7 @@ The project is **incomplete**. Fix and build all items below in the exact phase 
 
 ## PHASE 1 — Critical Fixes (Do these first)
 
-### Fix 1.1 — Auto-create student User account on enrollment
+### Fix 1.1 — Auto-create student User account on enrollment   <b>[FIXED]</b>
 **File:** `app/Http/Controllers/EnrollmentController.php`
 
 When a new student is enrolled (`store` method), automatically:
@@ -26,10 +26,14 @@ When a new student is enrolled (`store` method), automatically:
 4. Also handle the `promote` method — when a student is promoted to the next grade, do NOT create a new user; just update the existing student record
 
 Make sure this does not break re-enrollment of existing students who already have a user account.
-
+##Applied Fixes
+1. When student's being enrolled as a new student, student role auto applies unless when creating a new user, in which it will be treated as a guest account with login credentials
+2. If `password` and `confirm_password` is left blank then the `birth_date` is automatically used as a password and it is auto encrypted with bcryp, the defaulted format used is{yyyy-mm-dd}
+3. Auto assign upon registry
+4. Auto promotion happens when `school_year` ends
 ---
 
-### Fix 1.2 — Add Q4 to all grade tables and entry forms
+### Fix 1.2 — Add Q4 to all grade tables and entry forms <b>[Resolved]</b>
 **Files to update:**
 - `resources/js/pages/student/grades.tsx` — change `['Q1', 'Q2', 'Q3']` to `['Q1', 'Q2', 'Q3', 'Q4']`
 - `resources/js/pages/teacher/grades.tsx` — add Q4 column to grade entry table
@@ -39,6 +43,8 @@ Make sure this does not break re-enrollment of existing students who already hav
 
 The grade model stores grades as a JSON array in `student_subject.grades`. Ensure index 3 (Q4) is read and written correctly. The `total` field should be the average of all 4 quarters.
 
+###Changes:
+1. Since the new curriculum introduces 3 "quarters" now or idk how they call it this fix is invalid.
 ---
 
 ### Fix 1.3 — Add Forgot Password / Password Reset flow
@@ -52,6 +58,10 @@ The grade model stores grades as a JSON array in `student_subject.grades`. Ensur
 5. Configure mail in `.env` to use `MAIL_MAILER=smtp` with instructions to fill in SMTP details
 6. Add a "Forgot Password?" link on the login form (`resources/js/components/login-form.tsx`)
 
+###Fixes:
+1. Applied the mailer using the Laravel mailer so that it can send the reset password link if the associated email exists
+2. Added a locked-out to accounts who have entered the password too many times and added a simple captcha to prevent spam requests
+3. 
 ---
 
 ### Fix 1.4 — Replace broken pre-registration enrollment form
@@ -139,7 +149,7 @@ Only send push if `PUSH_ENABLED=true`.
 
 ---
 
-### Feature 2.4 — Adviser Dashboard
+### Feature 2.4 — Adviser Dashboard **[IMPLEMENTED]**
 **Create:**
 - `resources/js/pages/adviser/dashboard.tsx` — adviser welcome dashboard showing:
   - Their assigned section name and grade level
@@ -149,10 +159,10 @@ Only send push if `PUSH_ENABLED=true`.
 - `app/Http/Controllers/DashboardController.php` — add `adviserSection()` private method
 - Add `'access adviser dashboard'` permission check to the dashboard order array
 - Add route for `GET /adviser/dashboard` if needed
-
+- 
 ---
 
-### Feature 2.5 — Active School Year Warning Banner
+### Feature 2.5 — Active School Year Warning Banner **[IMPLEMENTED]**
 **Update:**
 - `resources/js/pages/admin/dashboard.tsx` (or the main dashboard component) — show a prominent red warning banner at the top when no school year is currently active
 - `app/Http/Controllers/DashboardController.php` — pass `hasActiveSchoolYear: bool` to all admin/school-head sections
@@ -160,7 +170,7 @@ Only send push if `PUSH_ENABLED=true`.
 
 ---
 
-### Feature 2.6 — Fix Staff Dashboard Links
+### Feature 2.6 — Fix Staff Dashboard Links **[IMPLEMENTED]**
 **Update:**
 - `resources/js/pages/staff/dashboard.tsx` — replace teacher/student links with appropriate staff actions:
   - View student list (read-only)
@@ -171,7 +181,7 @@ Only send push if `PUSH_ENABLED=true`.
 
 ---
 
-### Feature 2.7 — Improve QR Attendance Scan Feedback
+### Feature 2.7 — Improve QR Attendance Scan Feedback **[UPCOMING]**
 **Update:**
 - `resources/js/pages/student/attendance-scan.tsx` — improve the post-scan result screen to clearly show:
   - ✅ Present / ⏰ Late / ❌ Already recorded
@@ -184,7 +194,7 @@ Only send push if `PUSH_ENABLED=true`.
 
 ## PHASE 3 — Medium Priority (UX & Polish)
 
-### Feature 3.1 — Student Profile Page
+### Feature 3.1 — Student Profile Page **[UPCOMING]**
 **Create:**
 - `resources/js/pages/student/profile.tsx` — student can view and edit:
   - Profile picture upload
@@ -205,7 +215,7 @@ Only send push if `PUSH_ENABLED=true`.
 
 ---
 
-### Feature 3.3 — System Logs — Date Filter + Export
+### Feature 3.3 — System Logs — Date Filter + Export **[IMPLEMENTED]**
 **Update:**
 - `resources/js/pages/admin/system-logs.tsx` — add date range picker (start date / end date) filter
 - `app/Http/Controllers/AdminSystemLogController.php` — add date range filtering to the `index` query
@@ -280,26 +290,26 @@ Use the existing `resources/js/components/skeletons.tsx` component. Show skeleto
 
 ## Completion Checklist
 
-- [ ] Phase 1.1 — Auto-create student user on enrollment
-- [ ] Phase 1.2 — Q4 added to all grade tables
-- [ ] Phase 1.3 — Forgot password flow
+- [X] Phase 1.1 — Auto-create student user on enrollment
+- [X] Phase 1.2 — Q4 added to all grade tables
+- [X] Phase 1.3 — Forgot password flow
 - [ ] Phase 1.4 — Real enrollment form PDF
 - [ ] Phase 1.5 — Push notifications wired
 - [ ] Phase 1.6 — Email configured + student credentials mail
 - [ ] Phase 2.1 — Student attendance history page
 - [ ] Phase 2.2 — Attendance export for teachers
 - [ ] Phase 2.3 — Report card PDF export
-- [ ] Phase 2.4 — Adviser dashboard
-- [ ] Phase 2.5 — Active school year warning
-- [ ] Phase 2.6 — Staff dashboard fixed
+- [X] Phase 2.4 — Adviser dashboard
+- [X] Phase 2.5 — Active school year warning
+- [X] Phase 2.6 — Staff dashboard fixed
 - [ ] Phase 2.7 — QR scan feedback improved
 - [ ] Phase 3.1 — Student profile page
 - [ ] Phase 3.2 — Notification bell badge
-- [ ] Phase 3.3 — System logs filter + export
+- [X] Phase 3.3 — System logs filter + export
 - [ ] Phase 3.4 — Batch ID card download
 - [ ] Phase 3.5 — Duplicate LRN prevention
 - [ ] Phase 3.6 — Welcome page DNHS branding
-- [ ] Phase 4.1 — APP_NAME set
-- [ ] Phase 4.2 — Favicon and PWA icons branded
-- [ ] Phase 4.3 — Vendor warnings fixed
-- [ ] Phase 4.4 — Skeleton loaders on heavy pages
+- [X] Phase 4.1 — APP_NAME set
+- [X] Phase 4.2 — Favicon and PWA icons branded
+- [X] Phase 4.3 — Vendor warnings fixed
+- [X] Phase 4.4 — Skeleton loaders on heavy pages
