@@ -3,11 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Department;
-use App\Models\Subject;
+use App\Models\MajorSubject;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -89,10 +90,10 @@ class DepartmentController extends Controller
         }
     }
 
-    private function getSubjectTeachers(string $subjectUuid): Collection
+    private function getMajorTeachers(string $majorUuid): Collection
     {
         return User::query()
-            ->whereHas('subjects', fn ($q) => $q->where('subjects.uuid', $subjectUuid))
+            ->whereHas('subjects', fn ($q) => $q->where('subjects.major_subject_id', $majorUuid))
             ->orderBy('name')
             ->get(['uuid', 'name']);
     }
@@ -101,20 +102,25 @@ class DepartmentController extends Controller
     {
         $this->authorizeDepartment($request);
 
-        $departments = Department::with(['head', 'teachers', 'subject'])->orderBy('name')->get()
+        $departments = Department::with(['head', 'teachers', 'majors'])->orderBy('name')->get()
             ->map(function (Department $dept) {
                 return [
                     'uuid' => $dept->uuid,
                     'name' => $dept->name,
                     'description' => $dept->description,
-                    'subject' => $dept->subject ? ['uuid' => $dept->subject->uuid, 'name' => $dept->subject->name] : null,
+                    'type' => $dept->type ?? 'general',
+                    'majors' => $dept->majors->map(fn (MajorSubject $m) => [
+                        'uuid' => $m->uuid,
+                        'name' => $m->name,
+                        'strand' => $m->pivot->strand,
+                    ])->values(),
                     'head' => $dept->head ? ['uuid' => $dept->head->uuid, 'name' => $dept->head->name] : null,
                     'teacher_count' => $dept->teachers->count(),
                     'teachers' => $dept->teachers->map(fn (User $t) => ['uuid' => $t->uuid, 'name' => $t->name]),
                 ];
             });
 
-        $allSubjects = Subject::orderBy('name')->get(['uuid', 'name']);
+        $allMajors = MajorSubject::orderBy('name')->get(['uuid', 'name', 'code']);
 
         $allUsers = User::query()
             ->orderBy('name')
@@ -122,7 +128,7 @@ class DepartmentController extends Controller
 
         return Inertia::render('admin/departments', [
             'departments' => $departments,
-            'allSubjects' => $allSubjects,
+            'allMajors' => $allMajors,
             'allUsers' => $allUsers,
         ]);
     }
@@ -131,22 +137,29 @@ class DepartmentController extends Controller
     {
         $this->authorizeDepartment($request);
 
-        $request->validate([
+        $data = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'subject_uuid' => 'nullable|string|exists:subjects,uuid',
+            'type' => 'required|string|in:general,shs_unified,shs_strand',
+            'majors' => 'nullable|array',
+            'majors.*.major_subject_uuid' => 'required|string|exists:major_subjects,uuid',
+            'majors.*.strand' => 'nullable|string|max:255',
             'head_uuid' => 'nullable|string|exists:users,uuid',
         ]);
 
-        Department::create([
-            'name' => $request->name,
-            'description' => $request->description,
-            'subject_uuid' => $request->subject_uuid,
-            'head_uuid' => $request->head_uuid,
+        $this->validateMajorScope($data['type'], $data['majors'] ?? []);
+
+        $dept = Department::create([
+            'name' => $data['name'],
+            'description' => $data['description'] ?? null,
+            'type' => $data['type'],
+            'head_uuid' => $data['head_uuid'] ?? null,
         ]);
 
-        if ($request->head_uuid) {
-            $this->syncHeadRole(null, $request->head_uuid);
+        $this->syncDepartmentMajors($dept, $data['majors'] ?? []);
+
+        if (($data['head_uuid'] ?? null)) {
+            $this->syncHeadRole(null, $data['head_uuid']);
         }
 
         return back()->with('success', 'Department created.');
@@ -158,26 +171,66 @@ class DepartmentController extends Controller
 
         $dept = Department::where('uuid', $uuid)->firstOrFail();
 
-        $request->validate([
+        $data = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'subject_uuid' => 'nullable|string|exists:subjects,uuid',
+            'type' => 'required|string|in:general,shs_unified,shs_strand',
+            'majors' => 'nullable|array',
+            'majors.*.major_subject_uuid' => 'required|string|exists:major_subjects,uuid',
+            'majors.*.strand' => 'nullable|string|max:255',
             'head_uuid' => 'nullable|string|exists:users,uuid',
         ]);
 
+        $this->validateMajorScope($data['type'], $data['majors'] ?? []);
+
         $oldHeadUuid = $dept->head_uuid;
-        $newHeadUuid = $request->head_uuid;
+        $newHeadUuid = $data['head_uuid'] ?? null;
 
         $dept->update([
-            'name' => $request->name,
-            'description' => $request->description,
-            'subject_uuid' => $request->subject_uuid,
+            'name' => $data['name'],
+            'description' => $data['description'] ?? null,
+            'type' => $data['type'],
             'head_uuid' => $newHeadUuid,
         ]);
+
+        $this->syncDepartmentMajors($dept, $data['majors'] ?? []);
 
         $this->syncHeadRole($oldHeadUuid, $newHeadUuid);
 
         return back()->with('success', 'Department updated.');
+    }
+
+    private function syncDepartmentMajors(Department $dept, array $majors): void
+    {
+        $payload = [];
+        foreach ($majors as $entry) {
+            $strand = trim($entry['strand'] ?? '');
+
+            $payload[$entry['major_subject_uuid']] = [
+                'strand' => $strand ?: null,
+            ];
+        }
+
+        $dept->majors()->sync($payload);
+    }
+
+    private function validateMajorScope(string $type, array $majors): void
+    {
+        if (empty($majors)) {
+            return;
+        }
+
+        $errors = [];
+
+        foreach ($majors as $index => $entry) {
+            if ($type === 'shs_strand' && empty(trim($entry['strand'] ?? ''))) {
+                $errors["majors.{$index}.strand"] = 'A strand is required for each major in a strand-specific department.';
+            }
+        }
+
+        if ($errors) {
+            throw ValidationException::withMessages($errors);
+        }
     }
 
     public function destroy(Request $request, string $uuid)
@@ -223,23 +276,25 @@ class DepartmentController extends Controller
         return back()->with('success', 'Teacher removed from department.');
     }
 
-    public function subjectTeachers(Request $request, string $uuid): Response
+    public function subjectTeachers(Request $request, string $uuid)
     {
         $this->authorizeDepartment($request);
 
-        $dept = Department::where('uuid', $uuid)->firstOrFail();
+        $dept = Department::where('uuid', $uuid)->with('majors')->firstOrFail();
         $user = $request->user();
 
         $canBypass = method_exists($user, 'hasPermission')
             && $user->hasPermission('bypass department teacher restriction');
 
-        if ($canBypass || ! $dept->subject_uuid) {
+        $firstMajor = $dept->majors->first();
+
+        if ($canBypass || ! $firstMajor) {
             $teachers = User::query()
                 ->whereHas('roles', fn ($q) => $q->where('roles.name', 'TEACHER'))
                 ->orderBy('name')
                 ->get(['uuid', 'name']);
         } else {
-            $teachers = $this->getSubjectTeachers($dept->subject_uuid);
+            $teachers = $this->getMajorTeachers($firstMajor->uuid);
         }
 
         return response()->json([
@@ -254,7 +309,7 @@ class DepartmentController extends Controller
             abort(403);
         }
 
-        $dept = Department::where('head_uuid', $user->uuid)->with(['teachers', 'subject'])->first();
+        $dept = Department::where('head_uuid', $user->uuid)->with(['teachers', 'majors'])->first();
 
         if (! $dept) {
             abort(404);
@@ -273,7 +328,11 @@ class DepartmentController extends Controller
                 'uuid' => $dept->uuid,
                 'name' => $dept->name,
                 'description' => $dept->description,
-                'subject' => $dept->subject ? ['uuid' => $dept->subject->uuid, 'name' => $dept->subject->name] : null,
+                'majors' => $dept->majors->map(fn (MajorSubject $m) => [
+                    'uuid' => $m->uuid,
+                    'name' => $m->name,
+                    'strand' => $m->pivot->strand,
+                ])->values(),
             ],
             'teachers' => $teachers,
         ]);

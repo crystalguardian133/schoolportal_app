@@ -21,6 +21,8 @@ Route::get('/assets/profile_pictures/{folder}/{filename}', [AdminAssetController
 
 // Public support tickets (locked-out users, guests)
 Route::post('support/tickets', [\App\Http\Controllers\SupportTicketController::class, 'store'])->name('support.tickets.store');
+Route::get('support/tickets/lookup', [\App\Http\Controllers\SupportTicketController::class, 'lookupPage'])->name('support.tickets.lookup.page');
+Route::post('support/tickets/lookup', [\App\Http\Controllers\SupportTicketController::class, 'lookup'])->name('support.tickets.lookup');
 Route::get('support/tickets/{report}', [\App\Http\Controllers\SupportTicketController::class, 'show'])->name('support.tickets.show');
 Route::post('support/tickets/{report}/reply', [\App\Http\Controllers\SupportTicketController::class, 'reply'])->name('support.tickets.reply');
 
@@ -46,8 +48,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('teacher/classes/{classId}/grades', [\App\Http\Controllers\TeacherGradeController::class, 'update'])->name('teacher.classes.grades.update');
     Route::get('teacher/grades', [\App\Http\Controllers\TeacherGradeController::class, 'index'])->name('teacher.grades');
     Route::post('teacher/grades/{subjectUuid}', [\App\Http\Controllers\TeacherGradeController::class, 'update'])->name('teacher.grades.update');
-    Route::get('admin/assignments', [\App\Http\Controllers\AdminAssignmentController::class, 'index'])->name('admin.assignments');
-    Route::post('admin/assignments', [\App\Http\Controllers\AdminAssignmentController::class, 'update'])->name('admin.assignments.update');
     Route::get('admin/enrollments', [\App\Http\Controllers\EnrollmentController::class, 'index'])->name('admin.enrollments');
     Route::post('admin/enrollments', [\App\Http\Controllers\EnrollmentController::class, 'store'])->name('admin.enrollments.store');
     Route::post('admin/students/{uuid}/promote', [\App\Http\Controllers\EnrollmentController::class, 'promote'])->name('admin.students.promote');
@@ -66,7 +66,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('admin/manage-students/{uuid}/edit', [AdminStudentController::class, 'edit'])->name('admin.manage-students.edit');
     Route::put('admin/manage-students/{uuid}', [AdminStudentController::class, 'update'])->name('admin.manage-students.update');
     Route::get('admin/manage-teachers', [AdminTeacherController::class, 'index'])->name('admin.manage-teachers.index');
-    Route::get('admin/manage-teachers/{uuid}/edit', [AdminTeacherController::class, 'edit'])->name('admin.manage-teachers.edit');
     Route::patch('admin/manage-teachers/{uuid}', [AdminTeacherController::class, 'update'])->name('admin.manage-teachers.update');
     Route::get('admin/roles', [AdminRoleController::class, 'index'])->name('admin.roles');
     Route::post('admin/roles', [AdminRoleController::class, 'store'])->name('admin.roles.store');
@@ -91,6 +90,7 @@ Route::post('admin/subjects', [AdminSubjectController::class, 'store'])->name('a
 Route::patch('admin/subjects', [AdminSubjectController::class, 'update'])->name('admin.subjects.update');
 Route::delete('admin/subjects', [AdminSubjectController::class, 'destroy'])->name('admin.subjects.destroy');
 Route::post('admin/subjects/assign-teacher', [AdminSubjectController::class, 'assignTeacher'])->name('admin.subjects.assign-teacher');
+Route::post('admin/subject-majors', [AdminSubjectController::class, 'storeMajor'])->name('admin.subject-majors.store');
 Route::delete('admin/subjects/teachers/{teacherUuid}/{subjectUuid}', [AdminSubjectController::class, 'removeTeacher'])->name('admin.subjects.teachers.remove');
     Route::get('admin/schedules', [\App\Http\Controllers\ScheduleController::class, 'create'])->name('admin.schedules');
     Route::post('admin/schedules', [\App\Http\Controllers\ScheduleController::class, 'store'])->name('admin.schedules.store');

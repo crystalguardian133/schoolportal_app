@@ -1,7 +1,6 @@
 import { Head } from '@inertiajs/react';
 import { GraduationCap, FileText } from 'lucide-react';
 import { StudentPageShell } from '@/components/student-page-shell';
-import { exportPdf } from '@/lib/pdf-export';
 
 const quarterLabels = ['Q1', 'Q2', 'Q3'];
 
@@ -42,7 +41,7 @@ type GradesPageProps = {
 };
 
 export default function Grades({ student, yearLevelGroups }: GradesPageProps) {
-    function downloadReportCard(group: YearLevelGroup) {
+    async function downloadReportCard(group: YearLevelGroup) {
         const headers = ['Subject Code', 'Subject Name', ...quarterLabels, 'Total'];
         const rows = group.rows.map(row => [
             row.subjectCode || '—',
@@ -59,6 +58,7 @@ export default function Grades({ student, yearLevelGroups }: GradesPageProps) {
 
         rows.push(['', 'GENERAL AVERAGE', '', '', '', generalAverage]);
 
+        const { exportPdf } = await import('@/lib/pdf-export');
         exportPdf({
             title: `Report Card - ${group.yearLevel}`,
             subtitle: `Name: ${student?.name} | Section: ${group.section} | S.Y.: ${group.schoolYear}`,

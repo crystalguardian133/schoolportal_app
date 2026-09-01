@@ -247,6 +247,7 @@ class AdminUserController extends Controller
             'role' => 'nullable|string',
             'is_adviser' => 'nullable|boolean',
             'adviser_section' => 'nullable|string',
+            'avatar' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
         ]);
 
         $first = trim($data['first_name'] ?? '');
@@ -278,6 +279,21 @@ class AdminUserController extends Controller
 
         if (! empty($data['role'])) {
             $user->assignRole($data['role']);
+        }
+
+        if ($request->hasFile('avatar')) {
+            $avatar = $request->file('avatar');
+            $subfolder = 'teachers';
+            $destDir = base_path('resources/assets/profile_pictures/'.$subfolder);
+
+            if (! File::exists($destDir)) {
+                File::makeDirectory($destDir, 0755, true);
+            }
+
+            $filename = ($user->uuid ?? uniqid()).'.'.$avatar->getClientOriginalExtension();
+            $avatar->move($destDir, $filename);
+            $user->profile_picture = 'profile_pictures/'.$subfolder.'/'.$filename;
+            $user->save();
         }
 
         try {

@@ -1,13 +1,16 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { Users, LayoutGrid, BookOpen, Bell, BarChart3 } from 'lucide-react';
-import { useState, useCallback } from 'react';
-import { SimpleBarChart } from '@/components/charts';
+import { lazy, Suspense, useState, useCallback } from 'react';
 import { CommandPalette  } from '@/components/command-palette';
 import type {CommandItem} from '@/components/command-palette';
 import { PageLoader } from '@/components/page-loader';
 import { PortalPageShell } from '@/components/portal-page-shell';
 import { useCommandPalette } from '@/hooks/use-command-palette';
 import { getFirstName } from '@/lib/utils';
+
+const SimpleBarChart = lazy(() =>
+    import('@/components/charts').then((m) => ({ default: m.SimpleBarChart })),
+);
 
 type Props = {
     user: { name: string; email: string; roles?: string[] };
@@ -74,14 +77,16 @@ export default function AdminDashboard({ user, tools, stats, recentAnnouncements
                             />
                         </div>
 
-                        <SimpleBarChart
-                            title="Overview"
-                            data={[
-                                { label: 'Students', value: stats.totalStudents },
-                                { label: 'Sections', value: stats.totalSections },
-                                { label: 'Subjects', value: stats.totalSubjects },
-                            ]}
-                        />
+                        <Suspense fallback={<div className="h-72 animate-pulse rounded-2xl bg-muted" />}>
+                            <SimpleBarChart
+                                title="Overview"
+                                data={[
+                                    { label: 'Students', value: stats.totalStudents },
+                                    { label: 'Sections', value: stats.totalSections },
+                                    { label: 'Subjects', value: stats.totalSubjects },
+                                ]}
+                            />
+                        </Suspense>
                     </>
                 )}
 

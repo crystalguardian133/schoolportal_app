@@ -1,11 +1,14 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Bug, Lightbulb, MessageSquare, X, Check, Clock, Eye, Search, ChevronLeft, ChevronRight, Trash2, Lock, MessageCircle } from 'lucide-react';
-import { useState } from 'react';
-import { SimpleBarChart } from '@/components/charts';
+import { lazy, Suspense, useState } from 'react';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { PortalPageShell } from '@/components/portal-page-shell';
 import { formatDate } from '@/lib/dates';
 import { cn } from '@/lib/utils';
+
+const SimpleBarChart = lazy(() =>
+    import('@/components/charts').then((m) => ({ default: m.SimpleBarChart })),
+);
 
 type Report = {
     id: string;
@@ -16,7 +19,8 @@ type Report = {
     status: string;
     closed: boolean;
     replies: { id: string }[];
-    user: { id: number; name: string; email: string };
+    user: { id: number; name: string; email: string } | null;
+    contact_email: string | null;
     created_at: string;
 };
 
@@ -36,11 +40,15 @@ type Props = {
         under_review: number;
         accepted: number;
         rejected: number;
+        resolved: number;
+        unresolved: number;
+        closed: number;
     };
     filters: {
         type?: string;
         status?: string;
         search?: string;
+        resolution?: string;
     };
 };
 
@@ -55,6 +63,12 @@ const statusOptions = [
     { value: 'under_review', label: 'Under Review', icon: Eye, bg: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300' },
     { value: 'accepted', label: 'Accepted', icon: Check, bg: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300' },
     { value: 'rejected', label: 'Rejected', icon: X, bg: 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300' },
+];
+
+const resolutionOptions = [
+    { value: 'unresolved', label: 'Unresolved', icon: Clock, activeBg: 'bg-amber-50 border-amber-300 text-amber-700 dark:bg-amber-950 dark:border-amber-800 dark:text-amber-300' },
+    { value: 'resolved', label: 'Resolved', icon: Check, activeBg: 'bg-emerald-50 border-emerald-300 text-emerald-700 dark:bg-emerald-950 dark:border-emerald-800 dark:text-emerald-300' },
+    { value: 'closed', label: 'Closed', icon: Lock, activeBg: 'bg-gray-100 border-gray-400 text-gray-700 dark:bg-gray-900 dark:border-gray-600 dark:text-gray-300' },
 ];
 
 export default function DeveloperReports({ reports, stats, filters }: Props) {
@@ -108,6 +122,42 @@ return;
                     </div>
                 )}
 
+                <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-medium text-muted-foreground">Filter:</span>
+                    {resolutionOptions.map((r) => {
+                        const RIcon = r.icon;
+                        const active = filters.resolution === r.value;
+
+                        return (
+                            <button
+                                key={r.value}
+                                onClick={() => handleFilter('resolution', active ? '' : r.value)}
+                                className={cn(
+                                    'inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-xs font-medium transition',
+                                    active
+                                        ? r.activeBg
+                                        : 'border-border text-muted-foreground hover:bg-muted',
+                                )}
+                            >
+                                <RIcon className="size-3.5" />
+                                {r.label}
+                                <span className="rounded-full bg-background/60 px-1.5 text-[10px] font-semibold">
+                                    {stats[r.value as keyof typeof stats]}
+                                </span>
+                            </button>
+                        );
+                    })}
+                    {filters.resolution && (
+                        <button
+                            onClick={() => handleFilter('resolution', '')}
+                            className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-2 text-xs font-medium text-muted-foreground transition hover:bg-muted"
+                        >
+                            <X className="size-3" />
+                            Clear
+                        </button>
+                    )}
+                </div>
+
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     {statusOptions.map((s) => {
                         const Icon = s.icon;
@@ -136,7 +186,9 @@ return;
                     })}
                 </div>
 
-                <SimpleBarChart title="Status Overview" data={chartData} />
+                <Suspense fallback={<div className="h-64 animate-pulse rounded-2xl bg-muted" />}>
+                    <SimpleBarChart title="Status Overview" data={chartData} />
+                </Suspense>
 
                 <div className="flex flex-wrap items-center gap-3">
                     <div className="flex gap-2">
@@ -204,7 +256,7 @@ return;
                                         <div>
                                             <h3 className="font-semibold">{report.subject}</h3>
                                             <p className="text-xs text-muted-foreground">
-                                                by {report.user.name} ({report.user.email})
+                                                by {report.user ? `${report.user.name} (${report.user.email})` : (report.contact_email ?? 'Guest')}
                                             </p>
                                             <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{report.message}</p>
                                             <div className="mt-2 flex items-center gap-3">
@@ -302,7 +354,11 @@ return;
 
                 <ConfirmDialog
                     open={!!deleteTarget}
-                    onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
+                    onOpenChange={(open) => {
+ if (!open) {
+setDeleteTarget(null)
+} 
+}}
                     onConfirm={deleteReport}
                     title="Delete Report"
                     description="This will permanently delete this report and all its images. This action cannot be undone."

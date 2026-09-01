@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\MajorSubject;
 use App\Models\Subject;
 use App\Models\ClassSection;
 use Illuminate\Http\Request;
@@ -13,7 +14,10 @@ class AdminSubjectController extends Controller
     {
         $user = $request->user();
 
-        $hasPermission = $user && method_exists($user, 'hasPermission') && $user->hasPermission('manage subjects');
+        $hasPermission = $user && method_exists($user, 'hasPermission') && (
+            $user->hasPermission('manage subjects')
+            || $user->hasPermission('manage assignments')
+        );
 
         if (! $user || ! $hasPermission) {
             abort(403);
@@ -27,15 +31,17 @@ class AdminSubjectController extends Controller
         $user = $request->user();
         $q = $request->query('q');
         $perPage = (int) $request->query('per_page', 25);
+        $majorId = $request->query('major_id');
 
         $subjectsQuery = Subject::query()
-            ->select(['uuid', 'name', 'code', 'description', 'time_schedule'])
-            ->with('teachers')
+            ->select(['uuid', 'name', 'code', 'category', 'track', 'strand', 'level', 'description', 'major_subject_id'])
+            ->with(['teachers', 'majorSubject'])
             ->when($q, fn ($query, $search) => $query->where(function ($query) use ($search) {
                 $query->where('name', 'like', "%{$search}%")
                     ->orWhere('code', 'like', "%{$search}%")
                     ->orWhere('description', 'like', "%{$search}%");
-            }));
+            }))
+            ->when($majorId, fn ($query, $id) => $query->where('major_subject_id', $id));
 
         // Advisers only see subjects linked to their section
         $hasManageSubjects = $user && method_exists($user, 'hasPermission') && $user->hasPermission('manage subjects');
@@ -61,8 +67,17 @@ class AdminSubjectController extends Controller
                 'uuid' => $subject->uuid,
                 'name' => $subject->name,
                 'code' => $subject->code,
+                'category' => $subject->category,
+                'track' => $subject->track,
+                'strand' => $subject->strand,
+                'level' => $subject->level,
                 'description' => $subject->description,
-                'time_schedule' => $subject->time_schedule,
+                'major_subject_id' => $subject->major_subject_id,
+                'major_subject' => $subject->majorSubject ? [
+                    'uuid' => $subject->majorSubject->uuid,
+                    'name' => $subject->majorSubject->name,
+                    'code' => $subject->majorSubject->code,
+                ] : null,
                 'teachers' => $subject->teachers->map(fn ($teacher) => [
                     'uuid' => $teacher->uuid,
                     'name' => $teacher->name,
@@ -88,12 +103,43 @@ class AdminSubjectController extends Controller
             })
             ->get(['uuid', 'name', 'email', 'profile_picture']);
 
+        $stats = [
+            'total' => Subject::query()->count(),
+            'core' => Subject::query()->where('category', 'Core')->count(),
+            'applied' => Subject::query()->where('category', 'Applied')->count(),
+            'specialized' => Subject::query()->where('category', 'Specialized')->count(),
+            'no_category' => Subject::query()->whereNull('category')->count(),
+            'majors' => MajorSubject::query()->count(),
+            'major_subjects' => Subject::query()->whereNotNull('major_subject_id')->count(),
+        ];
+
+        $majors = MajorSubject::query()
+            ->withCount('subjects')
+            ->orderBy('name')
+            ->get(['uuid', 'name', 'code']);
+
+        $allSubjects = Subject::query()
+            ->orderBy('name')
+            ->get(['uuid', 'name', 'code', 'category', 'track', 'strand'])
+            ->map(fn (Subject $subject) => [
+                'uuid' => $subject->uuid,
+                'name' => $subject->name,
+                'code' => $subject->code,
+                'category' => $subject->category,
+                'track' => $subject->track,
+                'strand' => $subject->strand,
+            ]);
+
         return inertia('admin/subjects', [
             'subjects' => $subjects,
             'assignableTeachers' => $assignableTeachers,
+            'allSubjects' => $allSubjects,
+            'majors' => $majors,
+            'stats' => $stats,
             'filters' => [
                 'q' => $q,
                 'per_page' => $perPage,
+                'major_id' => $majorId,
             ],
         ]);
     }
@@ -105,15 +151,25 @@ class AdminSubjectController extends Controller
         $data = $request->validate([
             'name' => 'required|string|max:100',
             'code' => 'nullable|string|max:50',
+            'level' => 'nullable|string|in:jhs,shs',
+            'category' => 'nullable|string|max:100',
+            'track' => 'nullable|string|max:255',
+            'strand' => 'nullable|string|max:255',
             'description' => 'nullable|string',
-            'time_schedule' => 'nullable|string|max:255',
+            'major_subject_id' => 'nullable|string|exists:major_subjects,uuid',
         ]);
+
+        $level = $data['level'] ?? null;
 
         $subject = Subject::query()->create([
             'name' => trim($data['name']),
             'code' => $data['code'] ? strtoupper(trim($data['code'])) : null,
+            'level' => $level,
+            'category' => $data['category'] ? trim($data['category']) : null,
+            'track' => $level === 'jhs' ? null : ($data['track'] ? trim($data['track']) : null),
+            'strand' => $level === 'jhs' ? null : ($data['strand'] ? trim($data['strand']) : null),
             'description' => $data['description'] ?? null,
-            'time_schedule' => $data['time_schedule'] ?? null,
+            'major_subject_id' => $data['major_subject_id'] ?? null,
         ]);
 
         return back()->with('success', 'Subject created successfully.');
@@ -134,8 +190,12 @@ class AdminSubjectController extends Controller
             'subject_uuid' => 'required|string',
             'name' => 'required|string|max:100',
             'code' => 'nullable|string|max:50',
+            'level' => 'nullable|string|in:jhs,shs',
+            'category' => 'nullable|string|max:100',
+            'track' => 'nullable|string|max:255',
+            'strand' => 'nullable|string|max:255',
             'description' => 'nullable|string',
-            'time_schedule' => 'nullable|string|max:255',
+            'major_subject_id' => 'nullable|string|exists:major_subjects,uuid',
         ]);
 
         $subject = Subject::query()->where('uuid', $data['subject_uuid'])->first();
@@ -144,11 +204,17 @@ class AdminSubjectController extends Controller
             return back()->with('error', 'Subject not found.');
         }
 
+        $level = $data['level'] ?? $subject->level;
+
         $subject->update([
             'name' => trim($data['name']),
             'code' => $data['code'] ? strtoupper(trim($data['code'])) : null,
+            'level' => $level,
+            'category' => $data['category'] ? trim($data['category']) : null,
+            'track' => $level === 'jhs' ? null : ($data['track'] ? trim($data['track']) : null),
+            'strand' => $level === 'jhs' ? null : ($data['strand'] ? trim($data['strand']) : null),
             'description' => $data['description'] ?? null,
-            'time_schedule' => $data['time_schedule'] ?? null,
+            'major_subject_id' => array_key_exists('major_subject_id', $data) ? ($data['major_subject_id'] ?? null) : $subject->major_subject_id,
         ]);
 
         return back()->with('success', 'Subject updated successfully.');
@@ -170,7 +236,10 @@ class AdminSubjectController extends Controller
         $data = $request->validate([
             'subject_uuid' => 'required|string',
             'teacher_uuid' => 'nullable|string',
+            'teacher_uuids' => 'nullable|array',
+            'teacher_uuids.*' => 'string',
             'is_substitute' => 'nullable|boolean',
+            'reassign_from_subject_uuid' => 'nullable|string',
         ]);
 
         $subject = Subject::query()->where('uuid', $data['subject_uuid'])->first();
@@ -179,16 +248,43 @@ class AdminSubjectController extends Controller
             return back()->with('error', 'Subject not found.');
         }
 
-        if ($data['teacher_uuid']) {
+        // Reassign: detach the teacher from their source subject before attaching
+        $sourceSubjectUuid = $data['reassign_from_subject_uuid'] ?? null;
+        $singleTeacherUuid = $data['teacher_uuid'] ?? null;
+
+        if (! empty($sourceSubjectUuid) && $sourceSubjectUuid !== $subject->uuid && $singleTeacherUuid) {
+            DB::table('subject_teacher')
+                ->where('subject_uuid', $sourceSubjectUuid)
+                ->where('teacher_uuid', $singleTeacherUuid)
+                ->delete();
+        }
+
+        // Collect teacher UUIDs: support both single (teacher_uuid) and batch (teacher_uuids)
+        $teacherUuids = [];
+        if (! empty($data['teacher_uuids']) && is_array($data['teacher_uuids'])) {
+            $teacherUuids = $data['teacher_uuids'];
+        } elseif (! empty($singleTeacherUuid)) {
+            $teacherUuids = [$singleTeacherUuid];
+        }
+
+        foreach ($teacherUuids as $teacherUuid) {
             $exists = DB::table('subject_teacher')
                 ->where('subject_uuid', $subject->uuid)
-                ->where('teacher_uuid', $data['teacher_uuid'])
+                ->where('teacher_uuid', $teacherUuid)
                 ->exists();
 
             if (! $exists) {
-                $subject->teachers()->attach($data['teacher_uuid'], [
+                $subject->teachers()->attach($teacherUuid, [
                     'is_substitute' => $data['is_substitute'] ?? false,
                 ]);
+            } else {
+                DB::table('subject_teacher')
+                    ->where('subject_uuid', $subject->uuid)
+                    ->where('teacher_uuid', $teacherUuid)
+                    ->update([
+                        'is_substitute' => $data['is_substitute'] ?? false,
+                        'updated_at' => now(),
+                    ]);
             }
         }
 
@@ -237,5 +333,28 @@ class AdminSubjectController extends Controller
         $subject->delete();
 
         return back()->with('success', 'Subject deleted successfully.');
+    }
+
+    public function storeMajor(Request $request)
+    {
+        $this->authorizeAdmin($request);
+
+        $data = $request->validate([
+            'name' => 'required|string|max:100|unique:major_subjects,name',
+            'code' => 'nullable|string|max:50',
+            'description' => 'nullable|string',
+        ]);
+
+        $major = MajorSubject::create([
+            'name' => trim($data['name']),
+            'code' => $data['code'] ? strtoupper(trim($data['code'])) : null,
+            'description' => $data['description'] ?? null,
+        ]);
+
+        return response()->json([
+            'uuid' => $major->uuid,
+            'name' => $major->name,
+            'code' => $major->code,
+        ], 201);
     }
 }

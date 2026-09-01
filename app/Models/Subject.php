@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Symfony\Component\Uid\Uuid;
@@ -19,8 +20,13 @@ class Subject extends Model
     protected $fillable = [
         'name',
         'code',
+        'category',
+        'track',
+        'strand',
+        'level',
         'description',
         'time_schedule',
+        'major_subject_id',
     ];
 
     protected static function booted(): void
@@ -47,6 +53,11 @@ class Subject extends Model
         return $this->belongsToMany(User::class, 'subject_teacher', 'subject_uuid', 'teacher_uuid', 'uuid', 'uuid')
             ->withPivot('is_substitute')
             ->withTimestamps();
+    }
+
+    public function majorSubject(): BelongsTo
+    {
+        return $this->belongsTo(MajorSubject::class, 'major_subject_id', 'uuid');
     }
 
     public function sectionTeachers(): BelongsToMany

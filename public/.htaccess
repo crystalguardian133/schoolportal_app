@@ -22,4 +22,38 @@
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
+
+    # Efficient cache lifetimes for fingerprinted build assets and fonts.
+    <IfModule mod_headers.c>
+        <FilesMatch "\.(css|js|woff2?|png|svg|ico|webp)\.?(.*)$">
+            Header set Cache-Control "public, max-age=31536000, immutable"
+        </FilesMatch>
+        <FilesMatch "manifest\.webmanifest$">
+            Header set Cache-Control "public, max-age=86400"
+        </FilesMatch>
+        <FilesMatch "(^|/)sw\.js$">
+            Header set Cache-Control "no-cache, no-store, must-revalidate"
+        </FilesMatch>
+    </IfModule>
+
+    <IfModule mod_expires.c>
+        ExpiresActive On
+        ExpiresByType text/css "access plus 1 year"
+        ExpiresByType application/javascript "access plus 1 year"
+        ExpiresByType font/woff2 "access plus 1 year"
+        ExpiresByType image/png "access plus 1 year"
+        ExpiresByType image/svg+xml "access plus 1 year"
+        ExpiresByType application/manifest+json "access plus 1 hour"
+    </IfModule>
+
+    # Text compression (gzip/deflate) for documents, JS, CSS, fonts, etc.
+    <IfModule mod_deflate.c>
+        <FilesMatch "\.(html|htm|js|mjs|css|json|xml|txt|svg|webmanifest|map)$">
+            SetOutputFilter DEFLATE
+        </FilesMatch>
+    </IfModule>
+
+    <IfModule mod_mime.c>
+        AddOutputFilterByType DEFLATE text/html text/plain text/css text/xml application/javascript application/json image/svg+xml application/manifest+json
+    </IfModule>
 </IfModule>

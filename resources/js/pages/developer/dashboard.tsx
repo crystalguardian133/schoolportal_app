@@ -11,10 +11,18 @@ import {
     FileText,
     ArrowRight,
 } from 'lucide-react';
-import { SimpleBarChart, SimplePieChart } from '@/components/charts';
+import { lazy, Suspense } from 'react';
 import { PortalPageShell } from '@/components/portal-page-shell';
 import { formatDate } from '@/lib/dates';
 import { cn, getFirstName } from '@/lib/utils';
+
+const SimpleBarChart = lazy(() =>
+    import('@/components/charts').then((m) => ({ default: m.SimpleBarChart })),
+);
+
+const SimplePieChart = lazy(() =>
+    import('@/components/charts').then((m) => ({ default: m.SimplePieChart })),
+);
 
 type Props = {
     user: { name: string; email: string };
@@ -94,23 +102,25 @@ export default function DeveloperDashboard({ user, stats, typeBreakdown, recentR
                 </div>
 
                 <div className="grid gap-4 lg:grid-cols-2">
-                    <SimpleBarChart
-                        title="Status Overview"
-                        data={[
-                            { label: 'Pending', value: stats.pendingReports },
-                            { label: 'Under Review', value: stats.underReviewReports },
-                            { label: 'Accepted', value: stats.acceptedReports },
-                            { label: 'Rejected', value: stats.rejectedReports },
-                        ]}
-                    />
-                    <SimplePieChart
-                        title="Report Types"
-                        data={[
-                            { label: 'Bugs', value: typeBreakdown.bugs },
-                            { label: 'Suggestions', value: typeBreakdown.suggestions },
-                            { label: 'Feedback', value: typeBreakdown.feedback },
-                        ]}
-                    />
+                    <Suspense fallback={<div className="h-64 animate-pulse rounded-2xl bg-muted" />}>
+                        <SimpleBarChart
+                            title="Status Overview"
+                            data={[
+                                { label: 'Pending', value: stats.pendingReports },
+                                { label: 'Under Review', value: stats.underReviewReports },
+                                { label: 'Accepted', value: stats.acceptedReports },
+                                { label: 'Rejected', value: stats.rejectedReports },
+                            ]}
+                        />
+                        <SimplePieChart
+                            title="Report Types"
+                            data={[
+                                { label: 'Bugs', value: typeBreakdown.bugs },
+                                { label: 'Suggestions', value: typeBreakdown.suggestions },
+                                { label: 'Feedback', value: typeBreakdown.feedback },
+                            ]}
+                        />
+                    </Suspense>
                 </div>
 
                 <div className="rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm dark:border-sidebar-border dark:bg-sidebar">

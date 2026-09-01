@@ -36,8 +36,12 @@ function DelayedConfirmButton({
     const [remaining, setRemaining] = useState(seconds);
 
     useEffect(() => {
-        if (remaining <= 0) return;
+        if (remaining <= 0) {
+return;
+}
+
         const t = setTimeout(() => setRemaining((r) => r - 1), 1000);
+
         return () => clearTimeout(t);
     }, [remaining]);
 
@@ -375,6 +379,12 @@ export default function LoginForm({ status, canResetPassword }: Props) {
                                     View your support thread →
                                 </TextLink>
                             )}
+                            <TextLink
+                                href="/support/tickets/lookup"
+                                className="text-xs text-slate-500 dark:text-neutral-400"
+                            >
+                                Lost the link? Find your tickets by email or ID →
+                            </TextLink>
                             <DialogFooter>
                                 <Button type="button" variant="outline" onClick={() => setSupportOpen(false)}>
                                     Done
@@ -455,7 +465,10 @@ function ErrorEffects({
     onRateLimit: (msg: string | null) => void;
 }) {
     useEffect(() => {
-        if (errors.locked) onLocked();
+        if (errors.locked) {
+onLocked();
+}
+
         const msg =
             errors.rate_limited ||
             (errors.email && /too many login attempts/i.test(errors.email) ? errors.email : null) ||

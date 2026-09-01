@@ -21,7 +21,7 @@ type Reply = {
     id: string;
     message: string;
     images: string[] | null;
-    user: { id: number; name: string };
+    user: { id: number; name: string } | null;
     created_at: string;
 };
 
@@ -33,10 +33,15 @@ type Report = {
     images: string[] | null;
     status: string;
     closed: boolean;
-    user: { id: number; name: string; email: string };
+    user: { id: number; name: string; email: string } | null;
+    contact_email: string | null;
     replies: Reply[];
     created_at: string;
 };
+
+function displayName(report: Report): string {
+    return report.user?.name ?? report.contact_email ?? 'Guest';
+}
 
 type Props = {
     report: Report;
@@ -60,7 +65,7 @@ export default function ReportShow({ report }: Props) {
     const flash: any = props.flash || {};
     const auth = props.auth as { user: { id: number }; permissions: string[] };
     const isDeveloper = auth.permissions.includes('access developer dashboard');
-    const canClose = isDeveloper || auth.user.id === report.user.id;
+    const canClose = isDeveloper || (!!report.user && auth.user.id === report.user.id);
 
     const [replyText, setReplyText] = useState('');
     const [replyImages, setReplyImages] = useState<File[]>([]);
@@ -166,9 +171,12 @@ export default function ReportShow({ report }: Props) {
                                     )}
                                 </div>
                                 <p className="mt-1 text-sm text-muted-foreground">
-                                    <span className="block sm:inline">by {report.user.name}</span>
+                                    <span className="block sm:inline">
+                                        by {displayName(report)}
+                                        {report.user?.email ? ` (${report.user.email})` : ''}
+                                    </span>
                                     <span className="hidden sm:inline"> </span>
-                                    <span className="block text-xs text-muted-foreground sm:inline sm:text-sm">({report.user.email}) · {formatDate(report.created_at, 'MMM d, yyyy h:mm a')}</span>
+                                    <span className="block text-xs text-muted-foreground sm:inline sm:text-sm">· {formatDate(report.created_at, 'MMM d, yyyy h:mm a')}</span>
                                 </p>
                             </div>
                         </div>
@@ -238,7 +246,7 @@ export default function ReportShow({ report }: Props) {
                     ) : (
                         <div className="mt-4 space-y-3 sm:mt-5 sm:space-y-4">
                             {report.replies.map((reply) => {
-                                const isOwnReply = reply.user.id === report.user.id;
+                                const isOwnReply = !!report.user && !!reply.user && reply.user.id === report.user.id;
 
                                 return (
                                     <div
@@ -253,7 +261,7 @@ export default function ReportShow({ report }: Props) {
                                                 'text-xs font-semibold',
                                                 isOwnReply ? 'text-foreground' : 'text-primary',
                                             )}>
-                                                {reply.user.name}
+                                                {reply.user?.name ?? 'Guest'}
                                             </span>
                                             {!isOwnReply && (
                                                 <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">Developer</span>

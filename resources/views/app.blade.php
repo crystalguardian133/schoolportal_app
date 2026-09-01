@@ -70,6 +70,12 @@
 
         @fonts
 
+        @unless ($usesLocalViteServer)
+            @foreach (glob(public_path('build/assets/*.woff2')) ?: [] as $font)
+                <link rel="preload" href="{{ asset('build/assets/' . basename($font)) }}" as="font" type="font/woff2" crossorigin>
+            @endforeach
+        @endunless
+
         @if ($usesLocalViteServer)
             @viteReactRefresh
         @endif
