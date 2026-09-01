@@ -1,6 +1,6 @@
 import { router } from '@inertiajs/react';
 import { Pencil, Plus, ShieldCheck, ShieldOff, X } from 'lucide-react';
-import { lazy, Suspense, useState } from 'react';
+import { useState } from 'react';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { formatDate } from '@/lib/dates';
+import { getLucideIcon } from '@/lib/lucide-icon-map';
 
 type RoleAssignment = {
     id?: string;
@@ -63,11 +64,6 @@ function roleBadgeClass(role: string, expired: boolean, expiringSoon: boolean): 
     return 'border-transparent bg-muted text-muted-foreground dark:bg-muted/50';
 }
 
-const iconCache = new Map<
-    string,
-    React.LazyExoticComponent<React.ComponentType<{ className?: string }>>
->();
-
 function resolveIcon(
     name: string | null | undefined,
 ): React.ComponentType<{ className?: string }> | null {
@@ -75,20 +71,7 @@ function resolveIcon(
         return null;
     }
 
-    if (!iconCache.has(name)) {
-        iconCache.set(
-            name,
-            lazy(() =>
-                import('lucide-react').then((mod) => ({
-                    default: (mod as Record<string, unknown>)[name] as React.ComponentType<{
-                        className?: string;
-                    }>,
-                })),
-            ),
-        );
-    }
-
-    return iconCache.get(name)!;
+    return getLucideIcon(name) ?? null;
 }
 
 function isExpired(dateStr: string | null | undefined): boolean {
@@ -289,11 +272,7 @@ export default function UserRoleCell({ user, roles, roleOptions }: Props) {
                                     expiringSoon,
                                 )}
                             >
-                                <Suspense
-                                    fallback={<ShieldCheck className="size-3" />}
-                                >
-                                    <RoleIcon className="size-3" />
-                                </Suspense>
+                                <RoleIcon className="size-3" />
                                 {role.name}
                                 {role.expires_at && (
                                     <span className="opacity-70">

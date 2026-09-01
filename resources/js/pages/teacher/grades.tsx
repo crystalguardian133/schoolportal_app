@@ -2,7 +2,6 @@ import { Head, router } from '@inertiajs/react';
 import { Pencil, Save, Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Download, AlertTriangle } from 'lucide-react';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { PortalPageShell } from '@/components/portal-page-shell';
-import { exportPdf } from '@/lib/pdf-export';
 
 type Subject = {
     uuid: string;
@@ -255,11 +254,12 @@ return;
         );
     }
 
-    function downloadGradesPdf() {
+    async function downloadGradesPdf() {
         if (!selectedSubject) {
 return;
 }
 
+        const { exportPdf } = await import('@/lib/pdf-export');
         const headers = ['Student', 'LRN', 'Q1', 'Q2', 'Q3', 'Total'];
         const rows = students.map((s) => [
             s.name,

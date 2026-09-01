@@ -9,6 +9,7 @@ set_error_handler(function (int $errno, string $errstr, string $errfile): bool {
     return false; // Let PHP handle all other errors normally
 });
 
+use App\Http\Middleware\CacheStaticAssets;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\LogSystemActivity;
@@ -30,6 +31,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
         $middleware->trustProxies(at: '*');
+
+        $middleware->prepend(CacheStaticAssets::class);
 
         $middleware->web(append: [
             HandleAppearance::class,

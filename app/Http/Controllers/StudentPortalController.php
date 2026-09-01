@@ -69,7 +69,7 @@ class StudentPortalController extends Controller
             return Inertia::render('admin/dashboard', [
                 'user' => $user ? ['name' => $user->name, 'email' => $user->email, 'roles' => $user->roles()->pluck('name')->all()] : null,
                 'tools' => [
-                    ['label' => 'Assignments', 'href' => '/admin/assignments'],
+                    ['label' => 'Subjects', 'href' => '/admin/subjects'],
                     ['label' => 'Enrollments', 'href' => '/admin/enrollments'],
                     ['label' => 'Manage Users', 'href' => '/admin/users'],
                 ],

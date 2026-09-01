@@ -1,6 +1,6 @@
 import { Head, router, usePage, Link } from '@inertiajs/react';
 import { Trash2, ShieldCheck } from 'lucide-react';
-import { lazy, Suspense, useState } from 'react';
+import { useState } from 'react';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import IconPicker from '@/components/icon-picker';
 import { PageLoader } from '@/components/page-loader';
@@ -8,26 +8,14 @@ import { PortalPageShell } from '@/components/portal-page-shell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-
-const iconCache = new Map<string, React.LazyExoticComponent<React.ComponentType<{ className?: string }>>>();
+import { getLucideIcon } from '@/lib/lucide-icon-map';
 
 function resolveIcon(name: string | null): React.ComponentType<{ className?: string }> | null {
     if (!name) {
-return null;
-}
-
-    if (!iconCache.has(name)) {
-        iconCache.set(
-            name,
-            lazy(() =>
-                import('lucide-react').then((mod) => ({
-                    default: (mod as Record<string, unknown>)[name] as React.ComponentType<{ className?: string }>,
-                })),
-            ),
-        );
+        return null;
     }
 
-    return iconCache.get(name)!;
+    return getLucideIcon(name) ?? null;
 }
 
 type RoleRow = {
@@ -207,7 +195,6 @@ return;
                                     Roles
                                 </div>
                                 <div className="space-y-2">
-                                    <Suspense fallback={<div className="space-y-2">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-9 animate-pulse rounded-xl bg-muted" />)}</div>}>
                                     {roles.map((role) => {
                                         const RoleIcon = resolveIcon(role.icon) || ShieldCheck;
 
@@ -225,7 +212,6 @@ return;
                                             </button>
                                         );
                                     })}
-                                    </Suspense>
                                 </div>
                             </div>
 

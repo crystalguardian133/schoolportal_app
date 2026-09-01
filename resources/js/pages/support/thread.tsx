@@ -1,11 +1,9 @@
-import { Head, router, useForm } from '@inertiajs/react';
+import { Head, useForm, usePage } from '@inertiajs/react';
 import { LifeBuoy, LockKeyhole, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
-import { usePage } from '@inertiajs/react';
 
 type Message = {
     id: string;
@@ -147,6 +145,11 @@ export default function SupportThread() {
 
                     <p className="mt-4 text-center text-xs text-slate-500">
                         Keep this page link private — anyone with it can read this thread.
+                    </p>
+                    <p className="mt-2 text-center text-xs">
+                        <a href="/support/tickets/lookup" className="font-medium text-emerald-700 underline-offset-2 hover:underline dark:text-emerald-400">
+                            Find another ticket by email or ID
+                        </a>
                     </p>
                 </main>
             </div>

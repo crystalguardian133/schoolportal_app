@@ -1,23 +1,17 @@
 import { Search, X } from 'lucide-react';
-import { useState, useMemo, useRef, useEffect, lazy, Suspense } from 'react';
+import { useState, useMemo, useRef, useEffect, createElement } from 'react';
+import { getLucideIcon } from '@/lib/lucide-icon-map';
 import { LUCIDE_ICON_NAMES } from '@/lib/lucide-icons';
 import { cn } from '@/lib/utils';
 
-const iconCache = new Map<string, React.LazyExoticComponent<React.ComponentType<{ className?: string }>>>();
+function IconView({ name, className }: { name: string; className?: string }) {
+    const Icon = getLucideIcon(name);
 
-function getLazyIcon(name: string) {
-    if (!iconCache.has(name)) {
-        iconCache.set(
-            name,
-            lazy(() =>
-                import('lucide-react').then((mod) => ({
-                    default: (mod as Record<string, unknown>)[name] as React.ComponentType<{ className?: string }>,
-                })),
-            ),
-        );
+    if (!Icon) {
+        return null;
     }
 
-    return iconCache.get(name)!;
+    return createElement(Icon, { className });
 }
 
 type IconPickerProps = {
@@ -34,8 +28,8 @@ export default function IconPicker({ value, onChange, className }: IconPickerPro
 
     const filtered = useMemo(() => {
         if (!query) {
-return LUCIDE_ICON_NAMES;
-}
+            return LUCIDE_ICON_NAMES;
+        }
 
         const q = query.toLowerCase().replace(/[\s_]/g, '');
 
@@ -43,8 +37,6 @@ return LUCIDE_ICON_NAMES;
             name.toLowerCase().replace(/[\s_]/g, '').includes(q),
         );
     }, [query]);
-
-    const SelectedIcon = value ? getLazyIcon(value) : null;
 
     useEffect(() => {
         function handleClickOutside(e: MouseEvent) {
@@ -68,10 +60,8 @@ return LUCIDE_ICON_NAMES;
                 }}
                 className="flex w-full items-center gap-2 rounded-xl border border-sidebar-border/70 bg-sidebar/40 px-3 py-2 text-sm text-foreground transition hover:bg-sidebar/60 dark:border-sidebar-border/70 dark:bg-sidebar/80 dark:hover:bg-sidebar-accent/50"
             >
-                {SelectedIcon ? (
-                    <Suspense fallback={<span className="size-4 shrink-0 rounded bg-muted" />}>
-                        <SelectedIcon className="size-4 shrink-0" />
-                    </Suspense>
+                {value ? (
+                    <IconView name={value} className="size-4 shrink-0" />
                 ) : (
                     <span className="size-4 shrink-0 rounded bg-muted" />
                 )}
@@ -103,36 +93,24 @@ return LUCIDE_ICON_NAMES;
                         </div>
                     </div>
                     <div className="grid max-h-64 grid-cols-8 gap-0.5 overflow-y-auto p-2">
-                        <Suspense
-                            fallback={Array.from({ length: 64 }).map((_, i) => (
-                                <div key={i} className="flex size-8 items-center justify-center">
-                                    <div className="size-4 animate-pulse rounded bg-muted" />
-                                </div>
-                            ))}
-                        >
-                            {filtered.map((name) => {
-                                const Icon = getLazyIcon(name);
-
-                                return (
-                                    <button
-                                        key={name}
-                                        type="button"
-                                        title={name}
-                                        onClick={() => {
-                                            onChange(name);
-                                            setOpen(false);
-                                            setQuery('');
-                                        }}
-                                        className={cn(
-                                            'flex size-8 items-center justify-center rounded-lg transition hover:bg-sidebar-accent/60',
-                                            value === name && 'bg-primary/10 text-primary ring-1 ring-primary/30',
-                                        )}
-                                    >
-                                        <Icon className="size-4" />
-                                    </button>
-                                );
-                            })}
-                        </Suspense>
+                        {filtered.map((name) => (
+                            <button
+                                key={name}
+                                type="button"
+                                title={name}
+                                onClick={() => {
+                                    onChange(name);
+                                    setOpen(false);
+                                    setQuery('');
+                                }}
+                                className={cn(
+                                    'flex size-8 items-center justify-center rounded-lg transition hover:bg-sidebar-accent/60',
+                                    value === name && 'bg-primary/10 text-primary ring-1 ring-primary/30',
+                                )}
+                            >
+                                <IconView name={name} className="size-4" />
+                            </button>
+                        ))}
                         {filtered.length === 0 && (
                             <div className="col-span-8 py-6 text-center text-xs text-muted-foreground">
                                 No icons found.

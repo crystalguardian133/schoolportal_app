@@ -10,6 +10,7 @@ type PortalPageShellProps = {
     children?: ReactNode;
     showBackLink?: boolean;
     showHero?: boolean;
+    showHeader?: boolean;
 };
 
 export function PortalPageShell({
@@ -18,6 +19,7 @@ export function PortalPageShell({
     children,
     showBackLink = true,
     showHero = false,
+    showHeader = true,
 }: PortalPageShellProps) {
     const { props } = usePage();
     const flash: any = props.flash || {};
@@ -52,7 +54,7 @@ export function PortalPageShell({
 
     return (
         <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto p-3 sm:gap-6 sm:p-4">
-            {!showHero && (
+            {showHeader && !showHero && (
                 <header className="flex flex-col gap-1">
                     <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
                         {title}
@@ -65,7 +67,7 @@ export function PortalPageShell({
                 </header>
             )}
 
-            {showHero && (
+            {showHeader && showHero && (
                 <section className="rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
                     <h1 className="text-2xl font-semibold">{title}</h1>
                     {description && (

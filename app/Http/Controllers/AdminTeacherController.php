@@ -29,6 +29,31 @@ class AdminTeacherController extends Controller
 
         $q = $request->query('q');
         $perPage = (int) $request->query('per_page', 25);
+        $gradeLevel = $request->query('grade_level');
+        $sort = $request->query('sort', 'name_asc');
+
+        $sortMap = [
+            'name_asc' => ['name', 'asc'],
+            'name_desc' => ['name', 'desc'],
+            'email_asc' => ['email', 'asc'],
+            'email_desc' => ['email', 'desc'],
+            'section_asc' => ['adviser_section', 'asc'],
+            'section_desc' => ['adviser_section', 'desc'],
+            'created_at_asc' => ['created_at', 'asc'],
+            'created_at_desc' => ['created_at', 'desc'],
+        ];
+
+        [$sortColumn, $sortDirection] = $sortMap[$sort] ?? ['name', 'asc'];
+
+        $sections = ClassSection::query()
+            ->select(['uuid', 'name', 'grade_level'])
+            ->orderBy('name', 'asc')
+            ->get();
+
+        $sectionToGrade = [];
+        foreach ($sections as $s) {
+            $sectionToGrade[$s->name] = $s->grade_level;
+        }
 
         $query = User::query()
             ->select(['uuid', 'name', 'email', 'profile_picture', 'is_adviser', 'adviser_section'])
@@ -45,9 +70,22 @@ class AdminTeacherController extends Controller
             });
         }
 
-        $teachers = $query->orderBy('name')
-            ->paginate($perPage)
-            ->withQueryString();
+        if (! empty($gradeLevel)) {
+            $sectionNames = collect($sectionToGrade)
+                ->filter(fn ($g) => $g === $gradeLevel)
+                ->keys()
+                ->all();
+
+            if (count($sectionNames) > 0) {
+                $query->whereIn('adviser_section', $sectionNames);
+            } else {
+                $query->whereRaw('1 = 0');
+            }
+        }
+
+        $query->orderBy($sortColumn, $sortDirection);
+
+        $teachers = $query->paginate($perPage)->withQueryString();
 
         $roles = DB::table('role_user')
             ->join('roles', 'roles.id', '=', 'role_user.role_uuid')
@@ -57,26 +95,7 @@ class AdminTeacherController extends Controller
             ->map(fn ($items) => $items->pluck('role_name')->values()->all())
             ->all();
 
-        return inertia('admin/manage-teachers', [
-            'teachers' => $teachers,
-            'roles' => $roles,
-            'filters' => [
-                'q' => $q,
-                'per_page' => $perPage,
-            ],
-        ]);
-    }
-
-    public function edit(Request $request, string $uuid)
-    {
-        $this->authorizeAdmin($request);
-
-        $user = User::query()->where('uuid', $uuid)->firstOrFail();
-
-        $sections = ClassSection::query()
-            ->select(['uuid', 'name', 'grade_level'])
-            ->orderBy('name', 'asc')
-            ->get()
+        $sections = $sections
             ->map(fn ($s) => [
                 'uuid' => $s->uuid,
                 'name' => $s->name,
@@ -85,46 +104,42 @@ class AdminTeacherController extends Controller
             ->values()
             ->all();
 
-        // Filter out admin roles
+        $gradeLevels = collect($sectionToGrade)
+            ->values()
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+
         $adminPermId = DB::table('permissions')->where('name', 'Access Admin')->value('id');
         $adminRoleIds = $adminPermId
             ? DB::table('permission_role')->where('permission_uuid', $adminPermId)->pluck('role_uuid')->toArray()
             : [];
 
-        $roles = Role::query()
+        $roleList = Role::query()
             ->select(['id', 'name'])
             ->whereNotIn('id', $adminRoleIds)
             ->orderBy('name')
             ->get()
-            ->map(fn ($r) => ['id' => $r->id, 'name' => $r->name])
+            ->pluck('name')
             ->values()
             ->all();
 
-        $userRoles = $user->roles->pluck('name')->values()->all();
-        $takenAdviserSections = User::query()
-            ->where('is_adviser', true)
-            ->whereNotNull('adviser_section')
-            ->where('uuid', '<>', $user->uuid)
-            ->pluck('adviser_section')
-            ->filter()
-            ->values()
-            ->all();
-
-        return inertia('admin/edit-teacher', [
-            'teacher' => [
-                'uuid' => $user->uuid,
-                'name' => $user->name,
-                'email' => $user->email,
-                'profile_picture' => $user->profile_picture,
-                'is_adviser' => $user->is_adviser,
-                'adviser_section' => $user->adviser_section,
-                'roles' => $userRoles,
-            ],
-            'sections' => $sections,
+        return inertia('admin/manage-teachers', [
+            'teachers' => $teachers,
             'roles' => $roles,
-            'takenAdviserSections' => $takenAdviserSections,
+            'sections' => $sections,
+            'gradeLevels' => $gradeLevels,
+            'roleList' => $roleList,
+            'filters' => [
+                'q' => $q,
+                'per_page' => $perPage,
+                'grade_level' => $gradeLevel,
+                'sort' => $sort,
+            ],
         ]);
     }
+
 
     public function update(Request $request, string $uuid)
     {

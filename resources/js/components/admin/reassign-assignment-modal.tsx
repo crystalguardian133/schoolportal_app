@@ -51,7 +51,7 @@ export default function ReassignAssignmentModal({
         setProcessing(true);
 
         router.post(
-            '/admin/assignments',
+            '/admin/subjects/assign-teacher',
             {
                 subject_uuid: targetSubjectUuid,
                 teacher_uuid: teacher.uuid,

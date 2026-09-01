@@ -15,9 +15,9 @@ class ReportController extends Controller
         $user = auth()->user();
 
         $reports = Report::where(function ($q) use ($user) {
-                $q->where('user_id', $user->id)
-                    ->orWhere('contact_email', Str::lower($user->email));
-            })
+            $q->where('user_id', $user->id)
+                ->orWhere('contact_email', Str::lower($user->email));
+        })
             ->with(['user', 'replies.user'])
             ->latest()
             ->get();
@@ -34,7 +34,7 @@ class ReportController extends Controller
         // Only the report owner or a developer can view
         if ($report->user_id !== $user->id
             && $report->contact_email !== Str::lower($user->email)
-            && !$user->hasPermission('Access Developer Dashboard')) {
+            && ! $user->hasPermission('Access Developer Dashboard')) {
             abort(403);
         }
 
@@ -58,7 +58,7 @@ class ReportController extends Controller
         $imagePaths = [];
         if ($request->hasFile('images')) {
             foreach ($request->file('images') as $image) {
-                $filename = Str::uuid() . '.' . $image->getClientOriginalExtension();
+                $filename = Str::uuid().'.'.$image->getClientOriginalExtension();
                 $path = $image->storeAs('reports', $filename, 'public');
                 $imagePaths[] = $path;
             }
@@ -79,7 +79,7 @@ class ReportController extends Controller
     {
         $user = $request->user();
 
-        if ($report->user_id !== $user->id && $report->contact_email !== Str::lower($user->email) && !$user->hasPermission('Access Developer Dashboard')) {
+        if ($report->user_id !== $user->id && $report->contact_email !== Str::lower($user->email) && ! $user->hasPermission('Access Developer Dashboard')) {
             abort(403);
         }
 
@@ -96,7 +96,7 @@ class ReportController extends Controller
         $imagePaths = [];
         if ($request->hasFile('images')) {
             foreach ($request->file('images') as $image) {
-                $filename = Str::uuid() . '.' . $image->getClientOriginalExtension();
+                $filename = Str::uuid().'.'.$image->getClientOriginalExtension();
                 $path = $image->storeAs('reports', $filename, 'public');
                 $imagePaths[] = $path;
             }
@@ -116,7 +116,7 @@ class ReportController extends Controller
     {
         $user = auth()->user();
 
-        if (!$user->hasPermission('Access Developer Dashboard') && $report->user_id !== $user->id && $report->contact_email !== Str::lower($user->email)) {
+        if (! $user->hasPermission('Access Developer Dashboard') && $report->user_id !== $user->id && $report->contact_email !== Str::lower($user->email)) {
             abort(403);
         }
 
@@ -129,7 +129,7 @@ class ReportController extends Controller
     {
         $user = auth()->user();
 
-        if (!$user->hasPermission('Access Developer Dashboard') && $report->user_id !== $user->id && $report->contact_email !== Str::lower($user->email)) {
+        if (! $user->hasPermission('Access Developer Dashboard') && $report->user_id !== $user->id && $report->contact_email !== Str::lower($user->email)) {
             abort(403);
         }
 
@@ -150,6 +150,19 @@ class ReportController extends Controller
             $query->where('status', $request->status);
         }
 
+        if ($request->filled('resolution')) {
+            if ($request->resolution === 'unresolved') {
+                $query->where(function ($q) {
+                    $q->where('closed', false)
+                        ->whereIn('status', ['pending', 'under_review']);
+                });
+            } elseif ($request->resolution === 'resolved') {
+                $query->whereIn('status', ['accepted', 'rejected']);
+            } elseif ($request->resolution === 'closed') {
+                $query->where('closed', true);
+            }
+        }
+
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -166,12 +179,15 @@ class ReportController extends Controller
             'under_review' => Report::where('status', 'under_review')->count(),
             'accepted' => Report::where('status', 'accepted')->count(),
             'rejected' => Report::where('status', 'rejected')->count(),
+            'resolved' => Report::whereIn('status', ['accepted', 'rejected'])->count(),
+            'unresolved' => Report::where('closed', false)->whereIn('status', ['pending', 'under_review'])->count(),
+            'closed' => Report::where('closed', true)->count(),
         ];
 
         return Inertia::render('developer/reports', [
             'reports' => $reports,
             'stats' => $stats,
-            'filters' => $request->only(['type', 'status', 'search']),
+            'filters' => $request->only(['type', 'status', 'search', 'resolution']),
         ]);
     }
 
@@ -180,6 +196,10 @@ class ReportController extends Controller
         $validated = $request->validate([
             'status' => 'required|in:pending,under_review,accepted,rejected',
         ]);
+
+        if ($validated['status'] === 'accepted') {
+            $validated['closed'] = true;
+        }
 
         $report->update($validated);
 
@@ -190,7 +210,7 @@ class ReportController extends Controller
     {
         if ($report->images) {
             foreach ($report->images as $path) {
-                $fullPath = storage_path('app/public/' . $path);
+                $fullPath = storage_path('app/public/'.$path);
                 if (file_exists($fullPath)) {
                     unlink($fullPath);
                 }

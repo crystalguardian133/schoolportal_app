@@ -119,7 +119,7 @@ class DashboardController extends Controller
                 ['label' => 'Total Subjects', 'value' => Subject::count()],
             ],
             'tools' => [
-                ['label' => 'Assignments', 'href' => '/admin/assignments'],
+                ['label' => 'Subjects', 'href' => '/admin/subjects'],
                 ['label' => 'Enrollments', 'href' => '/admin/enrollments'],
                 ['label' => 'Manage Users', 'href' => '/admin/users'],
             ],
@@ -188,7 +188,7 @@ class DashboardController extends Controller
             'key' => 'staff',
             'label' => 'Staff Portal',
             'tools' => [
-                ['label' => 'Assignments', 'href' => '/admin/assignments'],
+                ['label' => 'Subjects', 'href' => '/admin/subjects'],
                 ['label' => 'Enrollments', 'href' => '/admin/enrollments'],
                 ['label' => 'Manage Users', 'href' => '/admin/users'],
                 ['label' => 'Classes', 'href' => '/teacher/classes'],
@@ -217,7 +217,7 @@ class DashboardController extends Controller
                 'type' => $r->type,
                 'subject' => $r->subject,
                 'status' => $r->status,
-                'user_name' => $r->user->name,
+                'user_name' => $r->user?->name ?? $r->contact_email ?? 'Guest',
                 'created_at' => $r->created_at->diffForHumans(),
             ])
             ->all();

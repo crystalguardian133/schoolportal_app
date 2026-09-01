@@ -22,8 +22,8 @@ class Department extends Model
         'uuid',
         'name',
         'description',
-        'subject_uuid',
         'head_uuid',
+        'type',
     ];
 
     protected static function booted(): void
@@ -40,9 +40,11 @@ class Department extends Model
         return $this->belongsTo(User::class, 'head_uuid', 'uuid');
     }
 
-    public function subject(): BelongsTo
+    public function majors(): BelongsToMany
     {
-        return $this->belongsTo(Subject::class, 'subject_uuid', 'uuid');
+        return $this->belongsToMany(MajorSubject::class, 'department_major', 'department_uuid', 'major_subject_uuid', 'uuid', 'uuid')
+            ->withPivot('strand')
+            ->withTimestamps();
     }
 
     public function teachers(): BelongsToMany

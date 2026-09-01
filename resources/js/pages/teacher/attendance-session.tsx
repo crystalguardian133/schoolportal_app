@@ -3,7 +3,6 @@ import { ArrowLeft, Camera, CameraOff, Save, UserCheck, UserX, Clock, Minus, Sea
 import { useCallback, useState } from 'react';
 import { PortalPageShell } from '@/components/portal-page-shell';
 import { QrScanner } from '@/components/qr-scanner';
-import { exportPdf } from '@/lib/pdf-export';
 
 type Student = {
     student_uuid: string;
@@ -194,7 +193,8 @@ export default function AttendanceSession({ session, students, enrolledUuids }: 
         link.click();
     }
 
-    function downloadPdf() {
+    async function downloadPdf() {
+        const { exportPdf } = await import('@/lib/pdf-export');
         const headers = ['Student', 'LRN', 'Status', 'Scanned At', 'Notes'];
         const rows = students.map(s => {
             const status = records[s.student_uuid] || 'absent';

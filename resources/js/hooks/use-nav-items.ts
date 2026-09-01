@@ -20,7 +20,6 @@ import {
     Shield,
     UserCog,
     UserCheck,
-    UserPlus,
     Users,
 } from 'lucide-react';
 import { toUrl } from '@/lib/utils';
@@ -140,13 +139,7 @@ const adminNavItems: NavItem[] = [
         title: 'Subjects',
         href: '/admin/subjects',
         icon: Book,
-        permission: 'manage subjects',
-    },
-    {
-        title: 'Assignments',
-        href: '/admin/assignments',
-        icon: Shield,
-        permission: 'manage assignments',
+        permission: ['manage subjects', 'manage assignments'],
     },
     {
         title: 'Assign Subjects',
@@ -195,12 +188,6 @@ const adminNavItems: NavItem[] = [
         href: '/account-unlock',
         icon: LockKeyhole,
         permission: 'unlock accounts',
-    },
-    {
-        title: 'Create Teacher',
-        href: '/admin/create-teacher',
-        icon: UserPlus,
-        permission: 'create teacher',
     },
     {
         title: 'Manage Students',
@@ -363,13 +350,7 @@ const schoolHeadNavItems: NavItem[] = [
         title: 'Subjects',
         href: '/admin/subjects',
         icon: Book,
-        permission: 'manage subjects',
-    },
-    {
-        title: 'Assignments',
-        href: '/admin/assignments',
-        icon: Shield,
-        permission: 'manage assignments',
+        permission: ['manage subjects', 'manage assignments'],
     },
     {
         title: 'Manage Schedules',
@@ -463,16 +444,23 @@ export function useNavItems(): { navItems: NavItem[]; sectionLabel: string | nul
     const isAdmin = permissions.includes('access admin dashboard');
     const isDeveloper = permissions.includes('access developer dashboard');
 
-    const hasPermission = (permission?: string) => {
+    const hasPermission = (permission?: string | string[]) => {
         if (!permission) {
             return true;
         }
 
-        if (auth.user?.is_adviser && ['assign subjects', 'manage schedules'].includes(permission)) {
-            return true;
-        }
+        const list = Array.isArray(permission) ? permission : [permission];
 
-        return permissions.includes(permission);
+        return list.some((p) => {
+            if (
+                auth.user?.is_adviser &&
+                ['assign subjects', 'manage schedules'].includes(p)
+            ) {
+                return true;
+            }
+
+            return permissions.includes(p);
+        });
     };
 
     const hasAnyItemPermission = (items: NavItem[]) =>

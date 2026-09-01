@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Report;
 use App\Models\ReportReply;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class SupportTicketController extends Controller
@@ -16,11 +18,11 @@ class SupportTicketController extends Controller
      */
     public function store(Request $request)
     {
-        $ipKey = 'support-ticket:' . $request->ip();
+        $ipKey = 'support-ticket:'.$request->ip();
         if (RateLimiter::tooManyAttempts($ipKey, 3)) {
             $seconds = RateLimiter::availableIn($ipKey);
 
-            throw \Illuminate\Validation\ValidationException::withMessages([
+            throw ValidationException::withMessages([
                 'message' => __('Too many support requests. Please try again in :seconds seconds.', ['seconds' => $seconds]),
             ]);
         }
@@ -44,8 +46,8 @@ class SupportTicketController extends Controller
             'status' => 'pending',
         ]);
 
-        if (!$user) {
-            session()->flash('support_thread_url', '/support/tickets/' . $report->id . '?token=' . $report->access_token);
+        if (! $user) {
+            session()->flash('support_thread_url', '/support/tickets/'.$report->id.'?token='.$report->access_token);
         }
 
         return back()->with('success', __('Support request submitted. Our team will contact you at :email.', ['email' => $validated['email']]));
@@ -106,8 +108,99 @@ class SupportTicketController extends Controller
         ]);
 
         return redirect()
-            ->to('/support/tickets/' . $report->id . '?token=' . $report->access_token)
+            ->to('/support/tickets/'.$report->id.'?token='.$report->access_token)
             ->with('success', __('Reply sent.'));
+    }
+
+    /**
+     * Public lookup form so guests can find their ticket without the original link.
+     */
+    public function lookupPage()
+    {
+        return Inertia::render('support/lookup', [
+            'query' => null,
+            'open_tickets' => [],
+            'resolved_tickets' => [],
+        ]);
+    }
+
+    /**
+     * Find a ticket by email address or ticket ID prefix and hand back thread links.
+     */
+    public function lookup(Request $request)
+    {
+        $ipKey = 'support-lookup:'.$request->ip();
+        if (RateLimiter::tooManyAttempts($ipKey, 10)) {
+            $seconds = RateLimiter::availableIn($ipKey);
+
+            throw ValidationException::withMessages([
+                'query' => __('Too many lookups. Please try again in :seconds seconds.', ['seconds' => $seconds]),
+            ]);
+        }
+        RateLimiter::hit($ipKey, 60);
+
+        $validated = $request->validate([
+            'query' => ['required', 'string', 'min:6', 'max:255'],
+        ]);
+
+        $value = trim($validated['query']);
+
+        if (str_contains($value, '@')) {
+            $tickets = Report::where('type', 'support')
+                ->whereNotNull('access_token')
+                ->where('contact_email', Str::lower($value))
+                ->orderByDesc('created_at')
+                ->get();
+
+            if ($tickets->isEmpty()) {
+                throw ValidationException::withMessages([
+                    'query' => __('No support tickets were found for that email address.'),
+                ]);
+            }
+
+            $open = $tickets->where('closed', false)->values();
+            $resolved = $tickets->where('closed', true)->values();
+
+            if ($open->count() === 1 && $resolved->isEmpty()) {
+                return redirect()->to('/support/tickets/'.$open[0]->id.'?token='.$open[0]->access_token);
+            }
+
+            return Inertia::render('support/lookup', [
+                'query' => $value,
+                'open_tickets' => $this->presentTickets($open),
+                'resolved_tickets' => $this->presentTickets($resolved),
+            ]);
+        }
+
+        $matches = Report::where('type', 'support')
+            ->whereNotNull('access_token')
+            ->where('id', 'like', Str::lower($value).'%')
+            ->get();
+
+        if ($matches->count() === 1) {
+            return redirect()->to('/support/tickets/'.$matches[0]->id.'?token='.$matches[0]->access_token);
+        }
+
+        throw ValidationException::withMessages([
+            'query' => $matches->isEmpty()
+                ? __('No support ticket matches that ID. It starts with the first 8 characters shown on your thread.')
+                : __('That ID matches multiple tickets. Type a few more characters.'),
+        ]);
+    }
+
+    /**
+     * @param  Collection<int, Report>  $tickets
+     * @return array<int, array<string, mixed>>
+     */
+    private function presentTickets($tickets)
+    {
+        return $tickets->map(fn (Report $r) => [
+            'id' => $r->id,
+            'subject' => $r->subject,
+            'status' => $r->status,
+            'created_at' => $r->created_at->toISOString(),
+            'url' => '/support/tickets/'.$r->id.'?token='.$r->access_token,
+        ])->all();
     }
 
     private function tokenMatches(Request $request, Report $report): bool
