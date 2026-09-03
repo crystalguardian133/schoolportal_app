@@ -8,15 +8,19 @@ import {
     Search,
     UserRound,
     Download,
+    Inbox,
+    ClipboardList,
 } from 'lucide-react';
 import { useState } from 'react';
 import { PageLoader } from '@/components/page-loader';
+import { PortalPageShell } from '@/components/portal-page-shell';
 import {
     Dialog,
     DialogContent,
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import { cn } from '@/lib/utils';
 
 function toArray(value: any) {
     if (Array.isArray(value)) {
@@ -255,194 +259,179 @@ export default function SystemLogs() {
     return (
         <>
             <Head title="System Logs" />
-            <div className="min-h-screen bg-background px-4 py-6 text-foreground">
-                <PageLoader skeleton="table">
-                <div className="mx-auto max-w-7xl space-y-6">
-                    <section className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
-                        <div className="relative px-6 py-8 sm:px-8">
-                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(148,163,184,0.08),_transparent_40%),radial-gradient(circle_at_bottom_left,_rgba(100,116,139,0.06),_transparent_34%)]" />
-                            <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-                                <div className="max-w-2xl space-y-3">
-                                    <div className="inline-flex items-center gap-2 rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium tracking-[0.18em] text-muted-foreground uppercase">
-                                        <FileText className="size-3.5" />
-                                        System Monitoring
+            <PageLoader skeleton="table">
+                <PortalPageShell
+                    title="System Logs"
+                    description="Track activity across the system, including user actions, route visits, response status, and request details. Click a row to view full metadata."
+                >
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:max-w-lg">
+                        <StatsTile
+                            icon={<Inbox className="size-4" />}
+                            label="Logs"
+                            value={logsProp.total ?? 0}
+                        />
+                        <StatsTile
+                            icon={<ClipboardList className="size-4" />}
+                            label="Page"
+                            value={logsProp.current_page ?? 1}
+                        />
+                        <StatsTile
+                            icon={<FileText className="size-4" />}
+                            label="Results"
+                            value={logs.length}
+                            accent
+                        />
+                    </div>
+
+                    <section className="rounded-2xl border border-sidebar-border/70 bg-white p-4 shadow-sm dark:border-sidebar-border dark:bg-sidebar sm:p-5">
+                        <div className="flex flex-wrap items-end justify-between gap-3">
+                            <form
+                                onSubmit={handleSubmit}
+                                className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_160px_auto_auto_auto] lg:items-end"
+                            >
+                                <div className="space-y-1.5">
+                                    <label className="block text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                                        Search
+                                    </label>
+                                    <div className="flex items-center gap-2 rounded-xl border border-input bg-background px-3 py-2.5 focus-within:border-ring focus-within:ring-4 focus-within:ring-ring/15">
+                                        <Search className="size-4 text-muted-foreground" />
+                                        <input
+                                            value={query}
+                                            onChange={(event) =>
+                                                setQuery(event.target.value)
+                                            }
+                                            placeholder="User, route, action, or path"
+                                            className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground/70"
+                                        />
                                     </div>
-                                    <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                                        System Logs
-                                    </h1>
-                                    <p className="max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
-                                        Track activity across the system,
-                                        including user actions, route visits,
-                                        response status, and request details.
-                                        Click a row to view full metadata.
-                                    </p>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-3 sm:min-w-[360px] sm:grid-cols-3">
-                                    <div className="rounded-2xl border border-border bg-card px-4 py-3 shadow-sm">
-                                        <div className="text-xs tracking-wide text-muted-foreground uppercase">
-                                            Logs
-                                        </div>
-                                        <div className="mt-1 text-2xl font-semibold">
-                                            {logsProp.total ?? 0}
-                                        </div>
-                                    </div>
-                                    <div className="rounded-2xl border border-border bg-card px-4 py-3 shadow-sm">
-                                        <div className="text-xs tracking-wide text-muted-foreground uppercase">
-                                            Page
-                                        </div>
-                                        <div className="mt-1 text-2xl font-semibold">
-                                            {logsProp.current_page ?? 1}
-                                        </div>
-                                    </div>
-                                    <div className="rounded-2xl border border-border bg-card px-4 py-3 shadow-sm">
-                                        <div className="text-xs tracking-wide text-muted-foreground uppercase">
-                                            Results
-                                        </div>
-                                        <div className="mt-1 text-2xl font-semibold text-emerald-600 dark:text-emerald-400">
-                                            {logs.length}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div className="mt-6 flex justify-end">
-                                <button
-                                    type="button"
-                                    onClick={handleExport}
-                                    className="inline-flex items-center gap-2 rounded-2xl border border-border bg-card px-4 py-2.5 text-sm font-medium shadow-sm transition hover:bg-muted"
-                                >
-                                    <Download className="size-4" />
-                                    Export CSV
-                                </button>
-                            </div>
-                        </div>
-                    </section>
-
-                    <section className="rounded-3xl border border-border bg-card p-5 shadow-sm">
-                        <form
-                            onSubmit={handleSubmit}
-                            className="grid gap-3 md:grid-cols-[1fr_160px_auto] md:items-end"
-                        >
-                            <div className="space-y-2">
-                                <label className="block text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                                    Search
-                                </label>
-                                <div className="flex items-center gap-2 rounded-2xl border border-input bg-background px-3 py-3 focus-within:border-ring focus-within:ring-4 focus-within:ring-ring/15">
-                                    <Search className="size-4 text-muted-foreground" />
-                                    <input
-                                        value={query}
+                                <div className="space-y-1.5">
+                                    <label className="block text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                                        Per page
+                                    </label>
+                                    <select
+                                        value={perPage}
                                         onChange={(event) =>
-                                            setQuery(event.target.value)
+                                            setPerPage(event.target.value)
                                         }
-                                        placeholder="Search by user, route, action, or path"
-                                        className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground/70"
+                                        className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm transition outline-none focus:border-ring focus:ring-4 focus:ring-ring/15"
+                                    >
+                                        {[10, 25, 50, 100].map((count) => (
+                                            <option key={count} value={count}>
+                                                {count}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label className="block text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                                        From Date
+                                    </label>
+                                    <input
+                                        type="date"
+                                        value={dateFrom}
+                                        onChange={(e) =>
+                                            setDateFrom(e.target.value)
+                                        }
+                                        className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm transition outline-none focus:border-ring focus:ring-4 focus:ring-ring/15"
                                     />
                                 </div>
-                            </div>
 
-                            <div className="space-y-2">
-                                <label className="block text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                                    Per page
-                                </label>
-                                <select
-                                    value={perPage}
-                                    onChange={(event) =>
-                                        setPerPage(event.target.value)
-                                    }
-                                    className="w-full rounded-2xl border border-input bg-background px-3 py-3 text-sm transition outline-none focus:border-ring focus:ring-4 focus:ring-ring/15"
+                                <div className="space-y-1.5">
+                                    <label className="block text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                                        To Date
+                                    </label>
+                                    <input
+                                        type="date"
+                                        value={dateTo}
+                                        onChange={(e) =>
+                                            setDateTo(e.target.value)
+                                        }
+                                        className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm transition outline-none focus:border-ring focus:ring-4 focus:ring-ring/15"
+                                    />
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    className="inline-flex items-center justify-center rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition hover:opacity-90 focus:ring-4 focus:ring-ring/20 focus:outline-none"
                                 >
-                                    {[10, 25, 50, 100].map((count) => (
-                                        <option key={count} value={count}>
-                                            {count}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="block text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                                    From Date
-                                </label>
-                                <input
-                                    type="date"
-                                    value={dateFrom}
-                                    onChange={(e) => setDateFrom(e.target.value)}
-                                    className="w-full rounded-2xl border border-input bg-background px-3 py-3 text-sm transition outline-none focus:border-ring focus:ring-4 focus:ring-ring/15"
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="block text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                                    To Date
-                                </label>
-                                <input
-                                    type="date"
-                                    value={dateTo}
-                                    onChange={(e) => setDateTo(e.target.value)}
-                                    className="w-full rounded-2xl border border-input bg-background px-3 py-3 text-sm transition outline-none focus:border-ring focus:ring-4 focus:ring-ring/15"
-                                />
-                            </div>
+                                    Filter
+                                </button>
+                            </form>
 
                             <button
-                                type="submit"
-                                className="inline-flex items-center justify-center rounded-2xl bg-primary px-5 py-3 text-sm font-medium text-primary-foreground shadow-sm transition hover:opacity-90 focus:ring-4 focus:ring-ring/20 focus:outline-none"
+                                type="button"
+                                onClick={handleExport}
+                                className="inline-flex items-center gap-2 rounded-xl border border-sidebar-border/70 bg-white px-4 py-2.5 text-sm font-medium transition hover:bg-muted dark:bg-sidebar"
                             >
-                                Filter
+                                <Download className="size-4" />
+                                Export CSV
                             </button>
-                        </form>
+                        </div>
 
-                        <div className="table-scroll-container mt-5 rounded-2xl border border-border">
-                            <table className="min-w-full divide-y divide-border text-left text-sm">
+                        <div className="table-scroll-container mt-4 -mx-1 rounded-xl border border-border">
+                            <table className="w-full divide-y divide-border text-left text-sm">
                                 <thead className="bg-muted text-xs tracking-wide text-muted-foreground uppercase">
                                     <tr>
-                                        <th className="px-4 py-3 font-medium">
+                                        <th className="bg-muted px-4 py-3 font-medium">
                                             Actor
                                         </th>
-                                        <th className="px-4 py-3 font-medium">
+                                        <th className="bg-muted px-4 py-3 font-medium">
                                             <button
                                                 type="button"
-                                                onClick={() => handleSort('action')}
+                                                onClick={() =>
+                                                    handleSort('action')
+                                                }
                                                 className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
                                             >
                                                 Action
                                                 <SortIcon column="action" sortBy={sortBy} sortDir={sortDir} />
                                             </button>
                                         </th>
-                                        <th className="px-4 py-3 font-medium">
+                                        <th className="bg-muted px-4 py-3 font-medium">
                                             <button
                                                 type="button"
-                                                onClick={() => handleSort('method')}
+                                                onClick={() =>
+                                                    handleSort('method')
+                                                }
                                                 className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
                                             >
                                                 Method
                                                 <SortIcon column="method" sortBy={sortBy} sortDir={sortDir} />
                                             </button>
                                         </th>
-                                        <th className="px-4 py-3 font-medium">
+                                        <th className="bg-muted px-4 py-3 font-medium">
                                             <button
                                                 type="button"
-                                                onClick={() => handleSort('status_code')}
+                                                onClick={() =>
+                                                    handleSort('status_code')
+                                                }
                                                 className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
                                             >
                                                 Status
                                                 <SortIcon column="status_code" sortBy={sortBy} sortDir={sortDir} />
                                             </button>
                                         </th>
-                                        <th className="px-4 py-3 font-medium">
+                                        <th className="bg-muted px-4 py-3 font-medium">
                                             <button
                                                 type="button"
-                                                onClick={() => handleSort('route_name')}
+                                                onClick={() =>
+                                                    handleSort('route_name')
+                                                }
                                                 className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
                                             >
                                                 Route / Path
                                                 <SortIcon column="route_name" sortBy={sortBy} sortDir={sortDir} />
                                             </button>
                                         </th>
-                                        <th className="px-4 py-3 font-medium">
+                                        <th className="bg-muted px-4 py-3 font-medium">
                                             <button
                                                 type="button"
-                                                onClick={() => handleSort('created_at')}
+                                                onClick={() =>
+                                                    handleSort('created_at')
+                                                }
                                                 className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
                                             >
                                                 Created
@@ -476,7 +465,7 @@ export default function SystemLogs() {
                             </table>
                         </div>
 
-                        <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+                        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                             <div className="text-sm text-muted-foreground">
                                 Page {logsProp.current_page} of{' '}
                                 {logsProp.last_page} · {logsProp.total ?? 0}{' '}
@@ -499,7 +488,7 @@ export default function SystemLogs() {
                                                 1,
                                         })
                                     }
-                                    className="rounded-2xl border border-border bg-background px-4 py-2 text-sm font-medium text-muted-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="rounded-xl border border-border bg-background px-4 py-2 text-sm font-medium text-muted-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     Prev
                                 </button>
@@ -522,16 +511,15 @@ export default function SystemLogs() {
                                                 1,
                                         })
                                     }
-                                    className="rounded-2xl border border-border bg-background px-4 py-2 text-sm font-medium text-muted-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="rounded-xl border border-border bg-background px-4 py-2 text-sm font-medium text-muted-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     Next
                                 </button>
                             </div>
                         </div>
                     </section>
-                </div>
-                </PageLoader>
-            </div>
+                </PortalPageShell>
+            </PageLoader>
 
             <Dialog
                 open={!!selectedLog}
@@ -652,5 +640,34 @@ export default function SystemLogs() {
                 </DialogContent>
             </Dialog>
         </>
+    );
+}
+
+function StatsTile({
+    icon,
+    label,
+    value,
+    accent = false,
+}: {
+    icon: React.ReactNode;
+    label: string;
+    value: React.ReactNode;
+    accent?: boolean;
+}) {
+    return (
+        <div className="rounded-xl border border-sidebar-border/70 bg-white px-4 py-3 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
+            <div className="flex items-center gap-2 text-xs tracking-wide text-muted-foreground uppercase">
+                {icon}
+                {label}
+            </div>
+            <div
+                className={cn(
+                    'mt-1 text-2xl font-semibold',
+                    accent && 'text-emerald-600 dark:text-emerald-400',
+                )}
+            >
+                {value}
+            </div>
+        </div>
     );
 }

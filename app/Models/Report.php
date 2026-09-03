@@ -14,6 +14,8 @@ class Report extends Model
     protected $fillable = [
         'user_id',
         'type',
+        'ticket_number',
+        'ticket_year',
         'subject',
         'message',
         'images',
@@ -25,7 +27,27 @@ class Report extends Model
     protected $casts = [
         'images' => 'array',
         'closed' => 'boolean',
+        'ticket_number' => 'integer',
+        'ticket_year' => 'integer',
     ];
+
+    protected $appends = ['ticket_id'];
+
+    public function getTicketIdAttribute(): string
+    {
+        if ($this->ticket_number && $this->ticket_year) {
+            return 'DNHS-'.$this->ticket_year.'-'.str_pad((string) $this->ticket_number, 4, '0', STR_PAD_LEFT);
+        }
+
+        return '#'.$this->id;
+    }
+
+    public static function nextTicketNumber(int $year): int
+    {
+        $max = static::where('ticket_year', $year)->max('ticket_number');
+
+        return (int) $max + 1;
+    }
 
     public function user(): BelongsTo
     {

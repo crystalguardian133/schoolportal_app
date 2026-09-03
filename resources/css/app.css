@@ -229,12 +229,15 @@ input[type='number'] {
     .table-scroll-container table {
         white-space: normal;
     }
+}
 
-    .table-scroll-container thead th {
-        position: sticky;
-        top: 0;
-        z-index: 1;
-    }
+/* Sticky header: stays fixed on vertical scroll regardless of screen size.
+   The header cells must carry an opaque background (set per table) so body
+   rows don't show through gaps while scrolling. */
+.table-scroll-container thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
 }
 
 /* modifier sizes */

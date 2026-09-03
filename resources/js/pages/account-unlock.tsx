@@ -174,40 +174,72 @@ export default function AccountUnlock() {
                                     </p>
                                 </div>
                             ) : (
-                                <ul className="divide-y divide-slate-100 dark:divide-neutral-800">
-                                    {lockedUsers.map((u) => (
-                                        <li
-                                            key={u.uuid}
-                                            className="flex items-center gap-4 px-5 py-4 transition hover:bg-slate-50/70 dark:hover:bg-neutral-900/50"
-                                        >
-                                            <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600 dark:bg-neutral-800 dark:text-neutral-300">
-                                                {initials(u.name)}
-                                            </div>
-                                            <div className="min-w-0 flex-1">
-                                                <p className="truncate text-sm font-medium">{u.name}</p>
-                                                <p className="truncate text-xs text-muted-foreground">{u.email}</p>
-                                                <p className="mt-1 text-[11px] text-muted-foreground">
-                                                    {u.failed_login_attempts} failed attempts · locked{' '}
-                                                    {timeAgo(u.locked_at)}
-                                                    <span className="hidden sm:inline"> · {formatDateTime(u.locked_at)}</span>
-                                                </p>
-                                            </div>
-                                            <Button
-                                                size="sm"
-                                                onClick={() => unlockManually(u.uuid)}
-                                                disabled={unlocking === u.uuid}
-                                                className="shrink-0 gap-1.5"
-                                            >
-                                                {unlocking === u.uuid ? (
-                                                    <Spinner />
-                                                ) : (
-                                                    <Unlock className="size-4" />
-                                                )}
-                                                Unlock
-                                            </Button>
-                                        </li>
-                                    ))}
-                                </ul>
+                                <div className="table-scroll-container">
+                                    <table className="w-full text-left text-sm">
+                                        <thead className="bg-slate-50 text-xs tracking-wide text-slate-500 uppercase dark:bg-neutral-900">
+                                            <tr>
+                                                <th className="bg-slate-50 px-5 py-3 font-medium text-slate-500 dark:bg-neutral-900 dark:text-neutral-400">
+                                                    User
+                                                </th>
+                                                <th className="bg-slate-50 px-5 py-3 font-medium text-slate-500 dark:bg-neutral-900 dark:text-neutral-400">
+                                                    Failed attempts
+                                                </th>
+                                                <th className="bg-slate-50 px-5 py-3 font-medium text-slate-500 dark:bg-neutral-900 dark:text-neutral-400">
+                                                    Locked
+                                                </th>
+                                                <th className="bg-slate-50 px-5 py-3 font-medium text-slate-500 dark:bg-neutral-900 dark:text-neutral-400" aria-label="Actions" />
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100 dark:divide-neutral-800">
+                                            {lockedUsers.map((u) => (
+                                                <tr
+                                                    key={u.uuid}
+                                                    className="transition hover:bg-slate-50/70 dark:hover:bg-neutral-900/50"
+                                                >
+                                                    <td className="px-5 py-4 align-top">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600 dark:bg-neutral-800 dark:text-neutral-300">
+                                                                {initials(u.name)}
+                                                            </div>
+                                                            <div className="min-w-0">
+                                                                <p className="truncate text-sm font-medium">{u.name}</p>
+                                                                <p className="truncate text-xs text-muted-foreground">{u.email}</p>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-5 py-4 align-top">
+                                                        <span className="inline-flex items-center rounded-full bg-rose-100 px-2.5 py-1 text-xs font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">
+                                                            {u.failed_login_attempts}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-5 py-4 align-top">
+                                                        <div className="text-sm text-slate-700 dark:text-neutral-300">
+                                                            {timeAgo(u.locked_at) || '—'}
+                                                        </div>
+                                                        <div className="text-xs text-muted-foreground">
+                                                            {formatDateTime(u.locked_at)}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-5 py-4 align-middle text-right">
+                                                        <Button
+                                                            size="sm"
+                                                            onClick={() => unlockManually(u.uuid)}
+                                                            disabled={unlocking === u.uuid}
+                                                            className="gap-1.5"
+                                                        >
+                                                            {unlocking === u.uuid ? (
+                                                                <Spinner />
+                                                            ) : (
+                                                                <Unlock className="size-4" />
+                                                            )}
+                                                            Unlock
+                                                        </Button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             )}
                         </section>
                     ) : (

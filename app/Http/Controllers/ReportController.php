@@ -64,9 +64,13 @@ class ReportController extends Controller
             }
         }
 
+        $year = (int) now()->format('Y');
+
         Report::create([
             'user_id' => $request->user()->id,
             'type' => $validated['type'],
+            'ticket_year' => $year,
+            'ticket_number' => Report::nextTicketNumber($year),
             'subject' => $validated['subject'],
             'message' => $validated['message'],
             'images' => $imagePaths ?: null,
@@ -157,7 +161,7 @@ class ReportController extends Controller
                         ->whereIn('status', ['pending', 'under_review']);
                 });
             } elseif ($request->resolution === 'resolved') {
-                $query->whereIn('status', ['accepted', 'rejected']);
+                $query->whereIn('status', ['accepted', 'rejected', 'resolved']);
             } elseif ($request->resolution === 'closed') {
                 $query->where('closed', true);
             }
@@ -179,7 +183,7 @@ class ReportController extends Controller
             'under_review' => Report::where('status', 'under_review')->count(),
             'accepted' => Report::where('status', 'accepted')->count(),
             'rejected' => Report::where('status', 'rejected')->count(),
-            'resolved' => Report::whereIn('status', ['accepted', 'rejected'])->count(),
+            'resolved' => Report::where('status', 'resolved')->count(),
             'unresolved' => Report::where('closed', false)->whereIn('status', ['pending', 'under_review'])->count(),
             'closed' => Report::where('closed', true)->count(),
         ];
@@ -194,10 +198,10 @@ class ReportController extends Controller
     public function updateStatus(Request $request, Report $report)
     {
         $validated = $request->validate([
-            'status' => 'required|in:pending,under_review,accepted,rejected',
+            'status' => 'required|in:pending,under_review,accepted,rejected,resolved',
         ]);
 
-        if ($validated['status'] === 'accepted') {
+        if (in_array($validated['status'], ['accepted', 'rejected', 'resolved'], true)) {
             $validated['closed'] = true;
         }
 

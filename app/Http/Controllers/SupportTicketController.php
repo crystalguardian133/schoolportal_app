@@ -35,12 +35,15 @@ class SupportTicketController extends Controller
         ]);
 
         $user = $request->user();
+        $year = (int) now()->format('Y');
 
         $report = Report::create([
             'user_id' => $user?->id,
             'contact_email' => Str::lower($validated['email']),
             'access_token' => Str::random(64),
             'type' => 'support',
+            'ticket_year' => $year,
+            'ticket_number' => Report::nextTicketNumber($year),
             'subject' => $validated['subject'] ?: __('Account Access Help'),
             'message' => $validated['message'],
             'status' => 'pending',
@@ -65,6 +68,7 @@ class SupportTicketController extends Controller
         return Inertia::render('support/thread', [
             'ticket' => [
                 'id' => $report->id,
+                'ticket_id' => $report->ticket_id,
                 'subject' => $report->subject,
                 'status' => $report->status,
                 'closed' => $report->closed,
@@ -145,6 +149,23 @@ class SupportTicketController extends Controller
 
         $value = trim($validated['query']);
 
+        // Support the human-friendly ticket id (e.g. DNHS-2026-0001)
+        if (preg_match('/^\s*dnhs-(\d{4})-(\d{1,6})\s*$/i', $value, $m)) {
+            $ticket = Report::where('type', 'support')
+                ->whereNotNull('access_token')
+                ->where('ticket_year', (int) $m[1])
+                ->where('ticket_number', (int) $m[2])
+                ->first();
+
+            if (! $ticket) {
+                throw ValidationException::withMessages([
+                    'query' => __('No support ticket was found for that ID.'),
+                ]);
+            }
+
+            return redirect()->to('/support/tickets/'.$ticket->id.'?token='.$ticket->access_token);
+        }
+
         if (str_contains($value, '@')) {
             $tickets = Report::where('type', 'support')
                 ->whereNotNull('access_token')
@@ -196,6 +217,7 @@ class SupportTicketController extends Controller
     {
         return $tickets->map(fn (Report $r) => [
             'id' => $r->id,
+            'ticket_id' => $r->ticket_id,
             'subject' => $r->subject,
             'status' => $r->status,
             'created_at' => $r->created_at->toISOString(),

@@ -216,7 +216,6 @@ export default function ManageTeachers() {
     const [editPreview, setEditPreview] = useState<string | undefined>(undefined);
     const [createAvatar, setCreateAvatar] = useState<File | null>(null);
     const [createPreview, setCreatePreview] = useState<string | undefined>(undefined);
-    const [showPassword, setShowPassword] = useState(false);
     const [showEditPassword, setShowEditPassword] = useState(false);
     const editPreviewUrlRef = useRef<string | null>(null);
     const createPreviewUrlRef = useRef<string | null>(null);
@@ -273,8 +272,8 @@ export default function ManageTeachers() {
     }
 
     function createTeacher() {
-        if (!form.last_name || !form.email || !form.password || !form.password_confirmation) {
-            showToast('Please fill in all required fields (name, email, password).', 'error');
+        if (!form.last_name || !form.email) {
+            showToast('Please fill in all required fields (name, email).', 'error');
 
             return;
         }
@@ -286,8 +285,6 @@ export default function ManageTeachers() {
             middle_name: form.middle_name,
             last_name: form.last_name,
             email: form.email,
-            password: form.password,
-            password_confirmation: form.password_confirmation,
             role: form.role || null,
             is_adviser: form.is_adviser ? 1 : 0,
             adviser_section: form.is_adviser ? form.adviser_section || null : null,
@@ -882,34 +879,20 @@ return;
                             ) : null}
 
                             {/* Password */}
-                            <div className="rounded-lg border p-3">
-                                <p className="mb-2 text-xs font-medium text-muted-foreground">
-                                    Password
+                            <div className="rounded-lg border border-dashed p-3">
+                                <p className="mb-1 text-xs font-medium text-muted-foreground">
+                                    Default password
                                 </p>
-                                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                    <div className="relative">
-                                        <Input
-                                            className="pr-10"
-                                            type={showPassword ? 'text' : 'password'}
-                                            placeholder="New password"
-                                            value={form.password}
-                                            onChange={(e) => setForm({ ...form, password: e.target.value })}
-                                        />
-                                        <button
-                                            type="button"
-                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                                            onClick={() => setShowPassword((s) => !s)}
-                                        >
-                                            {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                                        </button>
-                                    </div>
-                                    <Input
-                                        type="password"
-                                        placeholder="Confirm password"
-                                        value={form.password_confirmation}
-                                        onChange={(e) => setForm({ ...form, password_confirmation: e.target.value })}
-                                    />
-                                </div>
+                                <p className="text-sm text-foreground">
+                                    <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+                                        {form.first_name
+                                            ? `${form.first_name}.${form.last_name}@dnhs_portal`.toLowerCase()
+                                            : 'firstname.lastname@dnhs_portal'}
+                                    </code>
+                                </p>
+                                <p className="mt-1 text-xs text-muted-foreground">
+                                    This password is emailed to the teacher and must be changed after first login.
+                                </p>
                             </div>
 
                             <DialogFooter>

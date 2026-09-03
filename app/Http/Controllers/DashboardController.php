@@ -206,6 +206,7 @@ class DashboardController extends Controller
         $underReviewReports = Report::where('status', 'under_review')->count();
         $acceptedReports = Report::where('status', 'accepted')->count();
         $rejectedReports = Report::where('status', 'rejected')->count();
+        $resolvedReports = Report::where('status', 'resolved')->count();
         $totalUsers = User::count();
 
         $recentReports = Report::with('user')
@@ -214,6 +215,7 @@ class DashboardController extends Controller
             ->get()
             ->map(fn ($r) => [
                 'id' => $r->id,
+                'ticket_id' => $r->ticket_id,
                 'type' => $r->type,
                 'subject' => $r->subject,
                 'status' => $r->status,
@@ -239,6 +241,7 @@ class DashboardController extends Controller
             'statusBreakdown' => [
                 'accepted' => $acceptedReports,
                 'rejected' => $rejectedReports,
+                'resolved' => $resolvedReports,
             ],
             'recentReports' => $recentReports,
             'tools' => [

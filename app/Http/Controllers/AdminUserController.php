@@ -243,7 +243,6 @@ class AdminUserController extends Controller
             'middle_name' => 'nullable|string|max:50',
             'last_name' => 'required|string|max:50',
             'email' => 'required|email|unique:users,email',
-            'password' => 'required|string|min:6|confirmed',
             'role' => 'nullable|string',
             'is_adviser' => 'nullable|boolean',
             'adviser_section' => 'nullable|string',
@@ -256,6 +255,9 @@ class AdminUserController extends Controller
 
         $middleInitial = $middle ? ' ' . strtoupper(substr($middle, 0, 1)) : '';
         $name = $last . ($first ? ', ' . $first . $middleInitial : '');
+
+        // Default password pattern: firstname.lastname@dnhs_portal
+        $defaultPassword = strtolower(trim(($first ?: $last) . '.' . $last)) . '@dnhs_portal';
 
         // Validate adviser section isn't already taken
         if (! empty($data['is_adviser']) && ! empty($data['adviser_section'])) {
@@ -272,7 +274,7 @@ class AdminUserController extends Controller
         $user = User::create([
             'name' => $name,
             'email' => $data['email'],
-            'password' => Hash::make($data['password']),
+            'password' => Hash::make($defaultPassword),
             'is_adviser' => ! empty($data['is_adviser']),
             'adviser_section' => ! empty($data['is_adviser']) ? ($data['adviser_section'] ?? null) : null,
         ]);
@@ -298,7 +300,7 @@ class AdminUserController extends Controller
 
         try {
             $role = ! empty($data['role']) ? $data['role'] : 'teacher';
-            Mail::to($user->email)->queue(new UserCredentialsMail($user->name, $user->email, $data['password'], $role));
+            Mail::to($user->email)->queue(new UserCredentialsMail($user->name, $user->email, $defaultPassword, $role));
         } catch (\Throwable $mailEx) {
             \Log::warning('[ADMIN_USER] credentials email failed: ' . $mailEx->getMessage());
         }

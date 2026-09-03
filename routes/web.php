@@ -65,6 +65,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('admin/manage-students', [AdminStudentController::class, 'index'])->name('admin.manage-students.index');
     Route::get('admin/manage-students/{uuid}/edit', [AdminStudentController::class, 'edit'])->name('admin.manage-students.edit');
     Route::put('admin/manage-students/{uuid}', [AdminStudentController::class, 'update'])->name('admin.manage-students.update');
+    Route::delete('admin/manage-students/{uuid}', [AdminStudentController::class, 'destroy'])->name('admin.manage-students.destroy');
     Route::get('admin/manage-teachers', [AdminTeacherController::class, 'index'])->name('admin.manage-teachers.index');
     Route::patch('admin/manage-teachers/{uuid}', [AdminTeacherController::class, 'update'])->name('admin.manage-teachers.update');
     Route::get('admin/roles', [AdminRoleController::class, 'index'])->name('admin.roles');

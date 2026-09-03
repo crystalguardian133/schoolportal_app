@@ -1,8 +1,15 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { Bug, Lightbulb, MessageSquare, X, Check, Clock, Eye, Search, ChevronLeft, ChevronRight, Trash2, Lock, MessageCircle } from 'lucide-react';
+import { Bug, Lightbulb, MessageSquare, X, Check, CheckCircle2, Clock, Eye, Search, ChevronLeft, ChevronRight, Trash2, Lock, MessageCircle } from 'lucide-react';
 import { lazy, Suspense, useState } from 'react';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { PortalPageShell } from '@/components/portal-page-shell';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { formatDate } from '@/lib/dates';
 import { cn } from '@/lib/utils';
 
@@ -12,6 +19,7 @@ const SimpleBarChart = lazy(() =>
 
 type Report = {
     id: string;
+    ticket_id: string;
     type: string;
     subject: string;
     message: string;
@@ -63,6 +71,7 @@ const statusOptions = [
     { value: 'under_review', label: 'Under Review', icon: Eye, bg: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300' },
     { value: 'accepted', label: 'Accepted', icon: Check, bg: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300' },
     { value: 'rejected', label: 'Rejected', icon: X, bg: 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300' },
+    { value: 'resolved', label: 'Resolved', icon: CheckCircle2, bg: 'bg-teal-100 text-teal-700 dark:bg-teal-950 dark:text-teal-300' },
 ];
 
 const resolutionOptions = [
@@ -101,11 +110,16 @@ return;
         });
     }
 
+    function updateReportStatus(reportId: string, status: string) {
+        router.patch(`/developer/reports/${reportId}/status`, { status });
+    }
+
     const chartData = [
         { label: 'Pending', value: stats.pending },
         { label: 'Under Review', value: stats.under_review },
         { label: 'Accepted', value: stats.accepted },
         { label: 'Rejected', value: stats.rejected },
+        { label: 'Resolved', value: stats.resolved },
     ];
 
     return (
@@ -255,6 +269,9 @@ return;
                                         </div>
                                         <div>
                                             <h3 className="font-semibold">{report.subject}</h3>
+                                            <span className="mt-0.5 inline-block rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                                                {report.ticket_id}
+                                            </span>
                                             <p className="text-xs text-muted-foreground">
                                                 by {report.user ? `${report.user.name} (${report.user.email})` : (report.contact_email ?? 'Guest')}
                                             </p>
@@ -287,32 +304,29 @@ return;
 
                                 <div className="mt-3 flex items-center gap-2" onClick={(e) => e.preventDefault()}>
                                     <span className="text-xs text-muted-foreground">Status:</span>
-                                    {statusOptions.map((s) => {
-                                        const StIcon = s.icon;
+                                    <Select
+                                        value={report.status}
+                                        onValueChange={(value) => updateReportStatus(report.id, value)}
+                                    >
+                                        <SelectTrigger className="h-8 min-w-[8.5rem] gap-2 rounded-lg border px-3 text-xs">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent align="start" side="bottom" sideOffset={4}>
+                                            {statusOptions.map((s) => {
+                                                const StIcon = s.icon;
 
-                                        return (
-                                            <button
-                                                key={s.value}
-                                                onClick={(e) => {
-                                                    e.preventDefault();
-                                                    router.patch(`/developer/reports/${report.id}/status`, { status: s.value });
-                                                }}
-                                                className={cn(
-                                                    'inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-medium transition',
-                                                    report.status === s.value
-                                                        ? 'border-primary bg-primary/5 text-primary'
-                                                        : 'border-border text-muted-foreground hover:bg-muted',
-                                                )}
-                                            >
-                                                <StIcon className="size-3" />
-                                                {s.label}
-                                            </button>
-                                        );
-                                    })}
+                                                return (
+                                                    <SelectItem key={s.value} value={s.value}>
+                                                        <StIcon className="size-3.5" />
+                                                        {s.label}
+                                                    </SelectItem>
+                                                );
+                                            })}
+                                        </SelectContent>
+                                    </Select>
 
                                     <button
-                                        onClick={(e) => {
-                                            e.preventDefault();
+                                        onClick={() => {
                                             setDeleteTarget(report.id);
                                         }}
                                         className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950"

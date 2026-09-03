@@ -2,9 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Attendance;
 use App\Models\ClassSection;
 use App\Models\CommonAddress;
+use App\Models\EnrollmentAudit;
+use App\Models\GradeArchive;
 use App\Models\Student;
+use App\Models\StudentSubject;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -262,5 +266,39 @@ class AdminStudentController extends Controller
 
         return redirect()->route('admin.manage-students.index')
             ->with('success', 'Student information updated successfully.');
+    }
+
+    public function destroy(Request $request, string $uuid)
+    {
+        $this->authorizeAdmin($request);
+
+        $student = Student::query()->where('uuid', $uuid)->first();
+
+        if (! $student) {
+            return back()->with('error', 'Student not found or already deleted.');
+        }
+
+        DB::transaction(function () use ($student) {
+            // Remove related records before deleting the student
+            StudentSubject::where('student_uuid', $student->uuid)->delete();
+            Attendance::where('student_uuid', $student->uuid)->delete();
+            GradeArchive::where('student_uuid', $student->uuid)->delete();
+            EnrollmentAudit::where('student_uuid', $student->uuid)->delete();
+
+            $userUuid = $student->user_uuid;
+            $student->delete();
+
+            if ($userUuid) {
+                $user = User::query()->where('uuid', $userUuid)->first();
+                if ($user) {
+                    $user->roles()->detach();
+                    DB::table('push_subscriptions')->where('user_uuid', $userUuid)->delete();
+                    $user->delete();
+                }
+            }
+        });
+
+        return redirect()->route('admin.manage-students.index')
+            ->with('success', 'Student deleted successfully.');
     }
 }
