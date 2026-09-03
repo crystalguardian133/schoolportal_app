@@ -27,6 +27,7 @@ type Reply = {
 
 type Report = {
     id: string;
+    ticket_id: string;
     type: string;
     subject: string;
     message: string;
@@ -152,8 +153,11 @@ export default function ReportShow({ report }: Props) {
                             <div className={cn('mt-1 rounded-xl p-2 sm:p-3', cfg.bg)}>
                                 <TypeIcon className="size-5 sm:size-6" />
                             </div>
-                            <div className="min-w-0 flex-1">
-                                <h1 className="text-xl font-bold sm:text-2xl">{report.subject}</h1>
+<div className="min-w-0 flex-1">
+                                    <h1 className="text-xl font-bold sm:text-2xl">{report.subject}</h1>
+                                    <span className="inline-block rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                                        {report.ticket_id}
+                                    </span>
                                 <div className="mt-2 flex flex-wrap items-center gap-2 sm:gap-3">
                                     <span className={cn('inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium', cfg.bg)}>
                                         <TypeIcon className="size-3" />

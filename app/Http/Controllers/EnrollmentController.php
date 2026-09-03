@@ -239,6 +239,7 @@ class EnrollmentController extends Controller
                 'class_section_uuid' => 'required_with:new_student|string',
                 'new_student' => 'nullable|array',
                 'new_student.name' => 'required_with:new_student|string|max:255',
+                'new_student.email' => 'required_with:new_student|email|max:255',
                 'new_student.student_id' => 'nullable|string|max:100|unique:students,student_id',
                 'new_student.lrn' => 'nullable|string|max:100|unique:students,lrn',
                 'new_student.grade_level' => 'nullable|string|max:100',
@@ -333,10 +334,14 @@ class EnrollmentController extends Controller
             Log::info('[ENROLLMENT] inside transaction - found students', ['count' => $students->count()]);
 
             if (is_array($newStudentData) && ! empty($newStudentData['name'])) {
-                // Auto-generate email and password from LRN (or student_id as fallback)
-                $identifier = $newStudentData['lrn'] ?? $newStudentData['student_id'] ?? \Illuminate\Support\Str::random(10);
-                $autoEmail  = preg_replace('/\s+/', '', strtolower($identifier)) . '@dnhs.edu.ph';
-                $password   = $identifier; // temporary password = LRN
+                // Use the manually-entered email address (required field)
+                $autoEmail = preg_replace('/\s+/', '', strtolower(trim($newStudentData['email'] ?? '')));
+
+                // Temporary password defaults to the student's birthdate (yyyy-mm-dd)
+                $rawBirthday = $newStudentData['birthday'] ?? null;
+                $password    = ! empty($rawBirthday)
+                    ? \Illuminate\Support\Carbon::parse($rawBirthday)->format('Y-m-d')
+                    : \Illuminate\Support\Str::random(10);
 
                 // Check if a user with this email already exists (re-enrollment)
                 $existingUser = User::where('email', $autoEmail)->first();

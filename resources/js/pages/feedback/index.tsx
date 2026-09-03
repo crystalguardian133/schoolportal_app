@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 
 type Report = {
     id: string;
+    ticket_id: string;
     type: string;
     subject: string;
     message: string;
@@ -265,6 +266,9 @@ return;
                                             </div>
                                             <div>
                                                 <h3 className="font-semibold">{report.subject}</h3>
+                                                <span className="mt-0.5 inline-block rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                                                    {report.ticket_id}
+                                                </span>
                                                 <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{report.message}</p>
                                                 <div className="mt-2 flex items-center gap-3">
                                                     <span className={cn('rounded-full px-2.5 py-0.5 text-xs font-medium', status.bg)}>
@@ -326,6 +330,9 @@ return;
                                             </div>
                                             <div>
                                                 <h3 className="font-semibold">{report.subject}</h3>
+                                                <span className="mt-0.5 inline-block rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                                                    {report.ticket_id}
+                                                </span>
                                                 <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{report.message}</p>
                                                 <div className="mt-2 flex items-center gap-3">
                                                     <span className={cn('rounded-full px-2.5 py-0.5 text-xs font-medium', status.bg)}>

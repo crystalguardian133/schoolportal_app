@@ -6,6 +6,7 @@ import {
     Clock,
     Eye,
     Check,
+    CheckCircle2,
     X,
     Users,
     FileText,
@@ -32,6 +33,7 @@ type Props = {
         underReviewReports: number;
         acceptedReports: number;
         rejectedReports: number;
+        resolvedReports: number;
         totalUsers: number;
     };
     typeBreakdown: {
@@ -41,6 +43,7 @@ type Props = {
     };
     recentReports: Array<{
         id: string;
+        ticket_id: string;
         type: string;
         subject: string;
         status: string;
@@ -54,6 +57,7 @@ const statusConfig: Record<string, { label: string; icon: typeof Clock; bg: stri
     under_review: { label: 'Under Review', icon: Eye, bg: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300' },
     accepted: { label: 'Accepted', icon: Check, bg: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300' },
     rejected: { label: 'Rejected', icon: X, bg: 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300' },
+    resolved: { label: 'Resolved', icon: CheckCircle2, bg: 'bg-teal-100 text-teal-700 dark:bg-teal-950 dark:text-teal-300' },
 };
 
 const typeConfig: Record<string, { label: string; icon: typeof Bug; bg: string }> = {
@@ -110,6 +114,7 @@ export default function DeveloperDashboard({ user, stats, typeBreakdown, recentR
                                 { label: 'Under Review', value: stats.underReviewReports },
                                 { label: 'Accepted', value: stats.acceptedReports },
                                 { label: 'Rejected', value: stats.rejectedReports },
+                                { label: 'Resolved', value: stats.resolvedReports },
                             ]}
                         />
                         <SimplePieChart

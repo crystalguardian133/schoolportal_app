@@ -1,7 +1,5 @@
-import { Link, usePage } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
 import type { ReactNode } from 'react';
-import { useState, useEffect } from 'react';
-import Toast from '@/components/ui/toast';
 import { dashboard } from '@/routes';
 
 type PortalPageShellProps = {
@@ -21,37 +19,6 @@ export function PortalPageShell({
     showHero = false,
     showHeader = true,
 }: PortalPageShellProps) {
-    const { props } = usePage();
-    const flash: any = props.flash || {};
-    const message = flash.success ?? flash.error ?? null;
-    const type = flash.success ? 'success' : flash.error ? 'error' : 'info';
-    const [localToast, setLocalToast] = useState<{
-        message: string;
-        type?: string;
-        link?: string;
-        linkLabel?: string;
-    } | null>(null);
-
-    useEffect(() => {
-        function handler(e: any) {
-            const detail = e?.detail;
-
-            if (detail?.message) {
-                setLocalToast({
-                    message: detail.message,
-                    type: detail.type ?? 'success',
-                });
-
-                setTimeout(() => setLocalToast(null), detail.ttl ?? 3000);
-            }
-        }
-
-        window.addEventListener('local-toast', handler as EventListener);
-
-        return () =>
-            window.removeEventListener('local-toast', handler as EventListener);
-    }, []);
-
     return (
         <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto p-3 sm:gap-6 sm:p-4">
             {showHeader && !showHero && (
@@ -90,13 +57,6 @@ export function PortalPageShell({
             )}
 
             {children}
-            <Toast
-                message={message ?? localToast?.message ?? null}
-                type={(message ? type : (localToast?.type as any)) ?? 'info'}
-                onClose={() => setLocalToast(null)}
-                link={localToast?.link ?? null}
-                linkLabel={localToast?.linkLabel ?? 'View'}
-            />
         </div>
     );
 }

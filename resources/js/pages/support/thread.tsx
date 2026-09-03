@@ -16,6 +16,7 @@ type Message = {
 
 type Ticket = {
     id: string;
+    ticket_id: string;
     subject: string;
     status: string;
     closed: boolean;
@@ -74,7 +75,7 @@ export default function SupportThread() {
                             <div>
                                 <h1 className="text-base font-semibold">{ticket.subject}</h1>
                                 <p className="mt-0.5 text-xs text-slate-500">
-                                    Opened {formatDateTime(ticket.created_at)} · Ticket #{ticket.id.slice(0, 8)}
+                                    Opened {formatDateTime(ticket.created_at)} · Ticket #{ticket.ticket_id}
                                 </p>
                             </div>
                             {ticket.closed ? (

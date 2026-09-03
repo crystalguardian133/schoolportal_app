@@ -1,8 +1,18 @@
 import type { PageProps } from '@inertiajs/core';
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
+import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { PortalPageShell } from '@/components/portal-page-shell';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { PageLoader } from '@/components/page-loader';
+import { PortalPageShell } from '@/components/portal-page-shell';
+import { Button } from '@/components/ui/button';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 type Student = {
     uuid: string;
@@ -61,6 +71,7 @@ export default function ManageStudents() {
     const [perPage, setPerPage] = useState(Number(filters.per_page) || 25);
     const [sortBy, setSortBy] = useState(filters.sort_by ?? 'name');
     const [sortDirection, setSortDirection] = useState(filters.sort_direction ?? 'asc');
+    const [deleteTarget, setDeleteTarget] = useState<Student | null>(null);
     const initialRender = useRef(true);
 
     useEffect(() => {
@@ -95,6 +106,34 @@ export default function ManageStudents() {
         const arrow = active ? (sortDirection === 'asc' ? ' ↑' : ' ↓') : '';
 
         return `${label}${arrow}`;
+    }
+
+    function showToast(message: string, type: 'success' | 'error' = 'success') {
+        window.dispatchEvent(
+            new CustomEvent('local-toast', { detail: { message, type } }),
+        );
+    }
+
+    function deleteStudent(uuid: string) {
+        setDeleteTarget(null);
+        router.delete(`/admin/manage-students/${uuid}`, {
+            onSuccess: (page: any) => {
+                if (page?.props?.flash?.error) {
+                    showToast(page.props.flash.error, 'error');
+                } else {
+                    showToast('Student deleted successfully.', 'success');
+                }
+
+                router.reload();
+            },
+            onError: (errors: any) => {
+                const firstError = Object.values(errors || {})[0];
+                showToast(
+                    (firstError as string) || 'Unable to delete student.',
+                    'error',
+                );
+            },
+        });
     }
 
     return (
@@ -147,7 +186,7 @@ export default function ManageStudents() {
                                     </th>
                                     <th className="px-4 py-3 font-medium">Section</th>
                                     <th className="px-4 py-3 font-medium">Email</th>
-                                    <th className="px-4 py-3 font-medium">Actions</th>
+                                    <th className="px-4 py-3 text-right font-medium">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-sidebar-border/70 bg-white dark:bg-sidebar">
@@ -168,13 +207,28 @@ export default function ManageStudents() {
                                         <td className="px-4 py-3 text-muted-foreground">{student.grade_level || 'N/A'}</td>
                                         <td className="px-4 py-3 text-muted-foreground">{student.section || '-'}</td>
                                         <td className="px-4 py-3 text-muted-foreground">{student.email || '-'}</td>
-                                        <td className="px-4 py-3">
-                                            <Link
-                                                href={`/admin/manage-students/${student.uuid}/edit`}
-                                                className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/20"
-                                            >
-                                                Edit
-                                            </Link>
+                                        <td className="px-4 py-3 text-right">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon" aria-label="More actions">
+                                                        <MoreHorizontal className="size-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem onSelect={() => router.get(`/admin/manage-students/${student.uuid}/edit`)}>
+                                                        <Pencil className="size-4" />
+                                                        Edit
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem
+                                                        variant="destructive"
+                                                        onSelect={() => setDeleteTarget(student)}
+                                                    >
+                                                        <Trash2 className="size-4" />
+                                                        Delete
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
                                         </td>
                                     </tr>
                                 ))}
@@ -203,6 +257,19 @@ export default function ManageStudents() {
                     </div>
                 </div>
                 </PageLoader>
+
+                <ConfirmDialog
+                    open={deleteTarget !== null}
+                    title="Delete student"
+                    description={`Are you sure you want to delete ${deleteTarget ? formatStudentName(deleteTarget) : ''}? This will also remove their account and cannot be undone.`}
+                    confirmLabel="Delete"
+                    onOpenChange={(open) => {
+                        if (!open) {
+setDeleteTarget(null);
+}
+                    }}
+                    onConfirm={() => deleteTarget && deleteStudent(deleteTarget.uuid)}
+                />
             </PortalPageShell>
         </>
     );

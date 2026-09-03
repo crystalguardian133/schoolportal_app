@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 
 type TicketRef = {
     id: string;
+    ticket_id: string;
     subject: string;
     status: string;
     created_at: string;
@@ -160,7 +161,7 @@ export default function SupportLookup() {
                                                         <div className="min-w-0">
                                                             <p className="truncate text-sm font-medium">{t.subject}</p>
                                                             <p className="mt-0.5 text-[11px] text-slate-400">
-                                                                #{t.id.slice(0, 8)} · opened {formatDateTime(t.created_at)}
+                                                                #{t.ticket_id} · opened {formatDateTime(t.created_at)}
                                                             </p>
                                                         </div>
                                                         <div className="flex shrink-0 items-center gap-2">
@@ -204,7 +205,7 @@ export default function SupportLookup() {
                                         <StatusBadge status={t.status} />
                                     </div>
                                     <p className="mt-1 flex items-center gap-2 text-[11px] text-slate-400">
-                                        <MessageCircle className="size-3" />#{t.id.slice(0, 8)} · opened{' '}
+                                        <MessageCircle className="size-3" />#{t.ticket_id} · opened{' '}
                                         {formatDateTime(t.created_at)}
                                     </p>
                                 </a>

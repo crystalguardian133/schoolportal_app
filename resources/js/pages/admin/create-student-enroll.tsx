@@ -824,7 +824,6 @@ export default function CreateStudentEnroll() {
                         <label className="space-y-2 text-sm">
                             <span className={labelClass}>
                                 Password{' '}
-                                <span className="text-destructive">*</span>
                             </span>
                             <div className="relative">
                                 <input
@@ -860,7 +859,6 @@ export default function CreateStudentEnroll() {
                         <label className="space-y-2 text-sm">
                             <span className={labelClass}>
                                 Confirm Password{' '}
-                                <span className="text-destructive">*</span>
                             </span>
                             <div className="relative">
                                 <input
@@ -907,8 +905,6 @@ export default function CreateStudentEnroll() {
                                     !classSectionUuid ||
                                     !composedName ||
                                     !form.email ||
-                                    !form.password ||
-                                    !form.password_confirmation ||
                                     !form.address_barangay ||
                                     !form.address_municipality ||
                                     !form.address_province ||
