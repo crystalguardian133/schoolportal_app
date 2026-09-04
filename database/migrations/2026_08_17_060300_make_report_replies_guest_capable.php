@@ -13,7 +13,12 @@ return new class extends Migration
             $table->dropForeign(['user_id']);
         });
 
-        DB::statement('ALTER TABLE report_replies MODIFY user_id BIGINT UNSIGNED NULL');
+        $driver = DB::getDriverName();
+        if ($driver === 'pgsql') {
+            DB::statement('ALTER TABLE report_replies ALTER COLUMN user_id DROP NOT NULL');
+        } else {
+            DB::statement('ALTER TABLE report_replies MODIFY user_id BIGINT UNSIGNED NULL');
+        }
 
         Schema::table('report_replies', function (Blueprint $table) {
             $table->foreign('user_id')->references('id')->on('users')->nullOnDelete();
@@ -28,7 +33,12 @@ return new class extends Migration
             $table->dropForeign(['user_id']);
         });
 
-        DB::statement('ALTER TABLE report_replies MODIFY user_id BIGINT UNSIGNED NOT NULL');
+        $driver = DB::getDriverName();
+        if ($driver === 'pgsql') {
+            DB::statement('ALTER TABLE report_replies ALTER COLUMN user_id SET NOT NULL');
+        } else {
+            DB::statement('ALTER TABLE report_replies MODIFY user_id BIGINT UNSIGNED NOT NULL');
+        }
 
         Schema::table('report_replies', function (Blueprint $table) {
             $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();

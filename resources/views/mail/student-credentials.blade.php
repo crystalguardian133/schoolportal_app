@@ -48,7 +48,7 @@
     <div class="wrap">
         <div class="card">
             <div class="hero">
-                <img src="{{ config('app.icon') }}" alt="DNHS Logo" class="logo" width="96" height="96">
+                <img src="{{ asset(config('app.icon_small')) }}" alt="DNHS Logo" class="logo" width="96" height="96">
                 <h1>DNHS School Portal</h1>
                 <p>Dulag National High School &bull; Dulag, Leyte</p>
             </div>

@@ -5,6 +5,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import { renderTextWithLinks } from '@/lib/linkify';
 
 type AnnouncementRow = {
     uuid: string;
@@ -60,8 +61,8 @@ export function AnnouncementModal({
                             />
                         </div>
                     ) : null}
-                    <p className="text-sm leading-6 whitespace-pre-line text-foreground dark:text-sidebar-foreground">
-                        {announcement.body}
+                    <p className="text-sm leading-6 text-foreground dark:text-sidebar-foreground">
+                        {renderTextWithLinks(announcement.body)}
                     </p>
                 </div>
             </DialogContent>

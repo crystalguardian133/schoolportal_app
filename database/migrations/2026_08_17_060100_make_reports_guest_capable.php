@@ -19,13 +19,24 @@ return new class extends Migration
         });
 
         // Allow guest-submitted support tickets (no user account)
-        DB::statement('ALTER TABLE reports MODIFY user_id BIGINT UNSIGNED NULL');
+        $driver = DB::getDriverName();
+        if ($driver === 'pgsql') {
+            DB::statement('ALTER TABLE reports ALTER COLUMN user_id DROP NOT NULL');
+        } else {
+            DB::statement('ALTER TABLE reports MODIFY user_id BIGINT UNSIGNED NULL');
+        }
     }
 
     public function down(): void
     {
         DB::statement('DELETE FROM reports WHERE user_id IS NULL');
-        DB::statement('ALTER TABLE reports MODIFY user_id BIGINT UNSIGNED NOT NULL');
+
+        $driver = DB::getDriverName();
+        if ($driver === 'pgsql') {
+            DB::statement('ALTER TABLE reports ALTER COLUMN user_id SET NOT NULL');
+        } else {
+            DB::statement('ALTER TABLE reports MODIFY user_id BIGINT UNSIGNED NOT NULL');
+        }
 
         Schema::table('reports', function (Blueprint $table) {
             $table->dropColumn(['contact_email', 'access_token']);

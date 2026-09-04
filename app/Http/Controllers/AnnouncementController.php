@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Events\AnnouncementCreated;
 use App\Events\AnnouncementPublished;
 use App\Models\Announcement;
+use App\Models\AnnouncementRead;
 use App\Models\ClassSection;
 use App\Models\Student;
 use App\Models\User;
@@ -326,18 +327,7 @@ class AnnouncementController extends Controller
 
         AnnouncementPublished::dispatch($announcement);
 
-        $this->notifyAnnouncement($announcement);
-
         return back()->with('success', 'Announcement created successfully.');
-    }
-
-    private function notifyAnnouncement(Announcement $announcement): void
-    {
-        try {
-            app(\App\Services\PushNotificationService::class)->sendAnnouncement($announcement);
-        } catch (\Throwable $e) {
-            report($e);
-        }
     }
 
     public function update(Request $request, string $uuid)
@@ -418,6 +408,8 @@ class AnnouncementController extends Controller
             // broadcast failures should not break the request
         }
 
+        AnnouncementPublished::dispatch($announcement);
+
         return back()->with('success', 'Announcement updated successfully.');
     }
 
@@ -463,6 +455,71 @@ class AnnouncementController extends Controller
             'total' => $total,
             'updated_at' => $latestUpdated,
         ]);
+    }
+
+    /**
+     * Notifications for the bell: the latest visible announcements for the
+     * current user, each flagged with whether the user has read/seen it.
+     *
+     * GET /announcements/recent
+     */
+    public function recent(Request $request)
+    {
+        $user = $request->user();
+        $limit = (int) $request->query('limit', 30);
+
+        $announcements = $this->visibleAnnouncementsQuery($request)
+            ->latest()
+            ->withExists(['reads' => fn ($q) => $q->where('user_uuid', $user->uuid)])
+            ->limit($limit)
+            ->get()
+            ->map(fn (Announcement $announcement) => [
+                'uuid' => $announcement->uuid,
+                'title' => $announcement->title,
+                'body' => $announcement->body,
+                'scope' => $announcement->scope,
+                'target_label' => $this->announcementTargetLabel($announcement),
+                'created_by' => $announcement->creator?->name,
+                'created_at' => $announcement->created_at?->toIso8601String(),
+                'image_url' => $announcement->image_path ? url('/assets/announcements/'.basename($announcement->image_path)) : null,
+                'seen' => (bool) $announcement->reads_exists,
+            ])
+            ->values()
+            ->all();
+
+        return response()->json([
+            'notifications' => $announcements,
+        ]);
+    }
+
+    /**
+     * Mark announcements as seen for the current user.
+     *
+     * POST /announcements/seen
+     */
+    public function markSeen(Request $request)
+    {
+        $user = $request->user();
+        $uuids = $request->input('uuids');
+
+        $targets = $this->visibleAnnouncementsQuery($request)
+            ->when(
+                is_array($uuids) && count($uuids) > 0,
+                fn ($q) => $q->whereIn('announcements.uuid', $uuids),
+            )
+            ->pluck('announcements.uuid');
+
+        $marked = 0;
+        foreach ($targets as $announcementUuid) {
+            $marked += AnnouncementRead::query()
+                ->firstOrCreate([
+                    'user_uuid' => $user->uuid,
+                    'announcement_uuid' => $announcementUuid,
+                ])
+                ->wasRecentlyCreated ? 1 : 0;
+        }
+
+        return response()->json(['marked' => $marked]);
     }
 
     public function teacherIndex(Request $request)
@@ -584,8 +641,8 @@ class AnnouncementController extends Controller
 
         $user = $request->user();
         $data = $request->validate([
-            'title' => 'required|string|max:255',
-            'body' => 'required|string',
+            'title' => 'required|string|max:200',
+            'body' => 'required|string|max:400',
             'scope' => 'required|in:system,class,section',
             'class_section_uuid' => 'nullable|uuid|exists:class_sections,uuid',
             'section_name' => 'nullable|string|max:255',
@@ -674,8 +731,6 @@ class AnnouncementController extends Controller
         }
 
         AnnouncementPublished::dispatch($announcement);
-
-        $this->notifyAnnouncement($announcement);
 
         return back()->with('success', 'Announcement created successfully.');
     }

@@ -9,6 +9,8 @@ return new class extends Migration
 {
     public function up(): void
     {
+        $driver = DB::getDriverName();
+
         Schema::table('reports', function (Blueprint $table) {
             if (!Schema::hasColumn('reports', 'ticket_number')) {
                 $table->unsignedInteger('ticket_number')->nullable()->after('type');
@@ -32,10 +34,17 @@ return new class extends Migration
             ]);
         }
 
-        Schema::table('reports', function (Blueprint $table) {
-            $table->unsignedInteger('ticket_number')->nullable(false)->change();
-            $table->unsignedSmallInteger('ticket_year')->nullable(false)->change();
+        if ($driver === 'pgsql') {
+            DB::statement('ALTER TABLE reports ALTER COLUMN ticket_number SET NOT NULL');
+            DB::statement('ALTER TABLE reports ALTER COLUMN ticket_year SET NOT NULL');
+        } else {
+            Schema::table('reports', function (Blueprint $table) {
+                $table->unsignedInteger('ticket_number')->nullable(false)->change();
+                $table->unsignedSmallInteger('ticket_year')->nullable(false)->change();
+            });
+        }
 
+        Schema::table('reports', function (Blueprint $table) {
             $table->unique(['ticket_year', 'ticket_number'], 'reports_ticket_year_number_unique');
         });
     }

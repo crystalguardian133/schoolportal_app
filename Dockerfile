@@ -1,4 +1,4 @@
-FROM php:8.4-fpm as builder
+FROM php:8.4-fpm AS builder
 
 # Install system deps + PHP extensions
 # python3 + ffmpeg + yt-dlp are required by the Music Player (MusicController uses yt-dlp via Process)
@@ -21,8 +21,7 @@ WORKDIR /var/www/html
 
 # Copy composer files first for better layer caching
 COPY composer.json composer.lock ./
-RUN composer install --no-dev --no-scripts --optimize-autoloader
-RUN composer global require 
+RUN composer install --no-dev --optimize-autoloader
 
 # Copy package files for better layer caching
 COPY package.json package-lock.json ./
@@ -37,7 +36,8 @@ RUN mkdir -p storage/framework/cache \
     storage/framework/views \
     storage/logs \
     bootstrap/cache \
-    && chmod -R 775 storage bootstrap/cache
+    resources/assets/announcements \
+    && chmod -R 775 storage bootstrap/cache resources/assets/announcements
 
 RUN composer dump-autoload --optimize
 
@@ -53,13 +53,23 @@ ARG VITE_REVERB_APP_KEY
 ARG VITE_REVERB_HOST
 ARG VITE_REVERB_PORT
 ARG VITE_REVERB_SCHEME
+ARG APP_ICON
+ARG APP_ICON_SMALL
 ENV VITE_APP_NAME=$VITE_APP_NAME
 ENV VITE_REVERB_APP_KEY=$VITE_REVERB_APP_KEY
 ENV VITE_REVERB_HOST=$VITE_REVERB_HOST
 ENV VITE_REVERB_PORT=$VITE_REVERB_PORT
 ENV VITE_REVERB_SCHEME=$VITE_REVERB_SCHEME
+ENV APP_ICON=$APP_ICON
+ENV APP_ICON_SMALL=$APP_ICON_SMALL
 
 RUN npm run build
+
+# Cache Laravel config, routes, and views at build time
+RUN php artisan config:cache \
+    && php artisan route:cache \
+    && php artisan view:cache \
+    || true
 
 # Make entrypoint executable
 RUN chmod +x /var/www/html/entrypoint.sh
