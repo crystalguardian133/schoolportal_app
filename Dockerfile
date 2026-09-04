@@ -21,7 +21,7 @@ WORKDIR /var/www/html
 
 # Copy composer files first for better layer caching
 COPY composer.json composer.lock ./
-RUN composer install --no-dev --optimize-autoloader
+RUN composer install --no-dev --no-scripts --optimize-autoloader
 
 # Copy package files for better layer caching
 COPY package.json package-lock.json ./
@@ -74,6 +74,6 @@ RUN php artisan config:cache \
 # Make entrypoint executable
 RUN chmod +x /var/www/html/entrypoint.sh
 
-EXPOSE 8080
+EXPOSE 8080 8081
 
 ENTRYPOINT ["/var/www/html/entrypoint.sh"]

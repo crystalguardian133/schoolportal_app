@@ -25,8 +25,10 @@ if [ "$STATUS" = "external" ] && [ "$MODE" != "always" ]; then
     exit 1
   fi
 
-  echo "Starting server without running migrations..."
-  php artisan reverb:start --port="${REVERB_PORT:-8080}" >/dev/null 2>&1 &
+  echo "Starting Reverb WebSocket server on port ${REVERB_PORT:-8081}..."
+  php artisan reverb:start --port="${REVERB_PORT:-8081}" >/dev/null 2>&1 &
+
+  echo "Starting server on port ${PORT:-8080}..."
   php artisan serve --host=0.0.0.0 --port="${PORT:-8080}"
   exit 0
 fi
@@ -49,8 +51,8 @@ else
   echo "Skipping seed (RUN_SEED not set to true)"
 fi
 
-echo "Starting Reverb WebSocket server..."
-php artisan reverb:start --port="${REVERB_PORT:-8080}" >/dev/null 2>&1 &
+echo "Starting Reverb WebSocket server on port ${REVERB_PORT:-8081}..."
+php artisan reverb:start --port="${REVERB_PORT:-8081}" >/dev/null 2>&1 &
 
-echo "Starting server..."
+echo "Starting server on port ${PORT:-8080}..."
 php artisan serve --host=0.0.0.0 --port="${PORT:-8080}"
