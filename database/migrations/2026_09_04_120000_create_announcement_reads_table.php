@@ -10,7 +10,7 @@ return new class extends Migration
         Schema::create('announcement_reads', function (Blueprint $table) {
             $table->id();
             $table->string('user_uuid', 36)->index();
-            $table->string('announcement_uuid', 36)->index();
+            $table->uuid('announcement_uuid')->index();
             $table->timestamps();
             $table->unique(['user_uuid', 'announcement_uuid'], 'announcement_reads_user_announcement_unique');
             $table->foreign('user_uuid')->references('uuid')->on('users')->cascadeOnDelete();
