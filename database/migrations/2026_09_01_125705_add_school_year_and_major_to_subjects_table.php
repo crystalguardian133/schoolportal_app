@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::table('subjects', function (Blueprint $table) {
             $table->unsignedBigInteger('school_year_id')->nullable()->after('code');
-            $table->string('major_subject_id', 36)->nullable()->after('school_year_id');
+            $table->uuid('major_subject_id')->nullable()->after('school_year_id');
 
             $table->foreign('school_year_id')->references('id')->on('school_years')->nullOnDelete();
             $table->foreign('major_subject_id')->references('uuid')->on('major_subjects')->nullOnDelete();
