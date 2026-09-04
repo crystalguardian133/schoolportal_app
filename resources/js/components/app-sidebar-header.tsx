@@ -1,7 +1,8 @@
 import { usePage } from '@inertiajs/react';
-import { CalendarDays, Clock3, MapPin, SkipBack, SkipForward, Play, Pause, Bell } from 'lucide-react';
+import { CalendarDays, Clock3, MapPin, SkipBack, SkipForward, Play, Pause } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
+import { NotificationBell } from '@/components/notification-bell';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useMusicPlayer } from '@/contexts/music-player-context';
 import type { BreadcrumbItem as BreadcrumbItemType } from '@/types';
@@ -71,8 +72,18 @@ export function AppSidebarHeader({
     const [mounted, setMounted] = useState(false);
     const [now, setNow] = useState(() => new Date(0));
 
-    const { auth, unreadAnnouncementsCount } = usePage<{ auth: Auth, unreadAnnouncementsCount?: number }>().props;
+    const { auth } = usePage<{ auth: Auth }>().props;
     const canUseMusic = auth.permissions.includes('access music player');
+
+    const announcementsHref =
+        auth.user?.role == 'teacher'
+            ? '/teacher/announcements'
+            : auth.user?.role == 'admin' ||
+                    auth.user?.role == 'principal' ||
+                    auth.user?.role == 'registrar' ||
+                    auth.user?.role == 'staff'
+                ? '/admin/announcements'
+                : '/student/announcements';
 
     const {
         currentTrack,
@@ -169,22 +180,9 @@ return;
                     </div>
                 )}
 
+                <NotificationBell viewAllHref={announcementsHref} />
+                <div className="h-4 w-px bg-sidebar-border/80" />
                 <div className="flex items-center gap-3 rounded-full border border-sidebar-border/70 bg-sidebar px-3 py-2 shadow-sm">
-                    {unreadAnnouncementsCount !== undefined && unreadAnnouncementsCount > 0 && (
-                        <>
-                            <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
-                                <div className="relative">
-                                    <Bell className="size-4" />
-                                    <span className="absolute -right-0.5 -top-0.5 flex size-2 h-2 w-2">
-                                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75"></span>
-                                        <span className="relative inline-flex size-2 rounded-full bg-amber-500"></span>
-                                    </span>
-                                </div>
-                                <span className="font-medium">{unreadAnnouncementsCount}</span>
-                            </div>
-                            <div className="h-4 w-px bg-sidebar-border/80" />
-                        </>
-                    )}
                     <div className="flex items-center gap-2 text-xs text-sidebar-foreground/70 md:text-sm">
                         <CalendarDays className="size-4 text-sidebar-foreground" />
                         <span className="font-medium text-sidebar-foreground">

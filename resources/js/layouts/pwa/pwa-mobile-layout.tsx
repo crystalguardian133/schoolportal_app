@@ -1,7 +1,9 @@
 import { Link, router, usePage } from '@inertiajs/react';
-import { Bell, Download, LogOut, MoreHorizontal, Settings } from 'lucide-react';
+import { Download, LogOut, MoreHorizontal, Settings } from 'lucide-react';
 import { useState } from 'react';
 import AppLogoIcon from '@/components/app-logo-icon';
+import { NotificationBell } from '@/components/notification-bell';
+import { PwaPushBanner } from '@/components/pwa/pwa-push-banner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -71,16 +73,7 @@ export default function PwaMobileLayout({ children }: AppLayoutProps) {
                     </Link>
 
                     <div className="ml-auto flex items-center gap-1">
-                        {announcementsItem && (
-                            <Button variant="ghost" size="icon" asChild>
-                                <Link
-                                    href={announcementsItem.href}
-                                    aria-label="Announcements"
-                                >
-                                    <Bell className="size-5" />
-                                </Link>
-                            </Button>
-                        )}
+                        <NotificationBell viewAllHref={announcementsItem ? toUrl(announcementsItem.href) : '/student/announcements'} />
 
                         {auth.user && (
                             <DropdownMenu>
@@ -117,6 +110,8 @@ export default function PwaMobileLayout({ children }: AppLayoutProps) {
             </header>
 
             <main className="flex-1 pb-28">{children}</main>
+
+            <PwaPushBanner />
 
             <nav
                 className="fixed inset-x-0 bottom-0 z-40 border-t border-border/70 bg-background/95 backdrop-blur"

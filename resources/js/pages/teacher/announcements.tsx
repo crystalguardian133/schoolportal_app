@@ -312,11 +312,17 @@ return;
                         <div className="space-y-3">
                             {/* Title */}
                             <div className="grid gap-2">
-                                <Label className="text-xs text-muted-foreground dark:text-sidebar-foreground/80">
-                                    Title
-                                </Label>
+                                <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-muted-foreground dark:text-sidebar-foreground/80">
+                                        Title
+                                    </Label>
+                                    <span className="text-[11px] tabular-nums text-muted-foreground/70">
+                                        {form.title.length}/200
+                                    </span>
+                                </div>
                                 <Input
                                     value={form.title}
+                                    maxLength={200}
                                     onChange={(e) =>
                                         setForm({ ...form, title: e.target.value })
                                     }
@@ -326,11 +332,17 @@ return;
 
                             {/* Body */}
                             <div className="grid gap-2">
-                                <Label className="text-xs text-muted-foreground dark:text-sidebar-foreground/80">
-                                    Post
-                                </Label>
+                                <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-muted-foreground dark:text-sidebar-foreground/80">
+                                        Post
+                                    </Label>
+                                    <span className="text-[11px] tabular-nums text-muted-foreground/70">
+                                        {form.body.length}/400
+                                    </span>
+                                </div>
                                 <textarea
                                     value={form.body}
+                                    maxLength={400}
                                     onChange={(e) =>
                                         setForm({ ...form, body: e.target.value })
                                     }
@@ -610,22 +622,34 @@ return;
                     {editAnnouncement && (
                         <form onSubmit={submitEdit} className="mt-2 space-y-4">
                             <div className="grid gap-2">
-                                <Label className="text-xs text-muted-foreground dark:text-sidebar-foreground/80">
-                                    Title
-                                </Label>
+                                <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-muted-foreground dark:text-sidebar-foreground/80">
+                                        Title
+                                    </Label>
+                                    <span className="text-[11px] tabular-nums text-muted-foreground/70">
+                                        {form.title.length}/200
+                                    </span>
+                                </div>
                                 <Input
                                     value={form.title}
+                                    maxLength={200}
                                     onChange={(e) =>
                                         setForm({ ...form, title: e.target.value })
                                     }
                                 />
                             </div>
                             <div className="grid gap-2">
-                                <Label className="text-xs text-muted-foreground dark:text-sidebar-foreground/80">
-                                    Body
-                                </Label>
+                                <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-muted-foreground dark:text-sidebar-foreground/80">
+                                        Body
+                                    </Label>
+                                    <span className="text-[11px] tabular-nums text-muted-foreground/70">
+                                        {form.body.length}/400
+                                    </span>
+                                </div>
                                 <textarea
                                     value={form.body}
+                                    maxLength={400}
                                     onChange={(e) =>
                                         setForm({ ...form, body: e.target.value })
                                     }

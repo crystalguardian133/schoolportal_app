@@ -46,7 +46,8 @@ class HandleInertiaRequests extends Middleware
         }
 
         $query = \App\Models\Announcement::query()
-            ->where('created_at', '>=', now()->subDays(7));
+            ->where('created_at', '>=', now()->subDays(7))
+            ->whereDoesntHave('reads', fn ($q) => $q->where('user_uuid', $user->uuid));
 
         if (method_exists($user, 'hasRole') && $user->hasRole('student')) {
             $studentSection = $user->student?->section;

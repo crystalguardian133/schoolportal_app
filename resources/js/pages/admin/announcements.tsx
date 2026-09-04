@@ -262,11 +262,17 @@ export default function AdminAnnouncements({
 
                         <div className="space-y-3">
                             <div className="grid gap-2">
-                                <Label className="text-xs text-muted-foreground dark:text-sidebar-foreground/80">
-                                    Title
-                                </Label>
+                                <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-muted-foreground dark:text-sidebar-foreground/80">
+                                        Title
+                                    </Label>
+                                    <span className="text-[11px] tabular-nums text-muted-foreground/70">
+                                        {form.title.length}/{200}
+                                    </span>
+                                </div>
                                 <Input
                                     value={form.title}
+                                    maxLength={200}
                                     onChange={(e) =>
                                         setForm({
                                             ...form,
@@ -282,12 +288,18 @@ export default function AdminAnnouncements({
                                     <Label className="text-xs text-muted-foreground dark:text-sidebar-foreground/80">
                                         Post
                                     </Label>
-                                    <span className="text-[11px] tracking-[0.18em] text-muted-foreground/70 uppercase">
-                                        reddit-style editor
-                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[11px] tracking-[0.18em] text-muted-foreground/70 uppercase">
+                                            reddit-style editor
+                                        </span>
+                                        <span className="text-[11px] tabular-nums text-muted-foreground/70">
+                                            {form.body.length}/400
+                                        </span>
+                                    </div>
                                 </div>
                                 <textarea
                                     value={form.body}
+                                    maxLength={400}
                                     onChange={(e) =>
                                         setForm({
                                             ...form,
@@ -596,11 +608,17 @@ export default function AdminAnnouncements({
                     {editAnnouncement && (
                         <form onSubmit={submitEdit} className="mt-2 space-y-4">
                             <div className="grid gap-2">
-                                <Label className="text-xs text-muted-foreground dark:text-sidebar-foreground/80">
-                                    Title
-                                </Label>
+                                <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-muted-foreground dark:text-sidebar-foreground/80">
+                                        Title
+                                    </Label>
+                                    <span className="text-[11px] tabular-nums text-muted-foreground/70">
+                                        {form.title.length}/200
+                                    </span>
+                                </div>
                                 <Input
                                     value={form.title}
+                                    maxLength={200}
                                     onChange={(e) =>
                                         setForm({
                                             ...form,
@@ -610,11 +628,17 @@ export default function AdminAnnouncements({
                                 />
                             </div>
                             <div className="grid gap-2">
-                                <Label className="text-xs text-muted-foreground dark:text-sidebar-foreground/80">
-                                    Body
-                                </Label>
+                                <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-muted-foreground dark:text-sidebar-foreground/80">
+                                        Body
+                                    </Label>
+                                    <span className="text-[11px] tabular-nums text-muted-foreground/70">
+                                        {form.body.length}/400
+                                    </span>
+                                </div>
                                 <textarea
                                     value={form.body}
+                                    maxLength={400}
                                     onChange={(e) =>
                                         setForm({
                                             ...form,

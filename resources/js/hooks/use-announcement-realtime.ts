@@ -1,6 +1,7 @@
 import { usePage } from '@inertiajs/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import { echoClient } from '@/lib/echo';
 
 function getStorageKey(uuid?: string | null) {
     return `announcements_seen_at${uuid ? `_${uuid}` : ''}`;
@@ -129,6 +130,37 @@ export function useAnnouncementRealtime(onAnnouncementsUpdate?: () => void) {
 
         return () => clearInterval(interval);
     }, [checkNew]);
+
+    // Live updates over WebSockets (Reverb/Echo). When an announcement is
+    // broadcast, refresh the unread count and surface the toast immediately,
+    // instead of waiting for the next polling tick.
+    useEffect(() => {
+        if (!echoClient) {
+            return;
+        }
+
+        const channel = echoClient.channel('announcements');
+
+        channel
+            .listen('AnnouncementCreated', () => {
+                if (!skipToastRef.current) {
+                    setUnreadCount((count) => count + 1);
+                }
+
+                if (callbackRef.current) {
+                    callbackRef.current();
+                }
+            })
+            .error(() => {
+                // Socket errors fall back to the polling loop.
+            });
+
+        echoClient.connect();
+
+        return () => {
+            echoClient.leave('announcements');
+        };
+    }, []);
 
     useEffect(() => {
         if (unreadCount <= 0) {
