@@ -18,23 +18,23 @@ class RolePermissionSeeder extends Seeder
         $rows = [];
 
         foreach ($studentPerms as $pid) {
-            $rows[] = ['permission_uuid' => $pid, 'role_uuid' => $roleIds['student']];
+            $rows[] = ['permission_uuid' => $pid, 'role_uuid' => $roleIds['STUDENT']];
         }
         foreach ($staffPerms as $pid) {
-            $rows[] = ['permission_uuid' => $pid, 'role_uuid' => $roleIds['staff']];
+            $rows[] = ['permission_uuid' => $pid, 'role_uuid' => $roleIds['STAFF']];
         }
         foreach ($adminPerms as $pid) {
-            $rows[] = ['permission_uuid' => $pid, 'role_uuid' => $roleIds['admin']];
+            $rows[] = ['permission_uuid' => $pid, 'role_uuid' => $roleIds['ADMIN']];
         }
         // Principal and registrar roles also get all admin permissions
-        if (isset($roleIds['principal'])) {
+        if (isset($roleIds['PRINCIPAL'])) {
             foreach ($adminPerms as $pid) {
-                $rows[] = ['permission_uuid' => $pid, 'role_uuid' => $roleIds['principal']];
+                $rows[] = ['permission_uuid' => $pid, 'role_uuid' => $roleIds['PRINCIPAL']];
             }
         }
-        if (isset($roleIds['registrar'])) {
+        if (isset($roleIds['REGISTRAR'])) {
             foreach ($adminPerms as $pid) {
-                $rows[] = ['permission_uuid' => $pid, 'role_uuid' => $roleIds['registrar']];
+                $rows[] = ['permission_uuid' => $pid, 'role_uuid' => $roleIds['REGISTRAR']];
             }
         }
 

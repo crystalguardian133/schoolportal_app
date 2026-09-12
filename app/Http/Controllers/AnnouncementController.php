@@ -433,37 +433,7 @@ class AnnouncementController extends Controller
         return back()->with('success', 'Announcement deleted successfully.');
     }
 
-    public function newCount(Request $request)
-    {
-        $user = $request->user();
-        $since = $request->query('since');
-
-        $query = $this->visibleAnnouncementsQuery($request);
-
-        $total = $query->count();
-
-        $newQuery = (clone $query);
-        if ($since) {
-            $newQuery->where('created_at', '>', $since);
-        }
-        $newCount = $newQuery->count();
-
-        $latestUpdated = (clone $query)->max('updated_at');
-
-        return response()->json([
-            'count' => $newCount,
-            'total' => $total,
-            'updated_at' => $latestUpdated,
-        ]);
-    }
-
-    /**
-     * Notifications for the bell: the latest visible announcements for the
-     * current user, each flagged with whether the user has read/seen it.
-     *
-     * GET /announcements/recent
-     */
-    public function recent(Request $request)
+public function recent(Request $request)
     {
         $user = $request->user();
         $limit = (int) $request->query('limit', 30);
@@ -482,7 +452,7 @@ class AnnouncementController extends Controller
                 'created_by' => $announcement->creator?->name,
                 'created_at' => $announcement->created_at?->toIso8601String(),
                 'image_url' => $announcement->image_path ? url('/assets/announcements/'.basename($announcement->image_path)) : null,
-                'seen' => (bool) $announcement->reads_exists,
+                'seen' => (bool) $announcement->reads_exists || ($user && $announcement->created_by_user_uuid === $user->uuid),
             ])
             ->values()
             ->all();

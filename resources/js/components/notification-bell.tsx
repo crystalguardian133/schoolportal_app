@@ -7,8 +7,10 @@ import {
     DropdownMenuContent,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useNotifications } from '@/hooks/use-notifications';
-import type { NotificationRow } from '@/hooks/use-notifications';
+import {
+    useAnnouncements,
+} from '@/contexts/announcements-context';
+import type { NotificationRow } from '@/contexts/announcements-context';
 import { cn } from '@/lib/utils';
 
 type NotificationBellProps = {
@@ -53,7 +55,7 @@ export function NotificationBell({
     iconClassName,
 }: NotificationBellProps) {
     const { notifications, unread, loaded, refresh, markSeen } =
-        useNotifications();
+        useAnnouncements();
     const [open, setOpen] = useState(false);
     const [selected, setSelected] = useState<NotificationRow | null>(null);
 

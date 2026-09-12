@@ -3,7 +3,7 @@ import { Megaphone, ChevronDown } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { AnnouncementModal } from '@/components/announcement-modal';
 import { StudentPageShell } from '@/components/student-page-shell';
-import { useAnnouncementRealtime } from '@/hooks/use-announcement-realtime';
+import { useAnnouncements } from '@/contexts/announcements-context';
 
 type AnnouncementRow = {
     uuid: string;
@@ -27,8 +27,11 @@ export default function Announcements() {
         useState<AnnouncementRow | null>(null);
     const [currentSort, setCurrentSort] = useState(sort);
 
-    const { unreadCount, markAsRead } = useAnnouncementRealtime(() => {
-        router.reload({ only: ['announcements'] });
+    useAnnouncements({
+        markSeenOnMount: true,
+        onUpdate: () => {
+            router.reload({ only: ['announcements'] });
+        },
     });
 
     useEffect(() => {

@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useAnnouncementRealtime } from '@/hooks/use-announcement-realtime';
+import { useAnnouncements } from '@/contexts/announcements-context';
 
 type AnnouncementRow = {
     uuid: string;
@@ -83,8 +83,11 @@ export default function AdminAnnouncements({
         null,
     );
 
-    const { unreadCount, markAsRead } = useAnnouncementRealtime(() => {
-        router.reload({ only: ['announcements'], preserveState: true });
+    useAnnouncements({
+        markSeenOnMount: true,
+        onUpdate: () => {
+            router.reload({ only: ['announcements'], preserveState: true });
+        },
     });
 
     useEffect(() => {
