@@ -4,6 +4,7 @@ FROM php:8.4-fpm AS builder
 # python3 + ffmpeg + yt-dlp are required by the Music Player (MusicController uses yt-dlp via Process)
 RUN apt-get update && apt-get install -y \
     git curl unzip libpng-dev libonig-dev libxml2-dev libzip-dev libpq-dev \
+    libcurl4-openssl-dev \
     python3 ffmpeg \
     && docker-php-ext-install pdo_mysql pdo_pgsql mbstring exif pcntl bcmath gd zip curl \
     && curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp \
