@@ -2,6 +2,7 @@ import { createInertiaApp } from '@inertiajs/react';
 import { PwaBanners } from '@/components/pwa/pwa-banners';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { AnnouncementsProvider } from '@/contexts/announcements-context';
 import { MusicPlayerProvider } from '@/contexts/music-player-context';
 import { PwaProvider } from '@/contexts/pwa-context';
 import { initializeTheme } from '@/hooks/use-appearance';
@@ -31,17 +32,31 @@ createInertiaApp({
     },
     strictMode: true,
     withApp(app, { page }) {
-        const permissions =
-            (page.props.auth as { permissions?: string[] } | undefined)?.permissions ?? [];
+        const props = page.props as {
+            auth?: {
+                user?: { uuid?: string; role?: string | null } | null;
+                permissions?: string[];
+            };
+            unreadAnnouncementsCount?: number;
+        };
+        const authUser = props.auth?.user;
+        const permissions = props.auth?.permissions ?? [];
         const canUseMusic = permissions.includes('access music player');
 
         return (
             <PwaProvider>
                 <MusicPlayerProvider canUseMusic={canUseMusic}>
                     <TooltipProvider delayDuration={0}>
-                        {app}
-                        <Toaster />
-                        <PwaBanners />
+                        <AnnouncementsProvider
+                            initialUnreadCount={props.unreadAnnouncementsCount}
+                            initialUrl={page.url}
+                            role={authUser?.role ?? null}
+                            authenticated={!!authUser}
+                        >
+                            {app}
+                            <Toaster />
+                            <PwaBanners />
+                        </AnnouncementsProvider>
                     </TooltipProvider>
                 </MusicPlayerProvider>
             </PwaProvider>

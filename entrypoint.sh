@@ -1,6 +1,59 @@
 #!/bin/sh
 set -e
 
+APP_PID=""
+REVERB_PID=""
+QUEUE_PID=""
+
+cleanup() {
+  echo "Stopping background services..."
+  [ -n "$APP_PID" ] && kill "$APP_PID" 2>/dev/null || true
+  [ -n "$REVERB_PID" ] && kill "$REVERB_PID" 2>/dev/null || true
+  [ -n "$QUEUE_PID" ] && kill "$QUEUE_PID" 2>/dev/null || true
+  wait 2>/dev/null || true
+  exit 0
+}
+
+trap cleanup INT TERM
+
+# On every redeploy (container start) refresh dependencies so the running
+# image picks up the latest composer/npm patches without a rebuild.
+# Set UPDATE_DEPENDENCIES=false to skip (faster startup, uses bundled deps).
+if [ "${UPDATE_DEPENDENCIES:-true}" = "true" ]; then
+  echo "Redeploy: updating dependencies..."
+  mkdir -p /tmp/composer /tmp/npm
+  export COMPOSER_HOME="${COMPOSER_HOME:-/tmp/composer}"
+  export NPM_CONFIG_CACHE="${NPM_CONFIG_CACHE:-/tmp/npm}"
+  composer update --no-dev --no-interaction --prefer-dist \
+    || echo "WARNING: composer update failed, using bundled vendor/"
+  npm update \
+    || echo "WARNING: npm update failed, using bundled node_modules/"
+  npm run build \
+    || echo "WARNING: asset build failed, keeping previous build/"
+else
+  echo "Skipping dependency update (UPDATE_DEPENDENCIES != true)"
+fi
+
+start_services() {
+  echo "Starting Reverb WebSocket server on port ${REVERB_PORT:-8081}..."
+  php artisan reverb:start --port="${REVERB_PORT:-8081}" >/dev/null 2>&1 &
+  REVERB_PID=$!
+
+  # Queue worker is required so queued jobs run (e.g. SendAnnouncementPushNotification).
+  # The container's default QUEUE_CONNECTION=database, but skip when sync/local.
+  if [ "${QUEUE_CONNECTION:-database}" != "sync" ]; then
+    echo "Starting queue worker..."
+    php artisan queue:work --sleep=1 --tries=3 >/dev/null 2>&1 &
+    QUEUE_PID=$!
+  fi
+
+  echo "Starting server on port ${PORT:-8080}..."
+  php artisan serve --host=0.0.0.0 --port="${PORT:-8080}" &
+  APP_PID=$!
+
+  wait "$APP_PID"
+}
+
 echo "Caching config..."
 php artisan config:cache
 php artisan route:cache 2>/dev/null || true
@@ -25,11 +78,7 @@ if [ "$STATUS" = "external" ] && [ "$MODE" != "always" ]; then
     exit 1
   fi
 
-  echo "Starting Reverb WebSocket server on port ${REVERB_PORT:-8081}..."
-  php artisan reverb:start --port="${REVERB_PORT:-8081}" >/dev/null 2>&1 &
-
-  echo "Starting server on port ${PORT:-8080}..."
-  php artisan serve --host=0.0.0.0 --port="${PORT:-8080}"
+  start_services
   exit 0
 fi
 
@@ -51,8 +100,4 @@ else
   echo "Skipping seed (RUN_SEED not set to true)"
 fi
 
-echo "Starting Reverb WebSocket server on port ${REVERB_PORT:-8081}..."
-php artisan reverb:start --port="${REVERB_PORT:-8081}" >/dev/null 2>&1 &
-
-echo "Starting server on port ${PORT:-8080}..."
-php artisan serve --host=0.0.0.0 --port="${PORT:-8080}"
+start_services

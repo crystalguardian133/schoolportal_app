@@ -10,7 +10,7 @@ class RolesTableSeeder extends Seeder
 {
     public function run(): void
     {
-        foreach (['student', 'staff', 'admin', 'registrar', 'principal', 'teacher', 'department-head', 'school-head', 'developer'] as $name) {
+        foreach (['STUDENT', 'STAFF', 'ADMIN', 'REGISTRAR', 'PRINCIPAL', 'TEACHER', 'DEPARTMENT-HEAD', 'SCHOOL-HEAD', 'DEVELOPER'] as $name) {
             // Create if missing; do not attempt to update the primary key on existing rows
             Role::query()->firstOrCreate(
                 ['name' => $name],

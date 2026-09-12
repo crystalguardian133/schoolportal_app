@@ -106,7 +106,6 @@ Route::delete('admin/subjects/teachers/{teacherUuid}/{subjectUuid}', [AdminSubje
     Route::post('teacher/announcements', [AnnouncementController::class, 'teacherStore'])->name('teacher.announcements.store');
     Route::patch('teacher/announcements/{uuid}', [AnnouncementController::class, 'update'])->name('teacher.announcements.update');
     Route::delete('teacher/announcements/{uuid}', [AnnouncementController::class, 'destroy'])->name('teacher.announcements.destroy');
-    Route::get('announcements/new-count', [AnnouncementController::class, 'newCount'])->name('announcements.new-count');
     Route::get('announcements/recent', [AnnouncementController::class, 'recent'])->name('announcements.recent');
     Route::post('announcements/seen', [AnnouncementController::class, 'markSeen'])->name('announcements.seen');
     Route::get('adviser/dashboard', [\App\Http\Controllers\AdviserDashboardController::class, 'index'])->name('adviser.dashboard');

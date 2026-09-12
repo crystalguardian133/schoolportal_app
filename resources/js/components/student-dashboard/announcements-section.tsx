@@ -1,6 +1,6 @@
 import { Megaphone } from 'lucide-react';
 import { SectionShell } from '@/components/student-dashboard/section-shell';
-import { useAnnouncementRealtime } from '@/hooks/use-announcement-realtime';
+import { useAnnouncements } from '@/contexts/announcements-context';
 
 type AnnouncementsSectionProps = {
     unseenCount: number;
@@ -9,9 +9,9 @@ type AnnouncementsSectionProps = {
 export function AnnouncementsSection({
     unseenCount,
 }: AnnouncementsSectionProps) {
-    const { unreadCount } = useAnnouncementRealtime();
+    const { unread } = useAnnouncements();
 
-    const displayCount = Math.max(unseenCount, unreadCount);
+    const displayCount = Math.max(unseenCount, unread);
 
     return (
         <SectionShell

@@ -25,7 +25,7 @@ import {
 import { useState } from 'react';
 import { PortalPageShell } from '@/components/portal-page-shell';
 import { QrCodeModal } from '@/components/qr-code-modal';
-import { useAnnouncementRealtime } from '@/hooks/use-announcement-realtime';
+import { useAnnouncements } from '@/contexts/announcements-context';
 import { cn, getFirstName } from '@/lib/utils';
 import { dashboard } from '@/routes';
 
@@ -111,7 +111,7 @@ function formatGrade(n: number | null): string {
 export default function Dashboard({ user, sections }: Props) {
     const { auth } = usePage<Props>().props;
     const firstName = getFirstName(user?.name ?? auth.user?.name) || 'there';
-    const { unreadCount } = useAnnouncementRealtime();
+    const { unread: unreadCount } = useAnnouncements();
     const [qrOpen, setQrOpen] = useState(false);
 
     const studentSection = sections.find(

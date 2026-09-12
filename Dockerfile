@@ -5,7 +5,7 @@ FROM php:8.4-fpm AS builder
 RUN apt-get update && apt-get install -y \
     git curl unzip libpng-dev libonig-dev libxml2-dev libzip-dev libpq-dev \
     python3 ffmpeg \
-    && docker-php-ext-install pdo_mysql pdo_pgsql mbstring exif pcntl bcmath gd zip \
+    && docker-php-ext-install pdo_mysql pdo_pgsql mbstring exif pcntl bcmath gd zip curl \
     && curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp \
     && chmod +x /usr/local/bin/yt-dlp \
     && rm -rf /var/lib/apt/lists/*
@@ -31,13 +31,15 @@ RUN npm ci --legacy-peer-deps
 COPY . .
 
 # Ensure Laravel's required storage directories exist and are writable
+# ext-curl is installed above (R2 / AWS S3 adapter + Composer rely on it)
 RUN mkdir -p storage/framework/cache \
     storage/framework/sessions \
     storage/framework/views \
     storage/logs \
     bootstrap/cache \
     resources/assets/announcements \
-    && chmod -R 775 storage bootstrap/cache resources/assets/announcements
+    resources/assets/profile_pictures \
+    && chmod -R 775 storage bootstrap/cache resources/assets
 
 RUN composer dump-autoload --optimize
 
@@ -48,6 +50,8 @@ RUN cp .env.example .env && \
     php artisan config:clear
 
 # Build-time env vars for Vite (baked into JS bundle at build time)
+# For a TLS-terminated deployment pass VITE_REVERB_SCHEME=https and
+# VITE_REVERB_PORT=443 so clients connect over wss through the proxy.
 ARG VITE_APP_NAME
 ARG VITE_REVERB_APP_KEY
 ARG VITE_REVERB_HOST
