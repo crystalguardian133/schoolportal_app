@@ -24,7 +24,7 @@ class RolePermissionSeeder extends Seeder
             $rows[] = ['permission_uuid' => $pid, 'role_uuid' => $roleIds['STAFF']];
         }
         foreach ($adminPerms as $pid) {
-            $rows[] = ['permission_uuid' => $pid, 'role_uuid' => $roleIds['ADMIN']];
+            $rows[] = ['permission_uuid' => $pid, 'role_uuid' => $roleIds['ADMINISTRATOR']];
         }
         // Principal and registrar roles also get all admin permissions
         if (isset($roleIds['PRINCIPAL'])) {
