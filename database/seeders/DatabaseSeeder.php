@@ -47,6 +47,6 @@ class DatabaseSeeder extends Seeder
             $admin->save();
         }
 
-        $admin->assignRole('admin');
+        $admin->assignRole('ADMINISTRATOR');
     }
 }
