@@ -16,6 +16,12 @@ cleanup() {
 
 trap cleanup INT TERM
 
+# Detect whether the seed-populated tables already contain data.
+# Returns 0 (true) when data is present, 1 otherwise.
+db_has_seed_data() {
+  [ "$(php artisan app:db-has-seed-data 2>/dev/null)" = "yes" ]
+}
+
 # Optional: on a redeploy (container start) refresh dependencies so the
 # running image picks up the latest composer/npm patches without a rebuild.
 # DISABLED by default -- npm run build is memory-heavy and can OOM the
@@ -91,11 +97,11 @@ else
 fi
 
 if [ "$RUN_SEED" = "true" ]; then
-  if [ "$STATUS" = "empty" ]; then
+  if db_has_seed_data; then
+    echo "Skipping seed (database already contains data)"
+  else
     echo "Running seeders..."
     php artisan db:seed --force
-  else
-    echo "Skipping seed (database already contains data)"
   fi
 else
   echo "Skipping seed (RUN_SEED not set to true)"
