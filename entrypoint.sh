@@ -16,10 +16,11 @@ cleanup() {
 
 trap cleanup INT TERM
 
-# On every redeploy (container start) refresh dependencies so the running
-# image picks up the latest composer/npm patches without a rebuild.
-# Set UPDATE_DEPENDENCIES=false to skip (faster startup, uses bundled deps).
-if [ "${UPDATE_DEPENDENCIES:-true}" = "true" ]; then
+# Optional: on a redeploy (container start) refresh dependencies so the
+# running image picks up the latest composer/npm patches without a rebuild.
+# DISABLED by default -- npm run build is memory-heavy and can OOM the
+# container on cloud build services. Set UPDATE_DEPENDENCIES=true to enable.
+if [ "${UPDATE_DEPENDENCIES:-false}" = "true" ]; then
   echo "Redeploy: updating dependencies..."
   mkdir -p /tmp/composer /tmp/npm
   export COMPOSER_HOME="${COMPOSER_HOME:-/tmp/composer}"
