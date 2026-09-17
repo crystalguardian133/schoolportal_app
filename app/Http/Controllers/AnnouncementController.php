@@ -12,6 +12,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class AnnouncementController extends Controller
 {
@@ -322,7 +323,12 @@ class AnnouncementController extends Controller
         try {
             broadcast(new AnnouncementCreated($announcement));
         } catch (\Throwable $e) {
-            // broadcast failures should not break the request
+            // broadcast failures should not break the request, but they do
+            // mean realtime recipients get nothing (list + push still work)
+            Log::warning('[WS] Announcement broadcast failed', [
+                'announcement_uuid' => $announcement->uuid ?? null,
+                'error' => $e->getMessage(),
+            ]);
         }
 
         AnnouncementPublished::dispatch($announcement);
@@ -405,7 +411,12 @@ class AnnouncementController extends Controller
         try {
             broadcast(new AnnouncementCreated($announcement));
         } catch (\Throwable $e) {
-            // broadcast failures should not break the request
+            // broadcast failures should not break the request, but they do
+            // mean realtime recipients get nothing (list + push still work)
+            Log::warning('[WS] Announcement broadcast failed', [
+                'announcement_uuid' => $announcement->uuid ?? null,
+                'error' => $e->getMessage(),
+            ]);
         }
 
         AnnouncementPublished::dispatch($announcement);
@@ -697,7 +708,12 @@ public function recent(Request $request)
         try {
             broadcast(new AnnouncementCreated($announcement));
         } catch (\Throwable $e) {
-            // broadcast failures should not break the request
+            // broadcast failures should not break the request, but they do
+            // mean realtime recipients get nothing (list + push still work)
+            Log::warning('[WS] Announcement broadcast failed', [
+                'announcement_uuid' => $announcement->uuid ?? null,
+                'error' => $e->getMessage(),
+            ]);
         }
 
         AnnouncementPublished::dispatch($announcement);

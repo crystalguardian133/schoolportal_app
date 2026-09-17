@@ -13,7 +13,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-export default function EditUserModal({ user, sections, takenAdviserSections = [] }: any) {
+export default function EditUserModal({ user, sections, takenAdviserSections = [], userRoles = [] }: any) {
+    const isStudent = Array.isArray(userRoles) &&
+        userRoles.some((r: any) => (r?.name ?? '').toUpperCase() === 'STUDENT');
     const [open, setOpen] = useState(false);
     const currentAvatarUrl = user.profile_picture
         ? `/assets/${user.profile_picture}`
@@ -122,10 +124,12 @@ export default function EditUserModal({ user, sections, takenAdviserSections = [
                         setOpen(false);
                         showToast('User updated successfully.', 'success');
                     }
+
                     router.reload();
                 },
                 onError: (errors) => {
                     const firstError = Object.values(errors || {})[0];
+
                     showToast(
                         (firstError as string) || 'Unable to update user.',
                         'error',
@@ -150,10 +154,12 @@ export default function EditUserModal({ user, sections, takenAdviserSections = [
                         setOpen(false);
                         showToast('User updated successfully.', 'success');
                     }
+
                     router.reload();
                 },
                 onError: (errors) => {
                     const firstError = Object.values(errors || {})[0];
+
                     showToast(
                         (firstError as string) || 'Unable to update user.',
                         'error',
@@ -193,58 +199,70 @@ export default function EditUserModal({ user, sections, takenAdviserSections = [
 
                 <form onSubmit={submit} className="mt-4 grid gap-4">
                     <div className="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
-                        <div
-                            onDragOver={(e) => {
-                                e.preventDefault();
-                                setIsDraggingAvatar(true);
-                            }}
-                            onDragLeave={() => setIsDraggingAvatar(false)}
-                            onDrop={(e) => {
-                                e.preventDefault();
-                                setIsDraggingAvatar(false);
-                                handleAvatarChange(
-                                    e.dataTransfer.files?.[0] ?? null,
-                                );
-                            }}
-                            className={`grid gap-4 rounded-3xl border-2 border-dashed p-4 transition ${isDraggingAvatar ? 'border-indigo-500 bg-indigo-50/80 dark:bg-indigo-950/20' : 'border-border bg-background/80'}`}
-                        >
-                            <div className="space-y-2">
-                                <Label className="text-xs">Profile photo</Label>
-                                <div className="flex items-center gap-4">
-                                    <div className="h-28 w-28 overflow-hidden rounded-2xl border border-border bg-muted/20 shadow-sm">
-                                        {avatarPreview ? (
-                                            <img
-                                                src={avatarPreview}
-                                                alt="Profile preview"
-                                                className="h-full w-full object-cover"
-                                            />
-                                        ) : (
-                                            <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
-                                                No photo
-                                            </div>
-                                        )}
-                                    </div>
+                        {isStudent && (
+                            <div
+                                onDragOver={(e) => {
+                                    e.preventDefault();
+                                    setIsDraggingAvatar(true);
+                                }}
+                                onDragLeave={() => setIsDraggingAvatar(false)}
+                                onDrop={(e) => {
+                                    e.preventDefault();
+                                    setIsDraggingAvatar(false);
+                                    handleAvatarChange(
+                                        e.dataTransfer.files?.[0] ?? null,
+                                    );
+                                }}
+                                className={`grid gap-4 rounded-3xl border-2 border-dashed p-4 transition ${isDraggingAvatar ? 'border-indigo-500 bg-indigo-50/80 dark:bg-indigo-950/20' : 'border-border bg-background/80'}`}
+                            >
+                                <div className="space-y-2">
+                                    <Label className="text-xs">Profile photo</Label>
+                                    <div className="flex items-center gap-4">
+                                        <div className="h-28 w-28 overflow-hidden rounded-2xl border border-border bg-muted/20 shadow-sm">
+                                            {avatarPreview ? (
+                                                <img
+                                                    src={avatarPreview}
+                                                    alt="Profile preview"
+                                                    className="h-full w-full object-cover"
+                                                />
+                                            ) : (
+                                                <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
+                                                    No photo
+                                                </div>
+                                            )}
+                                        </div>
 
-                                    <div className="space-y-1 text-sm text-muted-foreground">
-                                        <p className="font-medium text-foreground">
-                                            Drop a new image here.
-                                        </p>
-                                        <p>JPG, PNG, or WEBP up to 2MB.</p>
+                                        <div className="space-y-1 text-sm text-muted-foreground">
+                                            <p className="font-medium text-foreground">
+                                                Drop a new image here.
+                                            </p>
+                                            <p>JPG, PNG, or WEBP up to 2MB.</p>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <Input
-                                type="file"
-                                accept="image/*"
-                                onChange={(e) =>
-                                    handleAvatarChange(
-                                        e.target.files?.[0] ?? null,
-                                    )
-                                }
-                                className="block w-full text-sm text-muted-foreground file:mr-4 file:rounded-full file:border-0 file:bg-foreground file:px-4 file:py-2 file:text-sm file:font-medium file:text-background hover:file:opacity-90"
-                            />
-                        </div>
+                                <Input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={(e) =>
+                                        handleAvatarChange(
+                                            e.target.files?.[0] ?? null,
+                                        )
+                                    }
+                                    className="block w-full text-sm text-muted-foreground file:mr-4 file:rounded-full file:border-0 file:bg-foreground file:px-4 file:py-2 file:text-sm file:font-medium file:text-background hover:file:opacity-90"
+                                />
+                            </div>
+                        )}
+
+                        {!isStudent && (
+                            <div className="rounded-3xl border border-sidebar-border/70 bg-white p-4 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
+                                <Label className="text-xs">Profile photo</Label>
+                                <p className="mt-2 text-sm text-muted-foreground">
+                                    Profile photo is managed by the account
+                                    owner from their profile page.
+                                </p>
+                            </div>
+                        )}
 
                         <div className="space-y-4 rounded-3xl border border-sidebar-border/70 bg-white p-4 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
                             <div className="grid gap-2 sm:grid-cols-3">

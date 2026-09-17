@@ -16,11 +16,11 @@ use Illuminate\Support\Facades\File;
 class ProfileController extends Controller
 {
     /**
-     * Show the user's profile settings page.
+     * Show the user's unified profile settings page.
      */
     public function edit(Request $request): Response
     {
-        return Inertia::render('settings/profile', [
+        return Inertia::render('profile/index', [
             'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
             'status' => $request->session()->get('status'),
         ]);
@@ -39,12 +39,10 @@ class ProfileController extends Controller
 
             $user = $request->user();
             $subfolder = 'admin-staff';
-            if (method_exists($user, 'hasRole')) {
-                if ($user->hasRole('student')) {
-                    $subfolder = 'students';
-                } elseif ($user->hasRole('teacher')) {
-                    $subfolder = 'teachers';
-                }
+            if ($user->student) {
+                $subfolder = 'students';
+            } elseif (method_exists($user, 'hasRole') && $user->roles->contains(fn ($role) => strtoupper((string) $role->name) === 'TEACHER')) {
+                $subfolder = 'teachers';
             }
 
             $destDir = base_path('resources/assets/profile_pictures/'.$subfolder);
@@ -71,21 +69,18 @@ class ProfileController extends Controller
         $request->session()->put('auth', ['user' => $request->user()]);
 
         $profilePicture = $data['profile_picture'] ?? null;
-        if ($request->user()->hasRole('student')) {
-            $student = $request->user()->student;
-            if ($student) {
-                $studentData = [];
-                if (isset($profilePicture)) {
-                    $studentData['profile_picture'] = $profilePicture;
-                }
-                if (isset($data['first_name'], $data['middle_name'], $data['last_name'])) {
-                    $studentData['first_name'] = $data['first_name'];
-                    $studentData['middle_name'] = $data['middle_name'];
-                    $studentData['last_name'] = $data['last_name'];
-                }
-                if (!empty($studentData)) {
-                    $student->update($studentData);
-                }
+        if ($student = $request->user()->student) {
+            $studentData = [];
+            if (isset($profilePicture)) {
+                $studentData['profile_picture'] = $profilePicture;
+            }
+            if (isset($data['first_name'], $data['middle_name'], $data['last_name'])) {
+                $studentData['first_name'] = $data['first_name'];
+                $studentData['middle_name'] = $data['middle_name'];
+                $studentData['last_name'] = $data['last_name'];
+            }
+            if (!empty($studentData)) {
+                $student->update($studentData);
             }
         }
 

@@ -11,27 +11,20 @@ class AppDbHasSeedData extends Command
 {
     protected $signature = 'app:db-has-seed-data';
 
-    protected $description = 'Detect whether any seed-populated table already contains data.';
-
-    protected array $tables = ['roles', 'permissions', 'school_years', 'users'];
+    protected $description = 'Detect whether the application was fully seeded (admin user exists).';
 
     public function handle(): int
     {
         try {
-            foreach ($this->tables as $table) {
-                if (Schema::hasTable($table) && DB::table($table)->exists()) {
-                    $this->line('yes');
-
-                    return 0;
-                }
-            }
+            $seeded = Schema::hasTable('users')
+                && DB::table('users')->where('email', 'admin@example.com')->exists();
         } catch (Throwable $e) {
             $this->error('Database is unreachable: '.$e->getMessage());
 
             return 2;
         }
 
-        $this->line('no');
+        $this->line($seeded ? 'yes' : 'no');
 
         return 0;
     }

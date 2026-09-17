@@ -18,6 +18,8 @@ supabase.txt
 .env
 .env.backup
 .env.production
+.env.prod
+deploy.env
 .phpactor.json
 .phpunit.result.cache
 Homestead.json

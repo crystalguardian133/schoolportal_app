@@ -232,6 +232,15 @@ class EnrollmentController extends Controller
             'all_input' => $request->all(),
         ]);
 
+        // Normalize LRN to digits-only so visually identical LRNs (with dashes,
+        // spaces, etc.) are treated as the same value and the unique check holds.
+        $newStudentInput = $request->input('new_student');
+        if (is_array($newStudentInput) && array_key_exists('lrn', $newStudentInput)) {
+            $normalizedLrn = preg_replace('/\D/', '', (string) $newStudentInput['lrn']);
+            $newStudentInput['lrn'] = $normalizedLrn === '' ? null : $normalizedLrn;
+            $request->merge(['new_student' => $newStudentInput]);
+        }
+
         try {
             $data = $request->validate([
                 'student_uuids' => 'nullable|array',
@@ -257,6 +266,8 @@ class EnrollmentController extends Controller
                 'new_student.last_grade_level' => ['required_with:new_student', 'string', 'max:100', 'regex:/^\d*$/'],
                 'new_student.previous_section' => 'nullable|string|max:255',
                 'new_student.avatar' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            ], [
+                'new_student.lrn.unique' => 'The LRN you entered is already registered to another student.',
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             Log::error('[ENROLLMENT] validation failed', [

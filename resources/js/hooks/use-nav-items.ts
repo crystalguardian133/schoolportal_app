@@ -20,6 +20,7 @@ import {
     Shield,
     UserCog,
     UserCheck,
+    UserRound,
     Users,
 } from 'lucide-react';
 import { toUrl } from '@/lib/utils';
@@ -42,6 +43,11 @@ const platformNavItems: NavItem[] = [
         title: 'Reports & Feedback',
         href: '/feedback',
         icon: MessageSquare,
+    },
+    {
+        title: 'My Profile',
+        href: '/profile',
+        icon: UserRound,
     },
 ];
 
@@ -76,6 +82,11 @@ const studentNavItems: NavItem[] = [
         href: '/feedback',
         icon: MessageSquare,
     },
+    {
+        title: 'My Profile',
+        href: '/student/profile',
+        icon: UserRound,
+    },
 ];
 
 const staffNavItems: NavItem[] = [
@@ -108,6 +119,11 @@ const staffNavItems: NavItem[] = [
         title: 'Reports & Feedback',
         href: '/feedback',
         icon: MessageSquare,
+    },
+    {
+        title: 'My Profile',
+        href: '/profile',
+        icon: UserRound,
     },
 ];
 
@@ -223,6 +239,11 @@ const adminNavItems: NavItem[] = [
         icon: Bug,
         permission: 'access developer dashboard',
     },
+    {
+        title: 'My Profile',
+        href: '/profile',
+        icon: UserRound,
+    },
 ];
 
 const teacherNavItems: NavItem[] = [
@@ -272,6 +293,11 @@ const teacherNavItems: NavItem[] = [
         title: 'Reports & Feedback',
         href: '/feedback',
         icon: MessageSquare,
+    },
+    {
+        title: 'My Profile',
+        href: '/profile',
+        icon: UserRound,
     },
 ];
 
@@ -325,6 +351,11 @@ const deptHeadNavItems: NavItem[] = [
         title: 'Reports & Feedback',
         href: '/feedback',
         icon: MessageSquare,
+    },
+    {
+        title: 'My Profile',
+        href: '/profile',
+        icon: UserRound,
     },
 ];
 
@@ -403,6 +434,11 @@ const schoolHeadNavItems: NavItem[] = [
         icon: Bug,
         permission: 'access developer dashboard',
     },
+    {
+        title: 'My Profile',
+        href: '/profile',
+        icon: UserRound,
+    },
 ];
 
 const developerNavItems: NavItem[] = [
@@ -420,6 +456,11 @@ const developerNavItems: NavItem[] = [
         title: 'Developer Reports',
         href: '/developer/reports',
         icon: Bug,
+    },
+    {
+        title: 'My Profile',
+        href: '/profile',
+        icon: UserRound,
     },
 ];
 
