@@ -102,11 +102,13 @@ php artisan view:cache 2>/dev/null || true
 
 MODE="${RUN_MIGRATIONS:-auto}"
 
-if ! STATUS="$(php artisan app:db-status)"; then
+if ! STATUS="$(php artisan app:db-status 2>&1)"; then
   echo "Database is unreachable or its state could not be determined. Aborting startup to protect existing data."
+  echo "---- Diagnostic output from app:db-status ----"
+  echo "$STATUS"
+  echo "-----------------------------------------------"
   exit 1
 fi
-
 echo "Database status: $STATUS"
 
 if [ "$STATUS" = "external" ] && [ "$MODE" != "always" ]; then
