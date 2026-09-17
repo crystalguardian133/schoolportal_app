@@ -159,7 +159,7 @@ class AdminStudentController extends Controller
                 'grade_level' => $student->grade_level,
                 'section' => $student->section,
                 'section_uuid' => $student->section_uuid,
-                'profile_picture' => $student->profile_picture,
+                'profile_picture' => $student->profile_picture ?: $user?->profile_picture,
                 'email' => $user?->email,
             ],
             'classSections' => $classSections,
@@ -262,6 +262,9 @@ class AdminStudentController extends Controller
 
             $student->profile_picture = 'profile_pictures/students/'.$filename;
             $student->save();
+
+            $user->profile_picture = $student->profile_picture;
+            $user->save();
         }
 
         return redirect()->route('admin.manage-students.index')

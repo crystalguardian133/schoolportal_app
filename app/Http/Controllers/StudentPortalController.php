@@ -5,7 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Student;
 use App\Models\StudentSubject;
 use App\Models\Attendance;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -118,8 +121,145 @@ class StudentPortalController extends Controller
         }
 
         return Inertia::render('student/profile', [
-            'student' => $student,
+            'student' => $student ? [
+                'uuid' => $student->uuid,
+                'name' => $student->full_name ?: $student->name,
+                'first_name' => $student->first_name,
+                'middle_name' => $student->middle_name,
+                'last_name' => $student->last_name,
+                'email' => $student->user?->email,
+                'lrn' => $student->lrn,
+                'student_id' => $student->student_id,
+                'grade_level' => $student->grade_level,
+                'section' => $student->section,
+                'school_year' => $student->school_year,
+                'birthday' => $student->birthday,
+                'age' => $student->age,
+                'contact_number' => $student->contact_number,
+                'address' => $student->address,
+                'address_zone_street' => $student->address_zone_street,
+                'address_barangay' => $student->address_barangay,
+                'address_municipality' => $student->address_municipality,
+                'address_province' => $student->address_province,
+                'previous_school' => $student->previous_school,
+                'last_school_year' => $student->last_school_year,
+                'last_grade_level' => $student->last_grade_level,
+                'previous_section' => $student->previous_section,
+                'profile_picture' => $student->profile_picture ?: $student->user?->profile_picture,
+            ] : null,
         ]);
+    }
+
+    public function updateProfile(Request $request): RedirectResponse
+    {
+        $student = $this->student($request);
+
+        if (! $student) {
+            abort(404, 'Student profile not found.');
+        }
+
+        $user = $student->user;
+
+        $data = $request->validate([
+            'first_name' => 'nullable|string|max:255',
+            'middle_name' => 'nullable|string|max:255',
+            'last_name' => 'nullable|string|max:255',
+            'email' => 'nullable|email|max:255',
+            'birthday' => 'nullable|date',
+            'contact_number' => ['nullable', 'string', 'max:50', 'regex:/^\d*$/'],
+            'address_zone_street' => 'nullable|string|max:255',
+            'address_barangay' => 'nullable|string|max:255',
+            'address_municipality' => 'nullable|string|max:255',
+            'address_province' => 'nullable|string|max:255',
+            'previous_school' => 'nullable|string|max:255',
+            'last_school_year' => ['nullable', 'string', 'max:50', 'regex:/^\d*(?:-\d+)*$/'],
+            'last_grade_level' => ['nullable', 'string', 'max:100', 'regex:/^\d*$/'],
+            'previous_section' => 'nullable|string|max:255',
+            'avatar' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+        ]);
+
+        if (! empty($data['email']) && $user) {
+            $emailTaken = DB::table('users')
+                ->where('email', $data['email'])
+                ->where('uuid', '<>', $user->uuid)
+                ->exists();
+
+            if ($emailTaken) {
+                return back()->with('error', 'Email already in use by another account.');
+            }
+        }
+
+        $student->fill(collect($data)->except(['email', 'avatar', 'lrn', 'student_id'])->toArray());
+
+        if (isset($data['lrn']) && $data['lrn'] !== null) {
+            $normalizedLrn = preg_replace('/\D/', '', (string) $data['lrn']);
+            $normalizedLrn = $normalizedLrn === '' ? null : $normalizedLrn;
+            $data['lrn'] = $normalizedLrn;
+        }
+
+        if (! empty($data['lrn']) && $data['lrn'] !== $student->lrn) {
+            $lrnTaken = DB::table('students')
+                ->where('lrn', $data['lrn'])
+                ->where('uuid', '<>', $student->uuid)
+                ->exists();
+
+            if ($lrnTaken) {
+                return back()->with('error', 'LRN already in use by another student.');
+            }
+            $student->lrn = $data['lrn'];
+        } elseif (array_key_exists('lrn', $data)) {
+            $student->lrn = $data['lrn'];
+        }
+
+        if (! empty($data['student_id']) && $data['student_id'] !== $student->student_id) {
+            $idTaken = DB::table('students')
+                ->where('student_id', $data['student_id'])
+                ->where('uuid', '<>', $student->uuid)
+                ->exists();
+
+            if ($idTaken) {
+                return back()->with('error', 'Student ID already in use by another student.');
+            }
+            $student->student_id = $data['student_id'];
+        } elseif (array_key_exists('student_id', $data)) {
+            $student->student_id = $data['student_id'];
+        }
+
+        $student->address = trim(implode(', ', array_filter([
+            $data['address_zone_street'] ?? null,
+            $data['address_barangay'] ?? null,
+            $data['address_municipality'] ?? null,
+            $data['address_province'] ?? null,
+        ]))) ?: null;
+        $student->save();
+
+        if ($user && isset($data['email'])) {
+            $user->email = $data['email'];
+            $user->save();
+        }
+
+        if ($request->hasFile('avatar')) {
+            $avatar = $request->file('avatar');
+            $destDir = base_path('resources/assets/profile_pictures/students');
+            if (! File::exists($destDir)) {
+                File::makeDirectory($destDir, 0755, true);
+            }
+
+            $filename = ($student->uuid ?? uniqid()).'.'.$avatar->getClientOriginalExtension();
+            $avatar->move($destDir, $filename);
+
+            $student->profile_picture = 'profile_pictures/students/'.$filename;
+            $student->save();
+
+            if ($user) {
+                $user->profile_picture = $student->profile_picture;
+                $user->save();
+            }
+        }
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Profile updated.')]);
+
+        return back();
     }
 
     private function getVisibleAnnouncements(Request $request)

@@ -312,10 +312,7 @@ class AdminUserController extends Controller
     {
         $this->authorizeAdmin($request);
 
-        $user = User::query()
-            ->where('uuid', $uuid)
-            ->orWhere('id', $uuid)
-            ->firstOrFail();
+        $user = User::query()->where('uuid', $uuid)->firstOrFail();
 
         $sections = ClassSection::query()
             ->select(['uuid', 'name', 'grade_level'])
@@ -352,10 +349,7 @@ class AdminUserController extends Controller
     {
         $this->authorizeAdmin($request);
 
-        $user = User::query()
-            ->where('uuid', $uuid)
-            ->orWhere('id', $uuid)
-            ->firstOrFail();
+        $user = User::query()->where('uuid', $uuid)->firstOrFail();
 
         $data = $request->validate([
             'first_name' => 'nullable|string|max:50',
@@ -405,12 +399,10 @@ class AdminUserController extends Controller
             $avatar = $request->file('avatar');
             $subfolder = 'admin-staff';
 
-            if (method_exists($user, 'hasRole')) {
-                if ($user->hasRole('student')) {
-                    $subfolder = 'students';
-                } elseif ($user->hasRole('teacher')) {
-                    $subfolder = 'teachers';
-                }
+            if ($user->student) {
+                $subfolder = 'students';
+            } elseif (method_exists($user, 'hasRole') && $user->roles->contains(fn ($role) => strtoupper((string) $role->name) === 'TEACHER')) {
+                $subfolder = 'teachers';
             }
 
             $destDir = base_path('resources/assets/profile_pictures/'.$subfolder);
@@ -430,6 +422,11 @@ class AdminUserController extends Controller
 
         $user->save();
 
+        if ($request->hasFile('avatar') && $user->student) {
+            $user->student->profile_picture = $user->profile_picture;
+            $user->student->save();
+        }
+
         return redirect()->route('admin.users')->with('success', 'User updated successfully.');
     }
 
@@ -437,10 +434,7 @@ class AdminUserController extends Controller
     {
         $this->authorizeAdmin($request);
 
-        $user = User::query()
-            ->where('uuid', $uuid)
-            ->orWhere('id', $uuid)
-            ->first();
+        $user = User::query()->where('uuid', $uuid)->first();
 
         if (! $user) {
             return back()->with('error', 'User not found or already deleted.');

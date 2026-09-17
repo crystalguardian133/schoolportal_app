@@ -646,7 +646,7 @@ export default function AdminSubjects() {
                         />
                     </div>
 
-                    <div className="mt-4 grid gap-4 lg:grid-cols-3">
+                    <div className="mt-4 grid items-start gap-4 lg:grid-cols-3">
                         {/* Table panel */}
                         <div className="flex flex-col rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm lg:col-span-2 dark:border-sidebar-border dark:bg-sidebar">
                             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -1830,6 +1830,7 @@ function CurriculumFields<T extends CurriculumForm>({
 }: CurriculumFieldsProps<T>) {
     function update(patch: Partial<CurriculumForm>) {
         if (patch.level === 'jhs') {
+            patch.category = '';
             patch.track = '';
             patch.strand = '';
         }
@@ -1865,21 +1866,26 @@ function CurriculumFields<T extends CurriculumForm>({
                     Senior High (SHS)
                 </button>
             </div>
-            <Select
-                value={value.category || undefined}
-                onValueChange={(v) => update({ category: v })}
-            >
-                <SelectTrigger>
-                    <SelectValue placeholder="Category (Core / Applied / Specialized)" />
-                </SelectTrigger>
-                <SelectContent>
-                    {CATEGORY_OPTIONS.map((c) => (
-                        <SelectItem key={c} value={c}>
-                            {c}
-                        </SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
+            {isShs && (
+                <Select
+                    value={value.category || '__none__'}
+                    onValueChange={(v) =>
+                        update({ category: v === '__none__' ? '' : v })
+                    }
+                >
+                    <SelectTrigger>
+                        <SelectValue placeholder="Category (Core / Applied / Specialized)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="__none__">No category</SelectItem>
+                        {CATEGORY_OPTIONS.map((c) => (
+                            <SelectItem key={c} value={c}>
+                                {c}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            )}
             {isShs && (
                 <Select
                     value={value.track || undefined}

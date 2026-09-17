@@ -39,6 +39,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', [\App\Http\Controllers\DashboardController::class, '__invoke'])->name('dashboard');
     Route::get('student/pre-registration', fn () => inertia('student/pre-registration'))->name('student.pre-registration');
     Route::get('student/profile', [StudentPortalController::class, 'profile'])->name('student.profile');
+    Route::patch('student/profile', [StudentPortalController::class, 'updateProfile'])->name('student.profile.update');
     Route::get('student/grades', [StudentPortalController::class, 'grades'])->name('student.grades');
     Route::get('student/attendance', [StudentPortalController::class, 'attendance'])->name('student.attendance');
     Route::get('student/subjects-enrolled', [\App\Http\Controllers\ScheduleController::class, 'studentSubjectsEnrolled'])->name('student.subjects-enrolled');

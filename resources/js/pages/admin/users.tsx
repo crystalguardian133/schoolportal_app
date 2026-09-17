@@ -207,10 +207,12 @@ export default function AdminUsers() {
                 } else {
                     showToast('User deleted successfully.', 'success');
                 }
+
                 router.reload();
             },
             onError: (errors) => {
                 const firstError = Object.values(errors || {})[0];
+
                 showToast(
                     (firstError as string) || 'Unable to delete user.',
                     'error',
@@ -523,6 +525,10 @@ export default function AdminUsers() {
                                                     sections={sections}
                                                     takenAdviserSections={
                                                         takenAdviserSections
+                                                    }
+                                                    userRoles={
+                                                        rolesMap[user.uuid] ||
+                                                        []
                                                     }
                                                 />
                                                 <Dialog>

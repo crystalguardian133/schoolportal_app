@@ -54,7 +54,7 @@ export function NotificationBell({
     className,
     iconClassName,
 }: NotificationBellProps) {
-    const { notifications, unread, loaded, refresh, markSeen } =
+    const { notifications, unread, loaded, connected, refresh, markSeen } =
         useAnnouncements();
     const [open, setOpen] = useState(false);
     const [selected, setSelected] = useState<NotificationRow | null>(null);
@@ -89,6 +89,18 @@ export function NotificationBell({
                         )}
                     >
                         <Bell className={cn('size-4', iconClassName)} />
+                        <span
+                            title={
+                                connected
+                                    ? 'Live updates connected'
+                                    : 'Live updates offline'
+                            }
+                            aria-hidden="true"
+                            className={cn(
+                                'absolute -bottom-0.5 -left-0.5 size-2 rounded-full ring-1 ring-sidebar',
+                                connected ? 'bg-emerald-500' : 'bg-muted-foreground/40',
+                            )}
+                        />
                         {unread > 0 && (
                             <span className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-amber-500 text-[9px] font-bold leading-none text-white ring-1 ring-sidebar">
                                 {unread > 9 ? '9+' : unread}

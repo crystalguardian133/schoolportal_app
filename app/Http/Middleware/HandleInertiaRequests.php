@@ -18,6 +18,12 @@ class HandleInertiaRequests extends Middleware
     {
         $user = $request->user();
 
+        $studentPicture = $user?->student?->profile_picture;
+
+        if (! empty($studentPicture)) {
+            $user->setAttribute('profile_picture', $studentPicture);
+        }
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),

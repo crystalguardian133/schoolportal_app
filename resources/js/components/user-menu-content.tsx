@@ -1,5 +1,5 @@
-import { Link, router } from '@inertiajs/react';
-import { LogOut, Settings } from 'lucide-react';
+import { Link, router, usePage } from '@inertiajs/react';
+import { LogOut, Settings, UserRound } from 'lucide-react';
 import {
     DropdownMenuGroup,
     DropdownMenuItem,
@@ -9,15 +9,17 @@ import {
 import { UserInfo } from '@/components/user-info';
 import { useMobileNavigation } from '@/hooks/use-mobile-navigation';
 import { logout } from '@/routes';
-import { edit } from '@/routes/profile';
-import type { User } from '@/types';
+import type { Auth } from '@/types';
 
 type Props = {
-    user: User;
+    user: Auth['user'];
 };
 
 export function UserMenuContent({ user }: Props) {
     const cleanup = useMobileNavigation();
+    const { auth } = usePage<{ auth: Auth }>().props;
+    const isStudent = auth.user?.role === 'student';
+    const profileUrl = isStudent ? '/student/profile' : '/profile';
 
     const handleLogout = () => {
         cleanup();
@@ -36,7 +38,18 @@ export function UserMenuContent({ user }: Props) {
                 <DropdownMenuItem asChild>
                     <Link
                         className="block w-full cursor-pointer"
-                        href={edit()}
+                        href={profileUrl}
+                        prefetch
+                        onClick={cleanup}
+                    >
+                        <UserRound className="mr-2" />
+                        My Profile
+                    </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                    <Link
+                        className="block w-full cursor-pointer"
+                        href="/settings/security"
                         prefetch
                         onClick={cleanup}
                     >

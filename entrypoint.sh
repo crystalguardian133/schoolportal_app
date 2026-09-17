@@ -16,8 +16,10 @@ cleanup() {
 
 trap cleanup INT TERM
 
-# Detect whether the seed-populated tables already contain data.
-# Returns 0 (true) when data is present, 1 otherwise.
+# Detect whether the application was fully seeded (admin user exists).
+# Returns 0 (true) when seeded, 1 otherwise. Seeding is skipped only when the
+# DatabaseSeeder completed (admin@example.com present); a partial seed
+# (roles/school_year only) will still re-run to completion.
 db_has_seed_data() {
   [ "$(php artisan app:db-has-seed-data 2>/dev/null)" = "yes" ]
 }

@@ -10,7 +10,7 @@ import {
 } from 'react';
 import type { ReactNode } from 'react';
 import { toast } from 'sonner';
-import { echoClient } from '@/lib/echo';
+import { ensureEcho, releaseEcho, subscribeEchoStatus } from '@/lib/echo';
 
 export type NotificationRow = {
     uuid: string;
@@ -28,6 +28,7 @@ type AnnouncementsContextValue = {
     notifications: NotificationRow[];
     unread: number;
     loaded: boolean;
+    connected: boolean;
     refresh: () => Promise<void>;
     markSeen: (uuids?: string[]) => Promise<void>;
     registerUpdateListener: (listener: () => void) => () => void;
@@ -87,6 +88,7 @@ export function AnnouncementsProvider({
         Math.max(initialUnreadCount ?? 0, 0),
     );
     const [loaded, setLoaded] = useState(false);
+    const [connected, setConnected] = useState(false);
 
     const urlRef = useRef(initialUrl);
     const listenersRef = useRef<Set<() => void>>(new Set());
@@ -169,30 +171,48 @@ export function AnnouncementsProvider({
         });
     }, []);
 
+    // Connection status is tracked independently of the channel subscription
+    // so logout (releaseEcho -> 'idle') updates it without a setState-in-effect.
+    useEffect(() => {
+        return subscribeEchoStatus((status) => {
+            setConnected(status === 'connected');
+        });
+    }, []);
+
     // WebSocket is the single notification source: it only signals "something
     // changed"; the server-side /announcements/recent list is re-fetched to
     // stay in sync with per-user visibility and seen state.
+    //
+    // Lifecycle: the shared socket is created on first authenticated mount
+    // (ensureEcho connects exactly once — never call .connect() here or a
+    // second socket opens) and torn down on logout so guests hold no socket.
     useEffect(() => {
-        if (!echoClient || !authenticated) {
+        if (!authenticated) {
+            releaseEcho();
+
             return;
         }
 
-        const channel = echoClient.channel('announcements');
+        const client = ensureEcho();
 
-        channel
-            .listen('AnnouncementCreated', () => {
-                pendingToastRef.current = !isAnnouncementsPage(urlRef.current);
-                notifyListeners();
-                refresh();
-            })
-            .error(() => {
-                // socket errors have no fallback now; the WS is the trigger
-            });
+        if (!client) {
+            return;
+        }
 
-        echoClient.connect();
+        const channel = client.channel('announcements');
+
+        // Leading dot = literal event name. Without it, Echo prepends the
+        // default "App.Events" namespace and this handler never fires,
+        // because the server broadcasts as `AnnouncementCreated`
+        // (see broadcastAs() in app/Events/AnnouncementCreated.php).
+        channel.listen('.AnnouncementCreated', () => {
+            pendingToastRef.current = !isAnnouncementsPage(urlRef.current);
+            notifyListeners();
+            refresh();
+        });
 
         return () => {
-            echoClient.leave('announcements');
+            client.leave('announcements');
         };
     }, [authenticated, refresh, notifyListeners]);
 
@@ -239,11 +259,12 @@ export function AnnouncementsProvider({
             notifications,
             unread,
             loaded,
+            connected,
             refresh,
             markSeen,
             registerUpdateListener,
         }),
-        [notifications, unread, loaded, refresh, markSeen, registerUpdateListener],
+        [notifications, unread, loaded, connected, refresh, markSeen, registerUpdateListener],
     );
 
     return (
