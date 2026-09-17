@@ -30,9 +30,12 @@ services:
     env_file: .env.prod
     environment:
       APP_URL: https://${APP_DOMAIN:?set APP_DOMAIN in deploy.env}
+      # Internal Reverb coordinates: ALWAYS plain http here (entrypoint.sh
+      # enforces this too). Public https/443 goes only into the VITE_*
+      # build args above -- putting https here breaks PHP->Reverb emits.
       REVERB_HOST: 0.0.0.0
       REVERB_PORT: 8081
-      REVERB_SCHEME: https
+      REVERB_SCHEME: http
       BROADCAST_CONNECTION: reverb
       QUEUE_CONNECTION: database
     volumes:

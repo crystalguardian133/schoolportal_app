@@ -16,6 +16,20 @@ cleanup() {
 
 trap cleanup INT TERM
 
+# --- Internal Reverb coordinates (plain HTTP, container-local) ---
+# TLS terminates at the reverse proxy, so everything INSIDE the container
+# (Reverb bind + the PHP broadcast client in config/broadcasting.php) must
+# stay plain HTTP on the internal port. The public https/443 values live ONLY
+# in the VITE_* build args baked into the JS bundle -- never here. Without
+# this, a runtime REVERB_SCHEME=https makes PHP POST events to
+# https://<host>:8081 (TLS against a non-TLS server) and every realtime emit
+# fails while Web Push keeps working, which looks exactly like "push arrives
+# but the bell stays grey".
+export REVERB_HOST="${REVERB_HOST:-0.0.0.0}"
+export REVERB_PORT="${REVERB_PORT:-8081}"
+export REVERB_SCHEME="http"
+echo "Internal Reverb endpoint: http://${REVERB_HOST}:${REVERB_PORT} (TLS terminates at proxy)"
+
 # Detect whether the application was fully seeded (admin user exists).
 # Returns 0 (true) when seeded, 1 otherwise. Seeding is skipped only when the
 # DatabaseSeeder completed (admin@example.com present); a partial seed
@@ -47,6 +61,24 @@ start_services() {
   echo "Starting Reverb WebSocket server on port ${REVERB_PORT:-8081}..."
   php artisan reverb:start --port="${REVERB_PORT:-8081}" >/dev/null 2>&1 &
   REVERB_PID=$!
+
+  # Fail loud, not silent: clients show a grey bell with zero console errors
+  # when Reverb never actually bound. Keys/secrets are never logged here.
+  echo "Waiting for Reverb on 127.0.0.1:${REVERB_PORT:-8081}..."
+  REVERB_READY=""
+  for _i in $(seq 1 15); do
+    if curl -s -o /dev/null -m 2 "http://127.0.0.1:${REVERB_PORT:-8081}/" 2>/dev/null; then
+      REVERB_READY="yes"
+      break
+    fi
+    sleep 1
+  done
+  if [ "$REVERB_READY" = "yes" ]; then
+    echo "Reverb is accepting connections (pid $REVERB_PID)."
+  else
+    echo "WARNING: Reverb port ${REVERB_PORT:-8081} is not accepting connections after 15s."
+    echo "Realtime broadcasts WILL FAIL (see [WS] lines); Web Push is unaffected."
+  fi
 
   # Queue worker is required so queued jobs run (e.g. SendAnnouncementPushNotification).
   # The container's default QUEUE_CONNECTION=database, but skip when sync/local.
