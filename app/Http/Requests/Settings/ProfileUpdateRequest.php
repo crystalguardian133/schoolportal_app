@@ -19,6 +19,7 @@ class ProfileUpdateRequest extends FormRequest
     {
         return array_merge($this->profileRules($this->user()->id), [
             'avatar' => ['nullable', 'image', 'max:2048'],
+            'cover_image' => ['nullable', 'image', 'max:4096'],
         ]);
     }
 }

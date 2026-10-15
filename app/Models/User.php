@@ -19,7 +19,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Models\Role;
 use App\Models\Concerns\HasRolesAndPermissions;
 
-#[Fillable(['name', 'email', 'password', 'profile_picture'])]
+#[Fillable(['name', 'email', 'password', 'profile_picture', 'cover_image', 'preferences'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable implements PasskeyUser
 {
@@ -43,6 +43,7 @@ class User extends Authenticatable implements PasskeyUser
             'adviser_section' => 'string',
             'failed_login_attempts' => 'integer',
             'locked_at' => 'datetime',
+            'preferences' => 'array',
         ];
     }
 

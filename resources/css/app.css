@@ -143,6 +143,38 @@
 }
 
 /*
+ * Compact density (user preference, html[data-density='compact']).
+ * Tightens data tables and softens large radii; page layouts and the
+ * sidebar rail are intentionally untouched.
+ */
+html[data-density='compact'] table :is(th, td) {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+}
+
+html[data-density='compact'] .rounded-2xl {
+    border-radius: 1rem;
+}
+
+html[data-density='compact'] .rounded-3xl {
+    border-radius: 1.25rem;
+}
+
+/*
+ * Reduced motion (user preference, html[data-motion='reduce']).
+ * Standard accessibility pattern: collapse animations/transitions to
+ * near-zero rather than removing them (avoids breaking JS timers).
+ */
+html[data-motion='reduce'] *,
+html[data-motion='reduce'] *::before,
+html[data-motion='reduce'] *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+}
+
+/*
  * Mobile friendliness
  *
  * Unlayered so these beat Tailwind utilities (e.g. `text-sm`).

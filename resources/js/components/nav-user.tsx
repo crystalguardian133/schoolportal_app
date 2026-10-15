@@ -19,6 +19,7 @@ export function NavUser() {
     const { auth } = usePage().props;
     const { state } = useSidebar();
     const isMobile = useIsMobile();
+    const collapsed = state === 'collapsed';
 
     if (!auth.user) {
         return null;
@@ -31,11 +32,18 @@ export function NavUser() {
                     <DropdownMenuTrigger asChild>
                         <SidebarMenuButton
                             size="lg"
-                            className="group text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent"
+                            className={`group text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent ${
+                                collapsed ? 'justify-center' : ''
+                            }`}
                             data-test="sidebar-menu-button"
                         >
-                            <UserInfo user={auth.user} />
-                            <ChevronsUpDown className="ml-auto size-4" />
+                            <UserInfo
+                                user={auth.user}
+                                showDetails={!collapsed}
+                            />
+                            {!collapsed && (
+                                <ChevronsUpDown className="ml-auto size-4" />
+                            )}
                         </SidebarMenuButton>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent

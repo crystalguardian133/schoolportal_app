@@ -213,7 +213,7 @@ const adminNavItems: NavItem[] = [
     },
     {
         title: 'Manage Teachers',
-        href: '/admin/manage-teachers',
+        href: '/admin/users?role=teacher',
         icon: BookOpenText,
         permission: 'manage users',
     },

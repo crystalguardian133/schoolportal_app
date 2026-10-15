@@ -56,6 +56,21 @@ class ProfileController extends Controller
             $data['profile_picture'] = 'profile_pictures/'.$subfolder.'/'.$filename;
         }
 
+        // handle cover/banner upload if present (same filename per user, overwrites)
+        if ($request->hasFile('cover_image')) {
+            $cover = $request->file('cover_image');
+
+            $coverDir = base_path('resources/assets/profile_covers');
+            if (! File::exists($coverDir)) {
+                File::makeDirectory($coverDir, 0755, true);
+            }
+
+            $coverFilename = ($request->user()->uuid ?? uniqid()).'.'.$cover->getClientOriginalExtension();
+            $cover->move($coverDir, $coverFilename);
+
+            $data['cover_image'] = 'profile_covers/'.$coverFilename;
+        }
+
         $request->user()->fill($data);
 
         if ($request->user()->isDirty('email')) {

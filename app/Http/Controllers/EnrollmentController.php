@@ -69,6 +69,7 @@ class EnrollmentController extends Controller
 
         $studentsQuery = DB::table('students as s')
             ->leftJoin('users as u', 'u.uuid', '=', 's.user_uuid')
+            ->where('s.status', '!=', 'graduated')
             ->select([
                 's.uuid',
                 's.name',
@@ -440,17 +441,11 @@ class EnrollmentController extends Controller
                     continue;
                 }
 
-                $updated = DB::table('students')->where('uuid', $student->uuid)->update([
+                DB::table('students')->where('uuid', $student->uuid)->update([
                     'section' => $classSection->name,
                     'section_uuid' => $classSection->uuid,
                     'school_year' => $schoolYear,
                     'grade_level' => $classSection->grade_level ?? $student->grade_level,
-                ]);
-
-                Log::info('[ENROLLMENT] updated student', [
-                    'uuid' => $student->uuid,
-                    'rows_affected' => $updated,
-                    'section' => $classSection->name,
                 ]);
 
                 foreach ($classSection->subjects as $subject) {
@@ -460,30 +455,23 @@ class EnrollmentController extends Controller
                         ->where('school_year', $schoolYear)
                         ->exists();
 
-                    Log::info('[ENROLLMENT] subject check', [
-                        'student_uuid' => $student->uuid,
-                        'subject_uuid' => $subject->uuid,
-                        'subject_name' => $subject->name,
-                        'exists' => $exists,
-                    ]);
-
                     if (! $exists) {
-                        $created = StudentSubject::create([
+                        StudentSubject::create([
                             'student_uuid' => $student->uuid,
                             'subject_uuid' => $subject->uuid,
                             'year_level' => $classSection->grade_level ?? ($student->grade_level ?? null),
                             'school_year' => $schoolYear,
                             'section' => $classSection->name,
                         ]);
-
-                        Log::info('[ENROLLMENT] created student_subject', [
-                            'id' => $created->id,
-                            'student_uuid' => $student->uuid,
-                            'subject_uuid' => $subject->uuid,
-                        ]);
                     }
                 }
             }
+
+            Log::info('[ENROLLMENT] section assignment done', [
+                'students_count' => $students->count(),
+                'section' => $classSection?->name,
+                'school_year' => $schoolYear,
+            ]);
 
             return $students;
         });
@@ -510,6 +498,10 @@ class EnrollmentController extends Controller
 
         if (! $student) {
             return back()->with('error', 'Student not found.');
+        }
+
+        if (($student->status ?? 'active') === 'graduated') {
+            return back()->with('error', 'Graduated students cannot be promoted.');
         }
 
         $currentLevel = $student->grade_level;

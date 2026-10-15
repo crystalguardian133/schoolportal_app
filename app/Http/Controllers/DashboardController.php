@@ -9,6 +9,7 @@ use App\Models\Announcement;
 use App\Models\SchoolYear;
 use App\Models\Report;
 use App\Models\User;
+use App\Support\DashboardSections;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -30,16 +31,9 @@ class DashboardController extends Controller
 
         $sections = [];
 
-        $order = [
-            'access school head dashboard' => 'schoolHeadSection',
-            'access admin dashboard' => 'adminSection',
-            'access department head dashboard' => 'departmentHeadSection',
-            'access teacher dashboard' => 'teacherSection',
-            'access staff dashboard' => 'staffSection',
-            'access developer dashboard' => 'developerSection',
-        ];
-
-        foreach ($order as $permission => $method) {
+        // Single source of truth lives in DashboardSections (also feeds the
+        // settings widget UI so visibility can never disagree).
+        foreach (DashboardSections::ORDER as $permission => $method) {
             if ($permissions->contains($permission)) {
                 $sections[] = $this->{$method}($request);
             }

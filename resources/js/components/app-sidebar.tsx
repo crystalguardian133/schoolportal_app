@@ -1,6 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
-import { Sun, Moon } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Moon, Sun } from 'lucide-react';
+import { useSyncExternalStore } from 'react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -12,6 +12,7 @@ import {
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
+    useSidebar,
 } from '@/components/ui/sidebar';
 import { useAppearance } from '@/hooks/use-appearance';
 import { useNavItems } from '@/hooks/use-nav-items';
@@ -22,6 +23,8 @@ export function AppSidebar() {
     const { auth } = usePage<{ auth: Auth }>().props;
     const isStudent = auth.user?.role === 'student';
     const { navItems, sectionLabel } = useNavItems();
+    const { state } = useSidebar();
+    const collapsed = state === 'collapsed';
 
     return (
         <Sidebar collapsible="icon" variant="inset">
@@ -49,13 +52,15 @@ export function AppSidebar() {
             </SidebarContent>
 
             <SidebarFooter>
-                <div className="px-3 pb-3">
+                <div
+                    className={
+                        collapsed
+                            ? 'flex flex-col items-center px-0 pb-3'
+                            : 'px-3 pb-3'
+                    }
+                >
                     <div className="mb-2 flex items-center justify-center">
-                        <div className="flex items-center gap-3">
-                            <Sun className="h-4 w-4 text-muted-foreground" />
-                            <AppearanceSwitch />
-                            <Moon className="h-4 w-4 text-muted-foreground" />
-                        </div>
+                        <AppearanceSwitch />
                     </div>
                     <NavUser />
                 </div>
@@ -66,34 +71,79 @@ export function AppSidebar() {
 
 function AppearanceSwitch() {
     const { resolvedAppearance, updateAppearance } = useAppearance();
-    const [mounted, setMounted] = useState(false);
-
-    useEffect(() => {
-        setMounted(true);
-    }, []);
+    const { state: sidebarState } = useSidebar();
+    // False on server/first paint (avoids hydration mismatch), true after.
+    const mounted = useSyncExternalStore(
+        () => () => {},
+        () => true,
+        () => false,
+    );
 
     const isDark = mounted && resolvedAppearance === 'dark';
+    // Compact switch fits the folded (icon-only) sidebar; the icon always
+    // rides on the knob so nothing is lost when labels collapse away.
+    const collapsed = sidebarState === 'collapsed';
 
     return (
         <button
+            type="button"
             onClick={() => updateAppearance(isDark ? 'light' : 'dark')}
-            aria-label="Toggle light/dark"
-            className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none"
+            aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+            aria-pressed={isDark}
+            title={isDark ? 'Dark mode' : 'Light mode'}
+            className={`relative inline-flex shrink-0 items-center overflow-hidden rounded-full border shadow-inner transition-all duration-300 focus:outline-none ${
+                collapsed ? 'h-6 w-11' : 'h-7 w-[68px]'
+            } ${
+                isDark
+                    ? 'border-slate-700 bg-slate-800'
+                    : 'border-amber-200 bg-amber-100'
+            }`}
         >
+            {/* stars, visible only in dark mode */}
             <span
-                className={
-                    isDark
-                        ? 'absolute left-0.5 h-5 w-5 translate-x-5 transform rounded-full bg-white transition-transform'
-                        : 'absolute left-0.5 h-5 w-5 rounded-full bg-white transition-transform'
-                }
-            />
+                aria-hidden="true"
+                className={`pointer-events-none absolute inset-0 transition-opacity duration-300 ${
+                    isDark ? 'opacity-100' : 'opacity-0'
+                }`}
+            >
+                <span className="absolute top-1 left-2 size-0.5 rounded-full bg-slate-300" />
+                <span className="absolute bottom-1.5 left-4 size-[3px] rounded-full bg-slate-400" />
+                <span
+                    className={`absolute top-1.5 right-2 size-0.5 rounded-full bg-slate-300 ${collapsed ? 'hidden' : ''}`}
+                />
+            </span>
+            {/* knob with the sun/moon riding on it */}
             <span
-                className={
+                aria-hidden="true"
+                className={`absolute flex items-center justify-center rounded-full shadow transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${
+                    collapsed ? 'top-0.5 left-0.5 size-5' : 'top-0.5 left-0.5 size-6'
+                } ${isDark ? 'bg-slate-950' : 'bg-white'                } ${
                     isDark
-                        ? 'block h-6 w-11 rounded-full bg-neutral-800'
-                        : 'block h-6 w-11 rounded-full bg-neutral-200'
-                }
-            />
+                        ? collapsed
+                            ? 'translate-x-5'
+                            : 'translate-x-10'
+                        : 'translate-x-0'
+                }`}
+            >
+                <Sun
+                    className={`absolute transition-all duration-500 ${
+                        collapsed ? 'size-3' : 'size-3.5'
+                    } text-amber-500 ${
+                        isDark
+                            ? 'rotate-90 scale-50 opacity-0'
+                            : 'rotate-0 scale-100 opacity-100'
+                    }`}
+                />
+                <Moon
+                    className={`absolute transition-all duration-500 ${
+                        collapsed ? 'size-3' : 'size-3.5'
+                    } text-amber-200 ${
+                        isDark
+                            ? 'rotate-0 scale-100 opacity-100'
+                            : '-rotate-90 scale-50 opacity-0'
+                    }`}
+                />
+            </span>
         </button>
     );
 }

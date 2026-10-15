@@ -14,30 +14,12 @@ use Inertia\Inertia;
 class AccountUnlockController extends Controller
 {
     /**
-     * Public unlock page. Staff with the "Unlock Accounts" permission get the
-     * manual unlock table; everyone else (and guests) get the email-link form.
+     * Public unlock page (request-a-link flow only). Staff unlock accounts
+     * from the users directory (admin/users unlock action).
      */
     public function page(Request $request)
     {
-        $user = $request->user();
-        $canManage = $user && $user->hasPermission('Unlock Accounts');
-
         return Inertia::render('account-unlock', [
-            'canManage' => $canManage,
-            'lockedUsers' => $canManage
-                ? User::query()
-                    ->whereNotNull('locked_at')
-                    ->orderBy('locked_at')
-                    ->get(['uuid', 'name', 'email', 'failed_login_attempts', 'locked_at'])
-                    ->map(fn (User $u) => [
-                        'uuid' => $u->uuid,
-                        'name' => $u->name,
-                        'email' => $u->email,
-                        'failed_login_attempts' => $u->failed_login_attempts,
-                        'locked_at' => $u->locked_at?->toISOString(),
-                    ])
-                    ->all()
-                : [],
             'status' => $request->session()->get('status'),
         ]);
     }
@@ -95,20 +77,4 @@ class AccountUnlockController extends Controller
         );
     }
 
-    /**
-     * Manual unlock by permitted staff.
-     */
-    public function unlockManual(Request $request, string $uuid)
-    {
-        $actor = $request->user();
-
-        if (!$actor || !$actor->hasPermission('Unlock Accounts')) {
-            abort(403);
-        }
-
-        $target = User::query()->where('uuid', $uuid)->firstOrFail();
-        app(LoginThrottleService::class)->unlock($target);
-
-        return back()->with('success', __("Account unlocked for :name.", ['name' => $target->name]));
-    }
 }

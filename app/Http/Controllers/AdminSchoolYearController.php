@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\EnrollmentAudit;
 use App\Models\GradeArchive;
 use App\Models\SchoolYear;
 use App\Models\Student;
@@ -82,6 +83,93 @@ class AdminSchoolYearController extends Controller
         return back()->with('success', 'School year created successfully.');
     }
 
+    private const GRADE_LEVEL_MAP = [
+        'Grade 7' => 'Grade 8',
+        'Grade 8' => 'Grade 9',
+        'Grade 9' => 'Grade 10',
+        'Grade 10' => 'Grade 11',
+        'Grade 11' => 'Grade 12',
+    ];
+
+    private const PASSING_AVERAGE = 75;
+
+    /**
+     * Classify every student of a school year WITHOUT writing anything.
+     * Averages are computed from the live student_subjects rows, so callers
+     * that delete those rows must call this FIRST.
+     *
+     * @return array{promoted: array, graduated: array, retained: array}
+     */
+    private function classifyRollover(SchoolYear $schoolYear): array
+    {
+        $averages = StudentSubject::where('school_year', $schoolYear->name)
+            ->whereNotNull('total')
+            ->get(['student_uuid', 'total'])
+            ->groupBy('student_uuid')
+            ->map(fn ($rows) => (int) round($rows->avg('total')));
+
+        $students = Student::where('school_year', $schoolYear->name)->get();
+
+        $promoted = [];
+        $graduated = [];
+        $retained = [];
+
+        foreach ($students as $student) {
+            $average = $averages->get($student->uuid);
+            $entry = [
+                'uuid' => $student->uuid,
+                'name' => $student->name,
+                'from' => $student->grade_level,
+                'average' => $average,
+            ];
+
+            if (empty($student->grade_level) || $average === null) {
+                $entry['to'] = null;
+                $entry['reason'] = empty($student->grade_level) ? 'no grade level' : 'no graded subjects';
+                $retained[] = $entry;
+                continue;
+            }
+
+            $nextLevel = self::GRADE_LEVEL_MAP[$student->grade_level] ?? null;
+
+            if ($nextLevel !== null && $average >= self::PASSING_AVERAGE) {
+                $entry['to'] = $nextLevel;
+                $promoted[] = $entry;
+            } elseif ($nextLevel === null && $student->grade_level === 'Grade 12' && $average >= self::PASSING_AVERAGE) {
+                $entry['to'] = null;
+                $graduated[] = $entry;
+            } else {
+                $entry['to'] = null;
+                $entry['reason'] = $average < self::PASSING_AVERAGE ? "average {$average} below ".self::PASSING_AVERAGE : 'no next level';
+                $retained[] = $entry;
+            }
+        }
+
+        return compact('promoted', 'graduated', 'retained');
+    }
+
+    public function rolloverPreview(Request $request, int $id)
+    {
+        $this->authorizeAdmin($request);
+
+        $schoolYear = SchoolYear::findOrFail($id);
+
+        $result = $this->classifyRollover($schoolYear);
+
+        return response()->json([
+            'school_year' => $schoolYear->name,
+            'status' => $schoolYear->status,
+            'counts' => [
+                'promoted' => count($result['promoted']),
+                'graduated' => count($result['graduated']),
+                'retained' => count($result['retained']),
+            ],
+            'promoted' => $result['promoted'],
+            'graduated' => $result['graduated'],
+            'retained' => $result['retained'],
+        ]);
+    }
+
     public function endYear(Request $request, int $id)
     {
         $this->authorizeAdmin($request);
@@ -92,15 +180,18 @@ class AdminSchoolYearController extends Controller
             return back()->with('error', 'Only an active school year can be ended.');
         }
 
-        $gradeLevelMap = [
-            'Grade 7' => 'Grade 8',
-            'Grade 8' => 'Grade 9',
-            'Grade 9' => 'Grade 10',
-            'Grade 10' => 'Grade 11',
-            'Grade 11' => 'Grade 12',
-        ];
+        $result = DB::transaction(function () use ($request, $schoolYear) {
+            // Classify FIRST: the archive/delete below wipes the rows the
+            // averages come from. Previously the grades were queried after
+            // the delete, so every student was silently retained.
+            $classification = $this->classifyRollover($schoolYear);
+            $byUuid = [];
+            foreach (['promoted', 'graduated', 'retained'] as $outcome) {
+                foreach ($classification[$outcome] as $entry) {
+                    $byUuid[$entry['uuid']] = $outcome;
+                }
+            }
 
-        DB::transaction(function () use ($schoolYear, $gradeLevelMap) {
             // Archive all grades for this school year before processing
             $enrollments = StudentSubject::where('school_year', $schoolYear->name)
                 ->whereNotNull('total')
@@ -134,61 +225,51 @@ class AdminSchoolYearController extends Controller
 
             $students = Student::where('school_year', $schoolYear->name)->get();
 
-            $promoted = 0;
-            $retained = 0;
+            $counts = ['promoted' => 0, 'graduated' => 0, 'retained' => 0];
 
             foreach ($students as $student) {
-                if (empty($student->grade_level)) {
-                    $retained++;
-                    continue;
+                $outcome = $byUuid[$student->uuid] ?? 'retained';
+                $counts[$outcome]++;
+
+                $updates = [
+                    'last_grade_level' => $student->grade_level,
+                    'last_school_year' => $schoolYear->name,
+                    'previous_section' => $student->section,
+                    'section' => null,
+                    'section_uuid' => null,
+                    'school_year' => null,
+                ];
+
+                $metadata = [
+                    'from' => $student->grade_level,
+                    'school_year' => $schoolYear->name,
+                ];
+
+                if ($outcome === 'promoted') {
+                    $updates['grade_level'] = self::GRADE_LEVEL_MAP[$student->grade_level];
+                    $metadata['to'] = $updates['grade_level'];
+                } elseif ($outcome === 'graduated') {
+                    $updates['status'] = 'graduated';
                 }
 
-                $grades = StudentSubject::where('student_uuid', $student->uuid)
-                    ->where('school_year', $schoolYear->name)
-                    ->whereNotNull('total')
-                    ->pluck('total');
+                DB::table('students')->where('uuid', $student->uuid)->update($updates);
 
-                if ($grades->isEmpty()) {
-                    $retained++;
-                    continue;
-                }
-
-                $average = (int) round($grades->avg());
-                $nextLevel = $gradeLevelMap[$student->grade_level] ?? null;
-
-                if ($nextLevel && $average >= 75) {
-                    DB::table('students')->where('uuid', $student->uuid)->update([
-                        'last_grade_level' => $student->grade_level,
-                        'last_school_year' => $schoolYear->name,
-                        'previous_section' => $student->section,
-                        'grade_level' => $nextLevel,
-                        'section' => null,
-                        'section_uuid' => null,
-                        'school_year' => null,
-                    ]);
-                    $promoted++;
-                } else {
-                    DB::table('students')->where('uuid', $student->uuid)->update([
-                        'last_grade_level' => $student->grade_level,
-                        'last_school_year' => $schoolYear->name,
-                        'previous_section' => $student->section,
-                        'section' => null,
-                        'section_uuid' => null,
-                        'school_year' => null,
-                    ]);
-                    $retained++;
-                }
+                EnrollmentAudit::create([
+                    'user_uuid' => $request->user()?->uuid,
+                    'student_uuid' => $student->uuid,
+                    'subject_uuid' => null,
+                    'school_year' => $schoolYear->name,
+                    'action' => $outcome,
+                    'metadata' => $metadata,
+                ]);
             }
 
             $schoolYear->update(['status' => 'ended']);
 
-            return [
-                'promoted' => $promoted,
-                'retained' => $retained,
-            ];
+            return $counts;
         });
 
-        return back()->with('success', 'School year ended. Students have been processed for promotion.');
+        return back()->with('success', "School year ended: {$result['promoted']} promoted, {$result['graduated']} graduated, {$result['retained']} retained.");
     }
 
     public function destroy(Request $request, int $id)

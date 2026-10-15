@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Settings\PreferencesController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\SecurityController;
 use Illuminate\Auth\Middleware\RequirePassword;
@@ -24,6 +25,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('user-password.update');
 
     Route::inertia('settings/appearance', 'settings/appearance')->name('appearance.edit');
+
+    Route::get('settings/preferences', [PreferencesController::class, 'show'])->name('preferences.show');
+    Route::patch('settings/preferences', [PreferencesController::class, 'update'])->name('preferences.update');
 
     Route::inertia('settings/notifications', 'settings/notifications')->name('notifications.edit');
 });

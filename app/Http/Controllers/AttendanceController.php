@@ -396,26 +396,6 @@ class AttendanceController extends Controller
         return back()->with('success', 'Attendance updated.');
     }
 
-    public function studentQrCode(Request $request): Response
-    {
-        $user = $request->user();
-        if (! $user) {
-            abort(403);
-        }
-
-        $student = Student::query()->where('user_uuid', $user->uuid)->first();
-
-        return Inertia::render('student/qr-code', [
-            'student' => $student ? [
-                'name' => $student->full_name,
-                'lrn' => $student->lrn,
-                'section' => $student->section,
-                'gradeLevel' => $student->grade_level,
-                'qrToken' => $student->qr_token,
-            ] : null,
-        ]);
-    }
-
     private function recordAttendance(AttendanceSession $session, Student $student, string $method, ?string $notes = null): JsonResponse
     {
         $now = \Carbon\Carbon::now();
