@@ -59,6 +59,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('admin/users/{uuid}', [AdminUserController::class, 'update'])->name('admin.users.update');
     Route::delete('admin/users/{uuid}', [AdminUserController::class, 'destroy'])->name('admin.users.destroy');
     Route::post('admin/users/{uuid}/unlock', [AdminUserController::class, 'unlock'])->name('admin.users.unlock');
+    Route::post('account-unlock/{uuid}/unlock', [\App\Http\Controllers\AccountUnlockController::class, 'unlock'])->name('account-unlock.unlock');
     Route::get('admin/manage-students', [AdminStudentController::class, 'index'])->name('admin.manage-students.index');
     Route::put('admin/manage-students/{uuid}', [AdminStudentController::class, 'update'])->name('admin.manage-students.update');
     Route::delete('admin/manage-students/{uuid}', [AdminStudentController::class, 'destroy'])->name('admin.manage-students.destroy');

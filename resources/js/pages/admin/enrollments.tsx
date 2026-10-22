@@ -36,6 +36,7 @@ type Student = {
     middle_name?: string | null;
     last_name?: string | null;
     email?: string | null;
+    enrollment_category?: 'new' | 'retained' | 'promoted' | 'other' | null;
 };
 type StudentPage = {
     data: Student[];
@@ -55,11 +56,19 @@ type ClassSection = {
 type EnrollmentsFilters = {
     q?: string | null;
     per_page?: number | string;
+    sort_by?: string | null;
+    sort_direction?: string | null;
+    enrollment_category?: string | null;
 };
+type EnrollmentCategory = 'new' | 'retained' | 'promoted';
+type CategoryCounts = { new: number; retained: number; promoted: number };
+type CategoryCountsByGrade = Record<string, Partial<CategoryCounts>>;
 type EnrollmentsPageProps = PageProps & {
     students?: StudentPage;
     classSections?: ClassSection[];
     filters?: EnrollmentsFilters;
+    categoryCounts?: CategoryCounts;
+    categoryCountsByGrade?: CategoryCountsByGrade;
 };
 
 type Step = 1 | 2 | 3;
@@ -69,6 +78,64 @@ const STEPS: { n: Step; label: string }[] = [
     { n: 2, label: 'Pick students' },
     { n: 3, label: 'Review & enroll' },
 ];
+
+const CATEGORY_META: Record<
+    EnrollmentCategory,
+    { label: string; filterLabel: string; className: string; title: string }
+> = {
+    new: {
+        label: 'New',
+        filterLabel: 'Transferee / New',
+        className:
+            'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300',
+        title: 'Transferee or first-time student — no prior enrollment history here',
+    },
+    retained: {
+        label: 'Retained',
+        filterLabel: 'Retained',
+        className:
+            'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+        title: 'Repeating the same grade after the last school year',
+    },
+    promoted: {
+        label: 'Promoted',
+        filterLabel: 'Promoted',
+        className:
+            'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
+        title: 'Promoted from the previous grade at the last rollover',
+    },
+};
+
+function categoryOf(student: Student): EnrollmentCategory | null {
+    const category = student.enrollment_category;
+
+    return category === 'new' ||
+        category === 'retained' ||
+        category === 'promoted'
+        ? category
+        : null;
+}
+
+function CategoryBadge({
+    category,
+}: {
+    category: EnrollmentCategory | null | undefined;
+}) {
+    if (!category) {
+        return <span className="text-muted-foreground">—</span>;
+    }
+
+    const meta = CATEGORY_META[category];
+
+    return (
+        <span
+            title={meta.title}
+            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${meta.className}`}
+        >
+            {meta.label}
+        </span>
+    );
+}
 
 export default function AdminEnrollments() {
     const { props } = usePage<EnrollmentsPageProps>();
@@ -86,7 +153,7 @@ export default function AdminEnrollments() {
         () => props.classSections || [],
         [props.classSections],
     );
-    const filters = props.filters || {
+    const filters: EnrollmentsFilters = props.filters || {
         q: '',
         per_page: 25,
         sort_by: 'name',
@@ -100,8 +167,24 @@ export default function AdminEnrollments() {
     const perPage =
         typeof filters.per_page === 'number' ? filters.per_page : 25;
     const [unassignedOnly, setUnassignedOnly] = useState(false);
+    const [categoryFilter, setCategoryFilter] = useState<
+        'all' | EnrollmentCategory
+    >(() => {
+        const initial = filters.enrollment_category;
+
+        return initial === 'new' ||
+            initial === 'retained' ||
+            initial === 'promoted'
+            ? initial
+            : 'all';
+    });
     const [submitting, setSubmitting] = useState(false);
     const initialRender = useRef(true);
+
+    const categoryCounts: CategoryCounts = useMemo(
+        () => props.categoryCounts ?? { new: 0, retained: 0, promoted: 0 },
+        [props.categoryCounts],
+    );
 
     // Section picker controls: grade filter + sorting, all client-side since
     // every section already ships in props.
@@ -161,14 +244,22 @@ export default function AdminEnrollments() {
     // review step can name selections that are no longer in view. Selection
     // intentionally survives search, sort, and pagination. A ref (not state)
     // is enough: it is only read during renders triggered by other state.
-    const seenRef = useRef<Record<string, { name: string; student_id: string }>>(
-        {},
-    );
+    const seenRef = useRef<
+        Record<
+            string,
+            {
+                name: string;
+                student_id: string;
+                enrollment_category?: EnrollmentCategory | null;
+            }
+        >
+    >({});
     useEffect(() => {
         for (const student of students) {
             seenRef.current[student.uuid] ??= {
                 name: student.name,
                 student_id: student.student_id,
+                enrollment_category: categoryOf(student),
             };
         }
     }, [students]);
@@ -177,6 +268,51 @@ export default function AdminEnrollments() {
     const selectedSection: ClassSection | null =
         classSections.find((section) => section.uuid === classSectionUuid) ??
         null;
+
+    // Counts scoped to the selected section's eligibility (its grade level
+    // plus ungraded students), so a chip like "Retained (5)" matches exactly
+    // what the list can show. Falls back to the whole-pool counts before a
+    // section is chosen.
+    const selectionCategoryCounts: CategoryCounts = useMemo(() => {
+        const empty = { new: 0, retained: 0, promoted: 0 };
+
+        if (!selectedSection?.grade_level) {
+            return categoryCounts;
+        }
+
+        const byGrade = props.categoryCountsByGrade ?? {};
+        const buckets = [
+            byGrade[selectedSection.grade_level],
+            byGrade['__ungraded__'],
+        ];
+
+        return buckets.reduce<CategoryCounts>(
+            (acc, bucket) => {
+                if (!bucket) {
+                    return acc;
+                }
+
+                acc.new += bucket.new ?? 0;
+                acc.retained += bucket.retained ?? 0;
+                acc.promoted += bucket.promoted ?? 0;
+
+                return acc;
+            },
+            { ...empty },
+        );
+    }, [selectedSection, categoryCounts, props.categoryCountsByGrade]);
+
+    // Grade 7 is the entry grade: nobody is ever promoted *into* it, so its
+    // pool is only transferee/new or retained. Higher grades can also hold
+    // students promoted from the previous grade.
+    const filterChipKeys: readonly ('all' | EnrollmentCategory)[] = useMemo(() => {
+        const match = (selectedSection?.grade_level ?? '').match(/(\d+)/);
+        const isEntryGrade = match ? Number(match[1]) === 7 : false;
+
+        return isEntryGrade
+            ? (['all', 'new', 'retained'] as const)
+            : (['all', 'new', 'retained', 'promoted'] as const);
+    }, [selectedSection]);
 
     // Section-first eligibility replaces the old anchor-grade maze: once a
     // target is picked, only matching (or ungraded) students are offered.
@@ -230,19 +366,48 @@ export default function AdminEnrollments() {
             reload({
                 q: query,
                 per_page: perPage,
+                ...(categoryFilter !== 'all'
+                    ? { enrollment_category: categoryFilter }
+                    : {}),
             });
         }, 250);
 
         return () => window.clearTimeout(timer);
-    }, [query, perPage]);
+    }, [query, perPage, categoryFilter]);
 
     function reload(
         params: Record<string, string | number | null | undefined>,
     ) {
-        router.get('/admin/enrollments', params, {
+        const cleaned: Record<string, string | number> = {};
+
+        for (const [key, value] of Object.entries(params)) {
+            if (value !== null && value !== undefined && value !== '') {
+                cleaned[key] = value;
+            }
+        }
+
+        router.get('/admin/enrollments', cleaned, {
             preserveState: true,
             replace: true,
         });
+    }
+
+    function filterParams(
+        extra: Record<string, string | number> = {},
+    ): Record<string, string | number> {
+        return {
+            q: query,
+            per_page: perPage,
+            ...(categoryFilter !== 'all'
+                ? { enrollment_category: categoryFilter }
+                : {}),
+            ...extra,
+        };
+    }
+
+    function applyCategory(next: 'all' | EnrollmentCategory) {
+        // The search/filter effect picks this up and reloads page 1.
+        setCategoryFilter(next);
     }
 
     function toggleStudent(uuid: string) {
@@ -273,6 +438,15 @@ export default function AdminEnrollments() {
         setClassSectionUuid(uuid);
         // Changing target invalidates previous picks (different grade pool).
         setSelectedStudents([]);
+
+        // Grade 7 has no "promoted" bucket, so drop a stale promoted filter
+        // when switching to an entry-grade section.
+        const target = classSections.find((section) => section.uuid === uuid);
+        const match = (target?.grade_level ?? '').match(/(\d+)/);
+
+        if (match && Number(match[1]) === 7 && categoryFilter === 'promoted') {
+            setCategoryFilter('all');
+        }
 
         if (uuid) {
             setStep(2);
@@ -305,10 +479,7 @@ export default function AdminEnrollments() {
                     // Keep the section for rapid repeat batches.
                     setSelectedStudents([]);
                     setStep(2);
-                    reload({
-                        q: query,
-                        per_page: perPage,
-                    });
+                    reload(filterParams());
                 },
             },
         );
@@ -606,6 +777,58 @@ export default function AdminEnrollments() {
                                 </div>
                             </div>
 
+                            {/* Student-type filter, derived from the last
+                                end-of-year rollover. Grade 7 (entry grade)
+                                has no promoted bucket, so that chip is hidden
+                                there. */}
+                            <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-sidebar-border/60 pt-3">
+                                <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                    Student type
+                                </span>
+                                {filterChipKeys.map((key) => {
+                                    const active = categoryFilter === key;
+                                    const count =
+                                        key === 'all'
+                                            ? selectionCategoryCounts.new +
+                                              selectionCategoryCounts.retained +
+                                              selectionCategoryCounts.promoted
+                                            : selectionCategoryCounts[key];
+                                    const label =
+                                        key === 'all'
+                                            ? 'All'
+                                            : CATEGORY_META[key].filterLabel;
+
+                                    return (
+                                        <button
+                                            key={key}
+                                            type="button"
+                                            title={
+                                                key === 'all'
+                                                    ? 'Every eligible student'
+                                                    : CATEGORY_META[key].title
+                                            }
+                                            onClick={() => applyCategory(key)}
+                                            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                                                active
+                                                    ? 'border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300'
+                                                    : 'border-sidebar-border/70 text-muted-foreground hover:bg-sidebar-accent/40'
+                                            }`}
+                                        >
+                                            {label}
+                                            <span
+                                                className={`rounded-full px-1.5 text-[10px] font-semibold ${
+                                                    active
+                                                        ? 'bg-emerald-600 text-white'
+                                                        : 'bg-muted text-muted-foreground'
+                                                }`}
+                                            >
+                                                {count}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
                             <div className="mt-4 max-h-[46vh] overflow-auto rounded-xl border border-sidebar-border/70 lg:max-h-[54vh]">
                                 <table className="min-w-full divide-y divide-sidebar-border/70 text-sm">
                                     <thead className="sticky top-0 z-10 bg-sidebar text-left text-xs font-medium uppercase tracking-wide text-muted-foreground shadow-[0_1px_0_0_var(--sidebar-border)]">
@@ -621,6 +844,9 @@ export default function AdminEnrollments() {
                                                 Grade Level
                                             </th>
                                             <th className="bg-sidebar px-4 py-3 font-medium">
+                                                Type
+                                            </th>
+                                            <th className="bg-sidebar px-4 py-3 font-medium">
                                                 Current Section
                                             </th>
                                         </tr>
@@ -629,7 +855,7 @@ export default function AdminEnrollments() {
                                         {visibleStudents.length === 0 && (
                                             <tr>
                                                 <td
-                                                    colSpan={5}
+                                                    colSpan={6}
                                                     className="px-4 py-12 text-center"
                                                 >
                                                     <Users className="mx-auto size-8 text-muted-foreground/50" />
@@ -670,6 +896,13 @@ export default function AdminEnrollments() {
                                                     {student.grade_level ??
                                                         'N/A'}
                                                 </td>
+                                                <td className="px-4 py-3">
+                                                    <CategoryBadge
+                                                        category={categoryOf(
+                                                            student,
+                                                        )}
+                                                    />
+                                                </td>
                                                 <td className="px-4 py-3 text-muted-foreground">
                                                     {student.section ?? '—'}
                                                 </td>
@@ -685,13 +918,13 @@ export default function AdminEnrollments() {
                                     size="sm"
                                     disabled={studentsProp.current_page <= 1}
                                     onClick={() =>
-                                        reload({
-                                            q: query,
-                                            per_page: perPage,
-                                            page:
-                                                (studentsProp.current_page ||
-                                                    1) - 1,
-                                        })
+                                        reload(
+                                            filterParams({
+                                                page:
+                                                    (studentsProp.current_page ||
+                                                        1) - 1,
+                                            }),
+                                        )
                                     }
                                 >
                                     <ChevronLeft className="size-3.5" />
@@ -710,13 +943,13 @@ export default function AdminEnrollments() {
                                         (studentsProp.last_page || 1)
                                     }
                                     onClick={() =>
-                                        reload({
-                                            q: query,
-                                            per_page: perPage,
-                                            page:
-                                                (studentsProp.current_page ||
-                                                    1) + 1,
-                                        })
+                                        reload(
+                                            filterParams({
+                                                page:
+                                                    (studentsProp.current_page ||
+                                                        1) + 1,
+                                            }),
+                                        )
                                     }
                                 >
                                     Next
@@ -830,9 +1063,16 @@ export default function AdminEnrollments() {
                                                     <span className="truncate font-medium">
                                                         {entry?.name ?? uuid}
                                                     </span>
-                                                    <span className="shrink-0 text-xs text-muted-foreground">
-                                                        {entry?.student_id ??
-                                                            ''}
+                                                    <span className="flex shrink-0 items-center gap-2">
+                                                        <CategoryBadge
+                                                            category={
+                                                                entry?.enrollment_category
+                                                            }
+                                                        />
+                                                        <span className="text-xs text-muted-foreground">
+                                                            {entry?.student_id ??
+                                                                ''}
+                                                        </span>
                                                     </span>
                                                 </li>
                                             );

@@ -25,6 +25,20 @@ class EnrollmentController extends Controller
         return $active?->name ?? date('Y');
     }
 
+    /**
+     * SQL for the latest end-of-year outcome recorded for a student.
+     *
+     * The rollover writes one enrollment_audits row per student per year
+     * (action = promoted|graduated|retained). The newest row is therefore the
+     * authoritative answer to "is this a fresh student or a repeater?" — far
+     * more reliable than the students.last_grade_level column, which is also
+     * used for a new student's previous-school grade and can be a bare number.
+     */
+    private function latestAuditActionExpression(string $studentUuidColumn = 's.uuid'): string
+    {
+        return "(SELECT ea.action FROM enrollment_audits ea WHERE ea.student_uuid = {$studentUuidColumn} ORDER BY ea.id DESC LIMIT 1)";
+    }
+
     private function yearLevelSortExpression(string $column): string
     {
         return "CASE {$column}"
@@ -67,6 +81,15 @@ class EnrollmentController extends Controller
             $sortDirection = 'asc';
         }
 
+        // "new" = no rollover history yet; "retained" = last rollover kept
+        // them in the same grade; "promoted" = last rollover moved them up.
+        $categoryFilter = (string) $request->query('enrollment_category', 'all');
+        if (! in_array($categoryFilter, ['new', 'retained', 'promoted'], true)) {
+            $categoryFilter = null;
+        }
+
+        $latestAction = $this->latestAuditActionExpression('s.uuid');
+
         $studentsQuery = DB::table('students as s')
             ->leftJoin('users as u', 'u.uuid', '=', 's.user_uuid')
             ->where('s.status', '!=', 'graduated')
@@ -82,7 +105,14 @@ class EnrollmentController extends Controller
                 's.middle_name',
                 's.last_name',
                 'u.email as email',
+                DB::raw("{$latestAction} as latest_audit_action"),
             ]);
+
+        if ($categoryFilter === 'new') {
+            $studentsQuery->whereRaw("{$latestAction} IS NULL");
+        } elseif ($categoryFilter !== null) {
+            $studentsQuery->whereRaw("{$latestAction} = ?", [$categoryFilter]);
+        }
 
         if (! empty($q)) {
             $studentsQuery->where(function ($w) use ($q) {
@@ -102,6 +132,49 @@ class EnrollmentController extends Controller
         };
 
         $students = $studentsQuery->paginate($perPage)->withQueryString();
+
+        $students->through(function ($student) {
+            $action = $student->latest_audit_action ?? null;
+            $student->enrollment_category = match (true) {
+                $action === null => 'new',
+                $action === 'retained' => 'retained',
+                $action === 'promoted' => 'promoted',
+                default => 'other',
+            };
+            unset($student->latest_audit_action);
+
+            return $student;
+        });
+
+        $categoryExpression = "CASE WHEN {$latestAction} IS NULL THEN 'new'"
+            ." WHEN {$latestAction} = 'retained' THEN 'retained'"
+            ." WHEN {$latestAction} = 'promoted' THEN 'promoted'"
+            ." ELSE 'other' END";
+
+        $rawCounts = DB::table('students as s')
+            ->where('s.status', '!=', 'graduated')
+            ->selectRaw("{$categoryExpression} as category, s.grade_level, COUNT(*) as total")
+            ->groupBy('category', 's.grade_level')
+            ->get();
+
+        $categoryCounts = ['new' => 0, 'retained' => 0, 'promoted' => 0];
+        $categoryCountsByGrade = [];
+
+        foreach ($rawCounts as $row) {
+            $category = $row->category;
+            if (! array_key_exists($category, $categoryCounts)) {
+                continue;
+            }
+
+            $total = (int) $row->total;
+            $categoryCounts[$category] += $total;
+
+            $gradeKey = $row->grade_level ?: '__ungraded__';
+            if (! isset($categoryCountsByGrade[$gradeKey])) {
+                $categoryCountsByGrade[$gradeKey] = ['new' => 0, 'retained' => 0, 'promoted' => 0];
+            }
+            $categoryCountsByGrade[$gradeKey][$category] += $total;
+        }
 
         $classSections = ClassSection::query()
             ->with('subjects')
@@ -144,6 +217,8 @@ class EnrollmentController extends Controller
             'students' => $students,
             'classSections' => $classSections,
             'commonAddresses' => $commonAddresses,
+            'categoryCounts' => $categoryCounts,
+            'categoryCountsByGrade' => $categoryCountsByGrade,
             'selectedSection' => $selectedSection ? [
                 'uuid' => $selectedSection->uuid,
                 'name' => $selectedSection->name,
@@ -161,6 +236,7 @@ class EnrollmentController extends Controller
                 'section_uuid' => $selectedSectionUuid,
                 'sort_by' => $sortBy,
                 'sort_direction' => $sortDirection,
+                'enrollment_category' => $categoryFilter ?? 'all',
             ],
         ]);
     }

@@ -3,6 +3,7 @@ import { Camera, ShieldCheck, User } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import DeleteUser from '@/components/delete-user';
+import { ImageCropDialog } from '@/components/image-crop-dialog';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +15,9 @@ import type { Auth } from '@/types';
 type PageProps = {
     auth: Auth;
 };
+
+// Fallback banner width/height ratio used before the real banner is measured.
+const DEFAULT_BANNER_ASPECT = 4;
 
 export default function Profile({
     mustVerifyEmail,
@@ -41,6 +45,17 @@ export default function Profile({
     );
     const [isDraggingCover, setIsDraggingCover] = useState(false);
     const coverPreviewUrlRef = useRef<string | null>(null);
+    const coverInputRef = useRef<HTMLInputElement>(null);
+    const bannerRef = useRef<HTMLDivElement>(null);
+    // Aspect of the live banner at crop time so the framed area is exactly
+    // what ends up showing.
+    const [cropAspect, setCropAspect] = useState(DEFAULT_BANNER_ASPECT);
+    // Source image waiting to be cropped; non-null keeps the editor open.
+    const [cropSrc, setCropSrc] = useState<string | null>(null);
+    const cropUrlRef = useRef<string | null>(null);
+    // Guards against a late onCancel firing after a successful crop and
+    // clearing the freshly cropped file from the input.
+    const cropAppliedRef = useRef(false);
 
     useEffect(() => {
         return () => {
@@ -50,6 +65,10 @@ export default function Profile({
 
             if (coverPreviewUrlRef.current) {
                 URL.revokeObjectURL(coverPreviewUrlRef.current);
+            }
+
+            if (cropUrlRef.current) {
+                URL.revokeObjectURL(cropUrlRef.current);
             }
         };
     }, []);
@@ -71,21 +90,79 @@ export default function Profile({
         setAvatarPreview(url);
     }
 
-    function handleCoverChange(file: File | null) {
-        if (coverPreviewUrlRef.current) {
-            URL.revokeObjectURL(coverPreviewUrlRef.current);
-            coverPreviewUrlRef.current = null;
+    // Stage the chosen file into the real input, then open the cropper. The
+    // raw file is replaced by the cropped one on confirm (or dropped on
+    // cancel), so the original is never uploaded un-cropped.
+    function beginCoverCrop(file: File | null) {
+        if (!file) {
+            return;
         }
 
-        if (!file) {
-            setCoverPreview(currentCoverUrl);
+        if (coverInputRef.current) {
+            const transfer = new DataTransfer();
+            transfer.items.add(file);
+            coverInputRef.current.files = transfer.files;
+        }
+
+        if (cropUrlRef.current) {
+            URL.revokeObjectURL(cropUrlRef.current);
+        }
+
+        const banner = bannerRef.current;
+
+        if (banner && banner.clientHeight > 0) {
+            setCropAspect(banner.clientWidth / banner.clientHeight);
+        }
+
+        const url = URL.createObjectURL(file);
+        cropUrlRef.current = url;
+        cropAppliedRef.current = false;
+        setCropSrc(url);
+    }
+
+    function handleCropCancel() {
+        if (cropAppliedRef.current) {
+            cropAppliedRef.current = false;
+            setCropSrc(null);
 
             return;
+        }
+
+        if (coverInputRef.current) {
+            coverInputRef.current.value = '';
+        }
+
+        if (cropUrlRef.current) {
+            URL.revokeObjectURL(cropUrlRef.current);
+            cropUrlRef.current = null;
+        }
+
+        setCropSrc(null);
+    }
+
+    function handleCropConfirm(file: File) {
+        cropAppliedRef.current = true;
+
+        if (coverInputRef.current) {
+            const transfer = new DataTransfer();
+            transfer.items.add(file);
+            coverInputRef.current.files = transfer.files;
+        }
+
+        if (coverPreviewUrlRef.current) {
+            URL.revokeObjectURL(coverPreviewUrlRef.current);
         }
 
         const url = URL.createObjectURL(file);
         coverPreviewUrlRef.current = url;
         setCoverPreview(url);
+
+        if (cropUrlRef.current) {
+            URL.revokeObjectURL(cropUrlRef.current);
+            cropUrlRef.current = null;
+        }
+
+        setCropSrc(null);
     }
 
     const displayName = composeName(
@@ -106,6 +183,7 @@ export default function Profile({
                 {/* Identity hero */}
                 <div className="overflow-hidden rounded-3xl border border-sidebar-border/70 bg-white shadow-sm dark:border-sidebar-border dark:bg-sidebar">
                     <div
+                        ref={bannerRef}
                         onDragOver={(e) => {
                             e.preventDefault();
                             setIsDraggingCover(true);
@@ -114,11 +192,11 @@ export default function Profile({
                         onDrop={(e) => {
                             e.preventDefault();
                             setIsDraggingCover(false);
-                            handleCoverChange(
+                            beginCoverCrop(
                                 e.dataTransfer.files?.[0] ?? null,
                             );
                         }}
-                        className={`relative h-36 overflow-hidden sm:h-44 ${
+                        className={`relative h-36 w-full overflow-hidden sm:h-44 ${
                             coverPreview
                                 ? ''
                                 : 'bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-500 dark:from-indigo-950 dark:via-violet-950 dark:to-fuchsia-950'
@@ -229,11 +307,12 @@ export default function Profile({
                             />
                             <Input
                                 id="cover_image"
+                                ref={coverInputRef}
                                 name="cover_image"
                                 type="file"
                                 accept="image/*"
                                 onChange={(e) =>
-                                    handleCoverChange(
+                                    beginCoverCrop(
                                         e.target.files?.[0] ?? null,
                                     )
                                 }
@@ -398,6 +477,15 @@ export default function Profile({
 
                 <DeleteUser />
             </div>
+
+            <ImageCropDialog
+                key={cropSrc ?? 'none'}
+                open={cropSrc !== null}
+                imageSrc={cropSrc}
+                aspect={cropAspect}
+                onCancel={handleCropCancel}
+                onConfirm={handleCropConfirm}
+            />
         </>
     );
 }
