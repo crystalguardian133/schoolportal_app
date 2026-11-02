@@ -5,7 +5,6 @@ use App\Http\Controllers\TeacherClassController;
 use App\Http\Controllers\AdminSystemLogController;
 use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\AdminStudentController;
-use App\Http\Controllers\AdminTeacherController;
 use App\Http\Controllers\AdminSectionController;
 use App\Http\Controllers\AdminRoleController;
 use App\Http\Controllers\AnnouncementController;
@@ -18,6 +17,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/login');
 Route::get('/assets/profile_pictures/{folder}/{filename}', [AdminAssetController::class, 'serveProfilePicture']);
+Route::get('/assets/profile_covers/{filename}', [AdminAssetController::class, 'serveProfileCover']);
 
 // Public support tickets (locked-out users, guests)
 Route::post('support/tickets', [\App\Http\Controllers\SupportTicketController::class, 'store'])->name('support.tickets.store');
@@ -26,14 +26,12 @@ Route::post('support/tickets/lookup', [\App\Http\Controllers\SupportTicketContro
 Route::get('support/tickets/{report}', [\App\Http\Controllers\SupportTicketController::class, 'show'])->name('support.tickets.show');
 Route::post('support/tickets/{report}/reply', [\App\Http\Controllers\SupportTicketController::class, 'reply'])->name('support.tickets.reply');
 
-// Account unlock (public page; manual table gated by "Unlock Accounts" permission)
+// Account unlock (public request-a-link page; staff unlock via admin/users)
 Route::get('account-unlock', [\App\Http\Controllers\AccountUnlockController::class, 'page'])->name('account-unlock.page');
 Route::post('account-unlock/request', [\App\Http\Controllers\AccountUnlockController::class, 'sendLink'])->name('account-unlock.request');
 Route::get('account-unlock/{user}', [\App\Http\Controllers\AccountUnlockController::class, 'unlockViaLink'])
     ->middleware('signed')
     ->name('account-unlock.link');
-Route::post('account-unlock/{uuid}/manual', [\App\Http\Controllers\AccountUnlockController::class, 'unlockManual'])
-    ->name('account-unlock.manual');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', [\App\Http\Controllers\DashboardController::class, '__invoke'])->name('dashboard');
@@ -57,18 +55,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('admin/system-logs', [AdminSystemLogController::class, 'index'])->name('admin.system-logs');
     Route::get('admin/users', [AdminUserController::class, 'index'])->name('admin.users');
     Route::post('admin/users', [AdminUserController::class, 'store'])->name('admin.users.store');
-    Route::get('admin/create-teacher', [AdminUserController::class, 'createTeacher'])->name('admin.create-teacher');
     Route::post('admin/create-teacher', [AdminUserController::class, 'storeTeacher'])->name('admin.create-teacher.store');
-    Route::get('admin/users/{uuid}/edit', [AdminUserController::class, 'edit'])->name('admin.users.edit');
     Route::patch('admin/users/{uuid}', [AdminUserController::class, 'update'])->name('admin.users.update');
     Route::delete('admin/users/{uuid}', [AdminUserController::class, 'destroy'])->name('admin.users.destroy');
     Route::post('admin/users/{uuid}/unlock', [AdminUserController::class, 'unlock'])->name('admin.users.unlock');
+    Route::post('account-unlock/{uuid}/unlock', [\App\Http\Controllers\AccountUnlockController::class, 'unlock'])->name('account-unlock.unlock');
     Route::get('admin/manage-students', [AdminStudentController::class, 'index'])->name('admin.manage-students.index');
-    Route::get('admin/manage-students/{uuid}/edit', [AdminStudentController::class, 'edit'])->name('admin.manage-students.edit');
     Route::put('admin/manage-students/{uuid}', [AdminStudentController::class, 'update'])->name('admin.manage-students.update');
     Route::delete('admin/manage-students/{uuid}', [AdminStudentController::class, 'destroy'])->name('admin.manage-students.destroy');
-    Route::get('admin/manage-teachers', [AdminTeacherController::class, 'index'])->name('admin.manage-teachers.index');
-    Route::patch('admin/manage-teachers/{uuid}', [AdminTeacherController::class, 'update'])->name('admin.manage-teachers.update');
+    // Teachers are managed in the unified users directory (role filter preset).
+    // Closure (not Route::redirect) so wayfinder skips it like other closures.
+    Route::get('admin/manage-teachers', fn () => redirect('/admin/users?role=teacher', 301))->name('admin.manage-teachers.index');
     Route::get('admin/roles', [AdminRoleController::class, 'index'])->name('admin.roles');
     Route::post('admin/roles', [AdminRoleController::class, 'store'])->name('admin.roles.store');
     Route::patch('admin/roles/{id}', [AdminRoleController::class, 'update'])->name('admin.roles.update');
@@ -101,6 +98,7 @@ Route::delete('admin/subjects/teachers/{teacherUuid}/{subjectUuid}', [AdminSubje
     Route::get('admin/school-years', [AdminSchoolYearController::class, 'index'])->name('admin.school-years');
     Route::post('admin/school-years', [AdminSchoolYearController::class, 'store'])->name('admin.school-years.store');
     Route::post('admin/school-years/{id}/end', [AdminSchoolYearController::class, 'endYear'])->name('admin.school-years.end');
+    Route::get('admin/school-years/{id}/rollover-preview', [AdminSchoolYearController::class, 'rolloverPreview'])->name('admin.school-years.preview');
     Route::delete('admin/school-years/{id}', [AdminSchoolYearController::class, 'destroy'])->name('admin.school-years.destroy');
     Route::get('teacher/schedule', [\App\Http\Controllers\ScheduleController::class, 'teacherSchedule'])->name('teacher.schedule');
     Route::get('teacher/announcements', [AnnouncementController::class, 'teacherIndex'])->name('teacher.announcements');
@@ -123,8 +121,6 @@ Route::delete('admin/subjects/teachers/{teacherUuid}/{subjectUuid}', [AdminSubje
     Route::post('teacher/attendance/sessions/{sessionId}/scan', [\App\Http\Controllers\AttendanceController::class, 'scanStudentQr'])->name('teacher.attendance.scan');
     Route::post('teacher/attendance/sessions/{sessionId}/override', [\App\Http\Controllers\AttendanceController::class, 'overrideScan'])->name('teacher.attendance.override');
     Route::get('teacher/attendance/sessions/{sessionId}/search-students', [\App\Http\Controllers\AttendanceController::class, 'searchStudents'])->name('teacher.attendance.search');
-    Route::get('attendance/scan/{token}', [\App\Http\Controllers\AttendanceController::class, 'scanPage'])->name('attendance.scan');
-    Route::post('attendance/submit', [\App\Http\Controllers\AttendanceController::class, 'submitScan'])->name('attendance.submit');
 
     // Reports / Feedback
     Route::get('feedback', [\App\Http\Controllers\ReportController::class, 'index'])->name('feedback.index');

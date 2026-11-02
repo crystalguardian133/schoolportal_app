@@ -145,7 +145,7 @@ export default function Notifications() {
                     description="Manage push notifications for this device"
                 />
 
-                <div className="space-y-10 rounded-3xl border border-sidebar-border/70 bg-white p-8 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
+                <div className="space-y-6 rounded-xl border border-sidebar-border/70 bg-white p-6 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
                     <div>
                         <h2 className="text-base font-semibold text-foreground">
                             Push notifications
@@ -171,7 +171,7 @@ export default function Notifications() {
 
                     {supported && pushEnabled && (
                         <div className="space-y-4">
-                            <div className="flex items-center justify-between gap-4">
+                            <div className="flex items-center justify-between gap-4 rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border">
                                 <div className="space-y-1">
                                     <p className="text-sm font-medium text-foreground">
                                         Enable notifications

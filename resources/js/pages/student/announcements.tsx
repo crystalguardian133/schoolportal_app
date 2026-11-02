@@ -1,51 +1,18 @@
-import { Head, usePage, router } from '@inertiajs/react';
-import { Megaphone, ChevronDown } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { AnnouncementModal } from '@/components/announcement-modal';
+import { Head, usePage } from '@inertiajs/react';
+import {
+    AnnouncementBoard
+    
+} from '@/components/announcements/announcement-board';
+import type {BoardAnnouncement} from '@/components/announcements/announcement-board';
 import { StudentPageShell } from '@/components/student-page-shell';
-import { useAnnouncements } from '@/contexts/announcements-context';
-
-type AnnouncementRow = {
-    uuid: string;
-    title: string;
-    body: string;
-    scope: 'system' | 'class' | 'section';
-    target_label: string;
-    created_by?: string | null;
-    created_at?: string | null;
-    image_url?: string | null;
-};
 
 export default function Announcements() {
     const { props } = usePage<{
-        announcements?: AnnouncementRow[];
+        announcements?: BoardAnnouncement[];
         sort?: string;
     }>();
     const announcements = props.announcements || [];
     const sort = props.sort || 'latest';
-    const [selectedAnnouncement, setSelectedAnnouncement] =
-        useState<AnnouncementRow | null>(null);
-    const [currentSort, setCurrentSort] = useState(sort);
-
-    useAnnouncements({
-        markSeenOnMount: true,
-        onUpdate: () => {
-            router.reload({ only: ['announcements'] });
-        },
-    });
-
-    useEffect(() => {
-        setCurrentSort(sort);
-    }, [sort]);
-
-    function handleSortChange(nextSort: string) {
-        setCurrentSort(nextSort);
-        router.get(
-            '/student/announcements',
-            { sort: nextSort },
-            { preserveState: true, preserveScroll: true },
-        );
-    }
 
     return (
         <>
@@ -54,88 +21,13 @@ export default function Announcements() {
                 title="Announcements"
                 description="Read school notices, reminders, schedule updates, and important alerts."
             >
-                <section className="rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="flex items-center gap-3">
-                            <Megaphone className="size-5 text-amber-600" />
-                            <h2 className="text-lg font-semibold">
-                                Latest announcements
-                            </h2>
-                        </div>
-                        <label className="flex items-center gap-2 text-xs text-muted-foreground dark:text-sidebar-foreground/80">
-                            Sort
-                            <div className="relative">
-                                <select
-                                    value={currentSort}
-                                    onChange={(e) =>
-                                        handleSortChange(e.target.value)
-                                    }
-                                    className="appearance-none rounded-xl border border-border bg-background py-1.5 pr-8 pl-3 text-xs transition outline-none focus:border-ring focus:ring-4 focus:ring-ring/15"
-                                >
-                                    <option value="latest">Latest</option>
-                                    <option value="oldest">Oldest</option>
-                                    <option value="author">By author</option>
-                                </select>
-                                <ChevronDown className="pointer-events-none absolute top-1/2 right-2 size-3 -translate-y-1/2 text-muted-foreground" />
-                            </div>
-                        </label>
-                    </div>
-                    <div className="mt-5 space-y-3">
-                        {announcements.length === 0 ? (
-                            <div className="rounded-xl border border-sidebar-border/70 px-4 py-3 text-sm text-muted-foreground dark:text-sidebar-foreground/70">
-                                No announcements available.
-                            </div>
-                        ) : (
-                            announcements.map((announcement) => (
-                                <article
-                                    key={announcement.uuid}
-                                    className="rounded-xl border border-sidebar-border/70 px-4 py-3"
-                                >
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            setSelectedAnnouncement(
-                                                announcement,
-                                            )
-                                        }
-                                        className="w-full text-left"
-                                    >
-                                        <div className="flex flex-wrap items-center justify-between gap-2">
-                                            <div>
-                                                <h3 className="text-sm font-semibold text-foreground dark:text-sidebar-foreground">
-                                                    {announcement.title}
-                                                </h3>
-                                                <div className="mt-1 text-xs text-muted-foreground dark:text-sidebar-foreground/70">
-                                                    {announcement.target_label}
-                                                    {announcement.created_by
-                                                        ? ` · by ${announcement.created_by}`
-                                                        : ''}
-                                                </div>
-                                            </div>
-                                            <span className="rounded-full border border-sidebar-border/70 px-3 py-1 text-xs text-muted-foreground dark:text-sidebar-foreground/70">
-                                                {announcement.scope}
-                                            </span>
-                                        </div>
-                                        <p className="mt-3 text-sm leading-6 whitespace-pre-line text-sidebar-foreground">
-                                            {announcement.body}
-                                        </p>
-                                    </button>
-                                </article>
-                            ))
-                        )}
-                    </div>
-                </section>
-            </StudentPageShell>
-
-            {selectedAnnouncement && (
-                <AnnouncementModal
-                    announcement={selectedAnnouncement}
-                    open={!!selectedAnnouncement}
-                    onOpenChange={(open) =>
-                        !open && setSelectedAnnouncement(null)
-                    }
+                <AnnouncementBoard
+                    announcements={announcements}
+                    sort={sort}
+                    basePath="/student/announcements"
+                    manageable={false}
                 />
-            )}
+            </StudentPageShell>
         </>
     );
 }

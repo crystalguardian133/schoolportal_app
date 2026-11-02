@@ -38,6 +38,17 @@ class FortifyServiceProvider extends ServiceProvider
         $this->configureViews();
         $this->configureAuthentication();
         $this->configureRateLimiting();
+
+        \Laravel\Fortify\Fortify::authenticateThrough(function (Request $request) {
+            return array_filter([
+                config('fortify.limiters.login') ? null : \Laravel\Fortify\Actions\EnsureLoginIsNotThrottled::class,
+                config('fortify.lowercase_usernames') ? \Laravel\Fortify\Actions\CanonicalizeUsername::class : null,
+                \Laravel\Fortify\Features::enabled(\Laravel\Fortify\Features::twoFactorAuthentication()) ? \Laravel\Fortify\Actions\RedirectIfTwoFactorAuthenticatable::class : null,
+                \Laravel\Fortify\Actions\AttemptToAuthenticate::class,
+                \Laravel\Fortify\Actions\PrepareAuthenticatedSession::class,
+                \App\Actions\Fortify\PrepareSingleSession::class,
+            ]);
+        });
     }
 
     /**
@@ -171,6 +182,12 @@ class FortifyServiceProvider extends ServiceProvider
             }
 
             $throttle->recordSuccess($user);
+
+            if (app(\App\Services\ActiveSessionChecker::class)->hasActiveSession($user, $request->session()->getId())) {
+                throw ValidationException::withMessages([
+                    Fortify::username() => __('This account is currently signed in on another device. Please sign out there first.'),
+                ]);
+            }
 
             return $user;
         });

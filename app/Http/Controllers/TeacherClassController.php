@@ -104,19 +104,6 @@ class TeacherClassController extends Controller
         })->toArray();
     }
 
-    public function index(Request $request): Response
-    {
-        $user = $request->user();
-
-        $schoolYear = DB::table('school_years')
-            ->where('status', 'active')
-            ->value('name');
-
-        return Inertia::render('teacher/classes', [
-            'classes' => $this->classLoad($user, $schoolYear),
-        ]);
-    }
-
     public function show(Request $request, string $classId): Response
     {
         $user = $request->user();

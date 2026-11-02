@@ -1,5 +1,5 @@
 import { Link, router, usePage } from '@inertiajs/react';
-import { Download, LogOut, MoreHorizontal, Settings, UserRound } from 'lucide-react';
+import { Download, LogOut, MoreHorizontal, Settings } from 'lucide-react';
 import { useState } from 'react';
 import AppLogoIcon from '@/components/app-logo-icon';
 import { NotificationBell } from '@/components/notification-bell';
@@ -39,8 +39,6 @@ export default function PwaMobileLayout({ children }: AppLayoutProps) {
     const getInitials = useInitials();
     const cleanup = useMobileNavigation();
     const [menuOpen, setMenuOpen] = useState(false);
-    const isStudent = auth.user?.role === 'student';
-    const profileUrl = isStudent ? '/student/profile' : '/profile';
 
     const announcementsItem = navItems.find((item) =>
         item.title.toLowerCase().includes('announcement'),
@@ -188,16 +186,6 @@ export default function PwaMobileLayout({ children }: AppLayoutProps) {
                     )}
 
                     <div className="grid grid-cols-2 gap-2">
-                        <Button variant="outline" asChild>
-                            <Link
-                                href={profileUrl}
-                                prefetch
-                                onClick={() => setMenuOpen(false)}
-                            >
-                                <UserRound className="size-4" />
-                                My Profile
-                            </Link>
-                        </Button>
                         <Button variant="outline" asChild>
                             <Link
                                 href="/settings/security"

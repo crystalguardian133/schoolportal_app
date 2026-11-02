@@ -1,5 +1,5 @@
 import { Form, router, usePage } from '@inertiajs/react';
-import { Mail, Lock, ShieldCheck, LifeBuoy, LockKeyhole, TimerReset, Send, X } from 'lucide-react';
+import { Mail, Lock, ShieldCheck, LifeBuoy, LockKeyhole, TimerReset, Send, X, Search } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
@@ -77,9 +77,16 @@ export default function LoginForm({ status, canResetPassword }: Props) {
     // Blocking modals
     const [lockoutOpen, setLockoutOpen] = useState(false);
     const [rateLimitMsg, setRateLimitMsg] = useState<string | null>(null);
+    const [sessionConflictOpen, setSessionConflictOpen] = useState(false);
 
     const pageProps = usePage().props as any;
     const threadUrl: string | null = pageProps.flash?.support_thread_url ?? null;
+
+    useEffect(() => {
+        if (pageProps.flash?.session_conflict) {
+            setSessionConflictOpen(true);
+        }
+    }, [pageProps.flash?.session_conflict]);
 
     const floatingLabel = (focused: boolean, value: string) =>
         focused || value !== '' ? 'top-2 translate-y-0 text-xs' : 'top-1/2 -translate-y-1/2 text-[15px]';
@@ -282,19 +289,30 @@ export default function LoginForm({ status, canResetPassword }: Props) {
                 }}
             </Form>
 
-            <div className="flex flex-col items-center gap-1 text-center">
-                <button
-                    type="button"
-                    onClick={() => {
-                        setSupportSent(null);
-                        setSupportOpen(true);
-                    }}
-                    className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 underline-offset-2 hover:underline dark:text-emerald-400"
-                    tabIndex={6}
-                >
-                    <LifeBuoy className="size-3.5" />
-                    Need help signing in?
-                </button>
+            <div className="flex flex-col items-center gap-1.5 text-center">
+                <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs">
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setSupportSent(null);
+                            setSupportOpen(true);
+                        }}
+                        className="inline-flex items-center gap-1.5 font-medium text-emerald-700 underline-offset-2 hover:underline dark:text-emerald-400"
+                        tabIndex={6}
+                    >
+                        <LifeBuoy className="size-3.5" />
+                        Need help signing in?
+                    </button>
+                    <span className="hidden text-slate-300 sm:inline dark:text-neutral-700">·</span>
+                    <a
+                        href="/support/tickets/lookup"
+                        className="inline-flex items-center gap-1.5 font-medium text-slate-700 underline-offset-2 hover:underline dark:text-slate-300"
+                        tabIndex={7}
+                    >
+                        <Send className="size-3.5" />
+                        Check support tickets
+                    </a>
+                </div>
                 <p className="text-xs text-black dark:text-white">
                     Contact the school office if you need an account.
                 </p>
@@ -331,7 +349,7 @@ export default function LoginForm({ status, canResetPassword }: Props) {
                             <LifeBuoy className="size-4" />
                             Contact Support
                         </Button>
-                        <DelayedConfirmButton label="Confirm" seconds={5} onClick={() => setLockoutOpen(false)} />
+                        <DelayedConfirmButton label="Confirm" uonds={5} onClick={() => setLockoutOpen(false)} />
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -398,10 +416,9 @@ export default function LoginForm({ status, canResetPassword }: Props) {
                                 <Input
                                     id="support-email"
                                     type="email"
-                                    required
                                     value={supportForm.email}
                                     onChange={(e) => setSupportForm((f) => ({ ...f, email: e.target.value }))}
-                                    placeholder="name@example.com"
+                                    placeholder="name@example.com (optional)"
                                 />
                                 <InputError message={supportErrors.email} />
                             </div>
@@ -435,6 +452,10 @@ export default function LoginForm({ status, canResetPassword }: Props) {
                                     <X className="size-4" />
                                     Cancel
                                 </Button>
+                                <Button type="button" variant="outline" onClick={() => (window.location.href = '/support/tickets/lookup')}>
+                                    <Search className="size-4" />
+                                    Look up thread
+                                </Button>
                                 <Button type="submit" disabled={supportProcessing}>
                                     {supportProcessing ? <Spinner /> : <Send className="size-4" />}
                                     Send request
@@ -442,6 +463,36 @@ export default function LoginForm({ status, canResetPassword }: Props) {
                             </DialogFooter>
                         </form>
                     )}
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={sessionConflictOpen} onOpenChange={setSessionConflictOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <LifeBuoy className="size-5 text-amber-500" />
+                            Account active elsewhere
+                        </DialogTitle>
+                        <DialogDescription>
+                            This account is currently signed in on another device or browser. For security, only one
+                            active session is allowed per account.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
+                        <p>
+                            If this was you, sign out of the other session first, then try again. If you do not
+                            recognize this activity, your account may be compromised — contact support immediately.
+                        </p>
+                    </div>
+                    <DialogFooter className="flex-row gap-2 sm:justify-end">
+                        <Button type="button" variant="outline" onClick={() => setSessionConflictOpen(false)}>
+                            Close
+                        </Button>
+                        <Button type="button" onClick={() => (window.location.href = '/support/tickets/lookup')}>
+                            <LifeBuoy className="size-4" />
+                            Contact support
+                        </Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         </div>

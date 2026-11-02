@@ -62,56 +62,6 @@ class StudentPortalController extends Controller
         ]);
     }
 
-    public function dashboard(Request $request): Response
-    {
-        $student = $this->student($request);
-        $user = $request->user();
-
-        // If user is admin/principal/registrar/staff, show admin dashboard with tools (bypass portal restrictions)
-        if ($user && method_exists($user, 'hasRole') && ($user->hasRole('admin') || $user->hasRole('principal') || $user->hasRole('registrar') || $user->hasRole('staff'))) {
-            return Inertia::render('admin/dashboard', [
-                'user' => $user ? ['name' => $user->name, 'email' => $user->email, 'roles' => $user->roles()->pluck('name')->all()] : null,
-                'tools' => [
-                    ['label' => 'Subjects', 'href' => '/admin/subjects'],
-                    ['label' => 'Enrollments', 'href' => '/admin/enrollments'],
-                    ['label' => 'Manage Users', 'href' => '/admin/users'],
-                ],
-            ]);
-        }
-
-        $currentSchoolYear = $student?->school_year;
-
-        $enrollments = $student
-            ? $student->enrollments()
-                ->when($currentSchoolYear, fn ($query) => $query->where('school_year', $currentSchoolYear))
-                ->get()
-            : collect();
-
-        $subjectsEnrolledCount = $enrollments->count();
-
-        $averageGrade = $enrollments->isNotEmpty()
-            ? round($enrollments->avg('total') ?? 0, 1)
-            : null;
-
-        $announcements = $this->getVisibleAnnouncements($request);
-        $unseenAnnouncementsCount = $announcements->count();
-
-        return Inertia::render('dashboard', [
-            'student' => $student ? [
-                'name' => $student->full_name ?: $student->name,
-                'firstName' => $student->first_name ?: strtok($student->name, ' ') ?: $student->name,
-                'middleName' => $student->middle_name,
-                'lastName' => $student->last_name,
-                'gradeLevel' => $student->grade_level,
-                'section' => $student->section,
-                'schoolYear' => $student->school_year,
-            ] : null,
-            'subjectsEnrolledCount' => $subjectsEnrolledCount,
-            'averageGrade' => $averageGrade,
-            'unseenAnnouncementsCount' => $unseenAnnouncementsCount,
-        ]);
-    }
-
     public function profile(Request $request): Response
     {
         $student = $this->student($request);

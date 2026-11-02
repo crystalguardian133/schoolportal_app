@@ -29,6 +29,24 @@ type SchoolYearRow = {
     student_count: number;
 };
 
+type RolloverEntry = {
+    uuid: string;
+    name: string;
+    from: string | null;
+    to: string | null;
+    average: number | null;
+    reason?: string | null;
+};
+
+type RolloverPreview = {
+    school_year: string;
+    status: string;
+    counts: { promoted: number; graduated: number; retained: number };
+    promoted: RolloverEntry[];
+    graduated: RolloverEntry[];
+    retained: RolloverEntry[];
+};
+
 type CurrentYear = {
     id: number;
     name: string;
@@ -55,6 +73,9 @@ export default function AdminSchoolYears() {
     const [submitting, setSubmitting] = useState(false);
     const [endTarget, setEndTarget] = useState<SchoolYearRow | null>(null);
     const [deleteTarget, setDeleteTarget] = useState<SchoolYearRow | null>(null);
+    const [preview, setPreview] = useState<RolloverPreview | null>(null);
+    const [previewLoading, setPreviewLoading] = useState(false);
+    const [previewError, setPreviewError] = useState<string | null>(null);
 
     function showToast(message: string, type: 'success' | 'error' = 'success') {
         window.dispatchEvent(
@@ -82,21 +103,55 @@ export default function AdminSchoolYears() {
         });
     }
 
+    function openEndPreview(sy: SchoolYearRow) {
+        setEndTarget(sy);
+        setPreview(null);
+        setPreviewError(null);
+        setPreviewLoading(true);
+
+        fetch(`/admin/school-years/${sy.id}/rollover-preview`, {
+            headers: { Accept: 'application/json' },
+        })
+            .then((res) => {
+                if (!res.ok) {
+                    throw new Error(`Preview failed (${res.status})`);
+                }
+
+                return res.json();
+            })
+            .then((data) => {
+                setPreview(data as RolloverPreview);
+                setPreviewLoading(false);
+            })
+            .catch((err) => {
+                setPreviewError(
+                    err instanceof Error ? err.message : 'Preview failed.',
+                );
+                setPreviewLoading(false);
+            });
+    }
+
+    function closeEndPreview() {
+        setEndTarget(null);
+        setPreview(null);
+        setPreviewError(null);
+    }
+
     function endYear() {
         if (!endTarget) {
-return;
+            return;
         }
 
         router.post(
             `/admin/school-years/${endTarget.id}/end`,
             {},
             {
-                onSuccess: () => {
-                    setEndTarget(null);
-                    showToast(
-                        'School year ended. Students have been processed for promotion.',
-                        'success',
-                    );
+                onSuccess: (page: any) => {
+                    const message =
+                        page?.props?.flash?.success ??
+                        'School year ended.';
+                    closeEndPreview();
+                    showToast(message, 'success');
                 },
                 onError: () => {
                     showToast('Unable to end school year.', 'error');
@@ -367,7 +422,7 @@ return (
                                                                 variant="destructive"
                                                                 size="sm"
                                                                 className="gap-1.5"
-                                                                onClick={() => setEndTarget(sy)}
+                                                                onClick={() => openEndPreview(sy)}
                                                             >
                                                                 <CalendarOff className="size-3.5" />
                                                                 End
@@ -397,15 +452,120 @@ return (
                 </PageLoader>
             </PortalPageShell>
 
-            <ConfirmDialog
+            <Dialog
                 open={!!endTarget}
-                onOpenChange={(open) => !open && setEndTarget(null)}
-                title="End School Year"
-                description={`Are you sure you want to end "${endTarget?.name}"? This will process all students for promotion based on their grades. Students with an average of 75 or higher will be promoted to the next grade level.`}
-                confirmLabel="End Year"
-                onConfirm={endYear}
-                variant="destructive"
-            />
+                onOpenChange={(open) => !open && closeEndPreview()}
+            >
+                <DialogContent className="sm:max-w-2xl">
+                    <DialogTitle>
+                        End School Year “{endTarget?.name}”?
+                    </DialogTitle>
+                    <DialogDescription>
+                        Grades are archived, sections are cleared, and every
+                        student is auto-promoted (average ≥ 75), graduated
+                        (Grade 12, average ≥ 75), or retained. Audit rows are
+                        written per student. This cannot be undone.
+                    </DialogDescription>
+                    {previewLoading && (
+                        <p className="py-6 text-center text-sm text-muted-foreground">
+                            Computing rollover preview…
+                        </p>
+                    )}
+                    {previewError && (
+                        <p className="py-6 text-center text-sm text-destructive">
+                            {previewError}
+                        </p>
+                    )}
+                    {preview && (
+                        <div className="mt-2 space-y-3">
+                            <div className="grid grid-cols-3 gap-2 text-center">
+                                <div className="rounded-lg bg-emerald-100 px-2 py-3 dark:bg-emerald-900/30">
+                                    <div className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">
+                                        {preview.counts.promoted}
+                                    </div>
+                                    <div className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                                        Promoted
+                                    </div>
+                                </div>
+                                <div className="rounded-lg bg-sky-100 px-2 py-3 dark:bg-sky-900/30">
+                                    <div className="text-2xl font-bold text-sky-700 dark:text-sky-300">
+                                        {preview.counts.graduated}
+                                    </div>
+                                    <div className="text-xs font-medium text-sky-700 dark:text-sky-300">
+                                        Graduated
+                                    </div>
+                                </div>
+                                <div className="rounded-lg bg-amber-100 px-2 py-3 dark:bg-amber-900/30">
+                                    <div className="text-2xl font-bold text-amber-700 dark:text-amber-400">
+                                        {preview.counts.retained}
+                                    </div>
+                                    <div className="text-xs font-medium text-amber-700 dark:text-amber-400">
+                                        Retained
+                                    </div>
+                                </div>
+                            </div>
+                            {(
+                                [
+                                    ['Promoted', preview.promoted, 'to'],
+                                    ['Graduated', preview.graduated, null],
+                                    ['Retained', preview.retained, 'reason'],
+                                ] as const
+                            ).map(([label, list]) => (
+                                <details
+                                    key={label}
+                                    className="rounded-lg border border-sidebar-border/70"
+                                >
+                                    <summary className="cursor-pointer px-3 py-2 text-sm font-medium">
+                                        {label} ({list.length})
+                                    </summary>
+                                    <ul className="max-h-44 space-y-1 overflow-auto px-3 pb-3 text-sm text-muted-foreground">
+                                        {list.length === 0 && (
+                                            <li>None.</li>
+                                        )}
+                                        {list.map((entry) => (
+                                            <li
+                                                key={entry.uuid}
+                                                className="flex items-center justify-between gap-2"
+                                            >
+                                                <span className="truncate">
+                                                    {entry.name}
+                                                </span>
+                                                <span className="shrink-0 text-xs">
+                                                    {entry.from ?? '—'}
+                                                    {entry.to
+                                                        ? ` → ${entry.to}`
+                                                        : ''}
+                                                    {entry.average != null
+                                                        ? ` · avg ${entry.average}`
+                                                        : ''}
+                                                    {entry.reason
+                                                        ? ` · ${entry.reason}`
+                                                        : ''}
+                                                </span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </details>
+                            ))}
+                        </div>
+                    )}
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button type="button" variant="outline">
+                                Cancel
+                            </Button>
+                        </DialogClose>
+                        <Button
+                            type="button"
+                            variant="destructive"
+                            disabled={previewLoading || !preview}
+                            onClick={endYear}
+                        >
+                            End Year
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
             <ConfirmDialog
                 open={!!deleteTarget}
                 onOpenChange={(open) => !open && setDeleteTarget(null)}

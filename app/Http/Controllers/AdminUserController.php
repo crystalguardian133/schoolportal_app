@@ -142,43 +142,6 @@ class AdminUserController extends Controller
         abort(404);
     }
 
-    public function createTeacher(Request $request)
-    {
-        $this->authorizeCreateTeacher($request);
-
-        $sections = ClassSection::query()
-            ->select(['uuid', 'name', 'grade_level'])
-            ->orderBy('name', 'asc')
-            ->get()
-            ->map(fn ($s) => [
-                'uuid' => $s->uuid,
-                'name' => $s->name,
-                'grade_level' => $s->grade_level,
-            ])
-            ->values()
-            ->all();
-
-        // Filter out roles that have "Access Admin" permission
-        $adminPermId = DB::table('permissions')->where('name', 'Access Admin')->value('id');
-        $adminRoleIds = $adminPermId
-            ? DB::table('permission_role')->where('permission_uuid', $adminPermId)->pluck('role_uuid')->toArray()
-            : [];
-
-        $roles = Role::query()
-            ->select(['id', 'name'])
-            ->whereNotIn('id', $adminRoleIds)
-            ->orderBy('name')
-            ->get()
-            ->map(fn ($r) => ['id' => $r->id, 'name' => $r->name])
-            ->values()
-            ->all();
-
-        return inertia('admin/create-teacher', [
-            'sections' => $sections,
-            'roles' => $roles,
-        ]);
-    }
-
     public function store(Request $request)
     {
         $this->authorizeAdmin($request);
@@ -306,43 +269,6 @@ class AdminUserController extends Controller
         }
 
         return redirect()->route('admin.users')->with('success', 'Teacher account created successfully.');
-    }
-
-    public function edit(Request $request, string $uuid)
-    {
-        $this->authorizeAdmin($request);
-
-        $user = User::query()->where('uuid', $uuid)->firstOrFail();
-
-        $sections = ClassSection::query()
-            ->select(['uuid', 'name', 'grade_level'])
-            ->orderBy('name', 'asc')
-            ->get()
-            ->map(fn ($s) => [
-                'uuid' => $s->uuid,
-                'name' => $s->name,
-                'grade_level' => $s->grade_level,
-            ])
-            ->values()
-            ->all();
-
-        $roles = Role::query()->select(['id', 'name'])->get()->map(fn ($r) => ['id' => $r->id, 'name' => $r->name])->values()->all();
-
-        $userRoles = $user->roles->pluck('name')->values()->all();
-
-        return inertia('admin/edit-user', [
-            'user' => [
-                'uuid' => $user->uuid,
-                'name' => $user->name,
-                'email' => $user->email,
-                'profile_picture' => $user->profile_picture,
-                'is_adviser' => $user->is_adviser,
-                'adviser_section' => $user->adviser_section,
-                'roles' => $userRoles,
-            ],
-            'sections' => $sections,
-            'roles' => $roles,
-        ]);
     }
 
     public function update(Request $request, string $uuid)

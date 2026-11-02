@@ -143,6 +143,142 @@
 }
 
 /*
+ * Compact density (user preference, html[data-density='compact']).
+ * Tightens data tables and softens large radii; page layouts and the
+ * sidebar rail are intentionally untouched.
+ */
+html[data-density='compact'] table :is(th, td) {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+}
+
+html[data-density='compact'] .rounded-2xl {
+    border-radius: 1rem;
+}
+
+html[data-density='compact'] .rounded-3xl {
+    border-radius: 1.25rem;
+}
+
+/*
+ * Appearance customization
+ */
+html {
+    --content-width: 72rem;
+    --border-alpha: 0.7;
+    --shadow-intensity: 0 1px 2px 0 rgb(0 0 0 / 0.02), 0 1px 3px 0 rgb(0 0 0 / 0.01);
+}
+
+.app-container,
+main {
+    max-width: var(--content-width);
+    width: 100%;
+    margin-inline: auto;
+}
+
+html[data-border='subtle'] :is(.border, .border-t, .border-b, .border-l, .border-r) {
+    border-color: color-mix(in oklab, var(--border) calc(var(--border-alpha) * 100%), transparent);
+}
+
+html[data-border='strong'] :is(.border, .border-t, .border-b, .border-l, .border-r) {
+    border-color: color-mix(in oklab, var(--border) 100%, transparent);
+}
+
+html[data-surface='elevated'] :is(.bg-card, .bg-white, .dark\:bg-sidebar, .bg-background) {
+    box-shadow: var(--shadow-intensity);
+}
+
+html[data-surface='glass'] :is(.bg-card, .bg-white, .dark\:bg-sidebar) {
+    background-color: color-mix(in oklab, var(--card) 80%, transparent);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+html.dark[data-surface='glass'] :is(.bg-card, .bg-white, .dark\:bg-sidebar) {
+    background-color: color-mix(in oklab, var(--sidebar) 80%, transparent);
+}
+
+html[data-blur='true'] [data-slot='dialog-overlay'],
+html[data-blur='true'] [data-slot='sheet-overlay'],
+html[data-blur='true'] [data-slot='alert-dialog-overlay'],
+html[data-blur='true'] [data-slot='drawer-overlay'],
+html[data-blur='true'] .overlay-blur {
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+}
+
+html[data-blur='true'] [data-slot='dialog-content'],
+html[data-blur='true'] [data-slot='sheet-content'],
+html[data-blur='true'] [data-slot='alert-dialog-content'],
+html[data-blur='true'] [data-slot='drawer-content'],
+html[data-blur='true'] .modal-blur {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    background-color: color-mix(in oklab, var(--background) 90%, transparent);
+}
+
+html.dark[data-blur='true'] [data-slot='dialog-content'],
+html.dark[data-blur='true'] [data-slot='sheet-content'],
+html.dark[data-blur='true'] [data-slot='alert-dialog-content'],
+html.dark[data-blur='true'] [data-slot='drawer-content'],
+html.dark[data-blur='true'] .modal-blur {
+    background-color: color-mix(in oklab, var(--background) 85%, transparent);
+}
+
+html[data-blur='false'] * {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+html[data-shadow='none'] :is(.shadow, .shadow-sm, .shadow-md, .shadow-lg, .shadow-xl) {
+    box-shadow: none !important;
+}
+
+html[data-shadow='medium'] :is(.bg-card, .bg-white, .dark\:bg-sidebar, .rounded-xl, .rounded-2xl, .rounded-3xl) {
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.03);
+}
+
+html[data-shadow='strong'] :is(.bg-card, .bg-white, .dark\:bg-sidebar, .rounded-xl, .rounded-2xl, .rounded-3xl) {
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+}
+
+html[data-focus='brand'] :is(button, a, input, select, textarea, [role='button']):focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+}
+
+html[data-focus='none'] :is(button, a, input, select, textarea, [role='button']):focus-visible {
+    outline: none;
+    box-shadow: none;
+}
+
+html[data-uistyle='minimal'] :is(.border, .border-t, .border-b, .border-l, .border-r) {
+    border-color: color-mix(in oklab, var(--border) 40%, transparent);
+}
+
+html[data-uistyle='modern'] :is(.rounded-xl) {
+    border-radius: calc(var(--radius) + 4px);
+}
+
+html[data-uistyle='modern'] :is(.rounded-2xl) {
+    border-radius: calc(var(--radius) + 8px);
+}
+
+/*
+ * Reduced motion (user preference, html[data-motion='reduce']).
+ * Standard accessibility pattern: collapse animations/transitions to
+ * near-zero rather than removing them (avoids breaking JS timers).
+ */
+html[data-motion='reduce'] *,
+html[data-motion='reduce'] *::before,
+html[data-motion='reduce'] *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+}
+
+/*
  * Mobile friendliness
  *
  * Unlayered so these beat Tailwind utilities (e.g. `text-sm`).

@@ -14,6 +14,7 @@ class Report extends Model
     protected $fillable = [
         'user_id',
         'type',
+        'ticket_id',
         'ticket_number',
         'ticket_year',
         'subject',
@@ -22,6 +23,8 @@ class Report extends Model
         'status',
         'developer_reply',
         'closed',
+        'contact_email',
+        'access_token',
     ];
 
     protected $casts = [
@@ -35,8 +38,12 @@ class Report extends Model
 
     public function getTicketIdAttribute(): string
     {
+        if (! empty($this->attributes['ticket_id'])) {
+            return (string) $this->attributes['ticket_id'];
+        }
+
         if ($this->ticket_number && $this->ticket_year) {
-            return 'DNHS-'.$this->ticket_year.'-'.str_pad((string) $this->ticket_number, 4, '0', STR_PAD_LEFT);
+            return 'DNHS'.$this->ticket_year.'-'.str_pad((string) $this->ticket_number, 4, '0', STR_PAD_LEFT);
         }
 
         return '#'.$this->id;

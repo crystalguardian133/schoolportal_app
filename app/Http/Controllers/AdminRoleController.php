@@ -10,12 +10,23 @@ use Illuminate\Support\Facades\DB;
 
 class AdminRoleController extends Controller
 {
+    /**
+     * Roles that must not be deleted unless the actor has "access admin".
+     * Role names are stored in upper case (ADMINISTRATOR, STUDENT, …) so the
+     * comparison is case-insensitive.
+     */
+    private const PROTECTED_ROLES = ['admin', 'administrator', 'principal', 'registrar', 'student', 'staff', 'teacher'];
+
+    private const ADMIN_ROLES = ['admin', 'administrator', 'principal', 'registrar'];
+
     private function authorizeAdmin(Request $request): void
     {
         $user = $request->user();
 
         $hasPermission = $user && method_exists($user, 'hasPermission') && $user->hasPermission('manage roles');
-        $hasRole = $user && method_exists($user, 'hasRole') && ($user->hasRole('admin') || $user->hasRole('principal') || $user->hasRole('registrar'));
+        $hasRole = $user && method_exists($user, 'activeRoles') && $user->activeRoles()
+            ->whereIn(DB::raw('LOWER(name)'), self::ADMIN_ROLES)
+            ->exists();
 
         if (! $user || (! $hasPermission && ! $hasRole)) {
             abort(403);
@@ -103,8 +114,8 @@ class AdminRoleController extends Controller
         $user = $request->user();
         $role = Role::query()->where('id', $id)->firstOrFail();
 
-        $protectedRoles = ['admin', 'principal', 'registrar', 'student', 'staff', 'teacher'];
-        if (in_array($role->name, $protectedRoles)) {
+        $protectedRoles = self::PROTECTED_ROLES;
+        if (in_array(strtolower($role->name), $protectedRoles, true)) {
             $hasAccessAdmin = $user && method_exists($user, 'hasPermission') && $user->hasPermission('access admin');
             if (! $hasAccessAdmin) {
                 return back()->with('error', 'This role is protected and cannot be deleted.');

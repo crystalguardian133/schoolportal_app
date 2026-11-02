@@ -1,4 +1,4 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     GraduationCap,
     BookOpenText,
@@ -22,12 +22,24 @@ import {
     ArrowRight,
     UserCircle,
 } from 'lucide-react';
-import { useState } from 'react';
+import type {ReactNode} from 'react';
+import { Fragment  } from 'react';
+import { useState, lazy, Suspense } from 'react';
+import { ROLE_BLOCKS } from '@/components/customize/dashboard-blocks';
 import { PortalPageShell } from '@/components/portal-page-shell';
 import { QrCodeModal } from '@/components/qr-code-modal';
 import { useAnnouncements } from '@/contexts/announcements-context';
+import { resolveWidgets, usePreferences } from '@/hooks/use-preferences';
 import { cn, getFirstName } from '@/lib/utils';
 import { dashboard } from '@/routes';
+
+const SimpleBarChart = lazy(() =>
+    import('@/components/charts').then((m) => ({ default: m.SimpleBarChart })),
+);
+
+const SimplePieChart = lazy(() =>
+    import('@/components/charts').then((m) => ({ default: m.SimplePieChart })),
+);
 
 type SectionStat = { label: string; value: number };
 
@@ -61,6 +73,7 @@ type RoleSection = {
     } | null;
     recentAnnouncements?: SectionAnnouncement[];
     typeBreakdown?: { bugs: number; suggestions: number; feedback: number };
+    statusBreakdown?: { accepted: number; rejected: number; resolved: number };
     recentReports?: SectionReport[];
     message?: string;
 };
@@ -111,7 +124,13 @@ function formatGrade(n: number | null): string {
 export default function Dashboard({ user, sections }: Props) {
     const { auth } = usePage<Props>().props;
     const firstName = getFirstName(user?.name ?? auth.user?.name) || 'there';
-    const { unread: unreadCount } = useAnnouncements();
+    const { unread: unreadCount } = useAnnouncements({
+        onUpdate: () => {
+            // Live announcement arrived; refresh the Recent Announcements
+            // widget (and any announcement-dependent section stats).
+            router.reload({ only: ['sections'] });
+        },
+    });
     const [qrOpen, setQrOpen] = useState(false);
 
     const studentSection = sections.find(
@@ -184,114 +203,385 @@ function StudentSectionBlock({
 }) {
     const { student, subjectsEnrolledCount, averageGrade, unseenAnnouncementsCount } = section;
     const announcementCount = Math.max(unseenAnnouncementsCount ?? 0, unreadCount);
+    const { preferences } = usePreferences();
+    const orderedIds = resolveWidgets('student', ['identity', 'metrics', 'links'], preferences);
+
+    const blocks: Record<string, ReactNode> = {};
+
+    if (student) {
+        blocks.identity = (
+            <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+                {student.gradeLevel && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-medium text-violet-700 dark:bg-violet-950 dark:text-violet-300">
+                        <GraduationCap className="size-3" />
+                        {student.gradeLevel}
+                    </span>
+                )}
+                {student.section && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-medium text-sky-700 dark:bg-sky-950 dark:text-sky-300">
+                        Section {student.section}
+                    </span>
+                )}
+                {student.schoolYear && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+                        <CalendarDays className="size-3" />
+                        {student.schoolYear}
+                    </span>
+                )}
+                {student.lrn && (
+                    <span className="text-xs text-muted-foreground">
+                        LRN: {student.lrn}
+                    </span>
+                )}
+            </div>
+        );
+    }
+
+    blocks.metrics = (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <MetricCard
+                label="Average Grade"
+                value={formatGrade(averageGrade)}
+                icon={Award}
+                color="violet"
+                href="/student/grades"
+            />
+            <MetricCard
+                label="Subjects Enrolled"
+                value={String(subjectsEnrolledCount ?? 0)}
+                icon={BookOpenText}
+                color="emerald"
+                href="/student/subjects-enrolled"
+            />
+            <MetricCard
+                label="Announcements"
+                value={String(announcementCount)}
+                subtitle={announcementCount > 0 ? 'new' : 'all read'}
+                icon={Megaphone}
+                color="amber"
+                href="/student/announcements"
+            />
+            <MetricCard
+                label="My Profile"
+                value="View"
+                subtitle="Student Information"
+                icon={UserCircle}
+                color="blue"
+                href="/student/profile"
+            />
+            <MetricCard
+                label="QR Code"
+                value="Scan"
+                subtitle="Show to teacher"
+                icon={QrCode}
+                color="sky"
+                onClick={onOpenQr}
+            />
+        </div>
+    );
+
+    blocks.links = (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <QuickLink
+                title="Grades"
+                description="View quarterly grades and general average"
+                icon={BarChart3}
+                href="/student/grades"
+                color="violet"
+            />
+            <QuickLink
+                title="Subjects Enrolled"
+                description="See your enrolled subjects and schedules"
+                icon={BookOpenText}
+                href="/student/subjects-enrolled"
+                color="emerald"
+            />
+            <QuickLink
+                title="Pre-registration"
+                description="Confirm enrollment details and documents"
+                icon={ClipboardList}
+                href="/student/pre-registration"
+                color="amber"
+            />
+            <QuickLink
+                title="Announcements"
+                description="Latest school notices and reminders"
+                icon={Megaphone}
+                href="/student/announcements"
+                color="rose"
+            />
+        </div>
+    );
 
     return (
         <section className="flex flex-col gap-4">
             <SectionHeading label={section.label} />
-
-            {student && (
-                <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-                    {student.gradeLevel && (
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-medium text-violet-700 dark:bg-violet-950 dark:text-violet-300">
-                            <GraduationCap className="size-3" />
-                            {student.gradeLevel}
-                        </span>
-                    )}
-                    {student.section && (
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-medium text-sky-700 dark:bg-sky-950 dark:text-sky-300">
-                            Section {student.section}
-                        </span>
-                    )}
-                    {student.schoolYear && (
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-950 dark:text-amber-300">
-                            <CalendarDays className="size-3" />
-                            {student.schoolYear}
-                        </span>
-                    )}
-                    {student.lrn && (
-                        <span className="text-xs text-muted-foreground">
-                            LRN: {student.lrn}
-                        </span>
-                    )}
-                </div>
-            )}
-
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <MetricCard
-                    label="Average Grade"
-                    value={formatGrade(averageGrade)}
-                    icon={Award}
-                    color="violet"
-                    href="/student/grades"
-                />
-                <MetricCard
-                    label="Subjects Enrolled"
-                    value={String(subjectsEnrolledCount ?? 0)}
-                    icon={BookOpenText}
-                    color="emerald"
-                    href="/student/subjects-enrolled"
-                />
-                <MetricCard
-                    label="Announcements"
-                    value={String(announcementCount)}
-                    subtitle={announcementCount > 0 ? 'new' : 'all read'}
-                    icon={Megaphone}
-                    color="amber"
-                    href="/student/announcements"
-                />
-                <MetricCard
-                    label="My Profile"
-                    value="View"
-                    subtitle="Student Information"
-                    icon={UserCircle}
-                    color="blue"
-                    href="/student/profile"
-                />
-                <MetricCard
-                    label="QR Code"
-                    value="Scan"
-                    subtitle="Show to teacher"
-                    icon={QrCode}
-                    color="sky"
-                    onClick={onOpenQr}
-                />
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <QuickLink
-                    title="Grades"
-                    description="View quarterly grades and general average"
-                    icon={BarChart3}
-                    href="/student/grades"
-                    color="violet"
-                />
-                <QuickLink
-                    title="Subjects Enrolled"
-                    description="See your enrolled subjects and schedules"
-                    icon={BookOpenText}
-                    href="/student/subjects-enrolled"
-                    color="emerald"
-                />
-                <QuickLink
-                    title="Pre-registration"
-                    description="Confirm enrollment details and documents"
-                    icon={ClipboardList}
-                    href="/student/pre-registration"
-                    color="amber"
-                />
-                <QuickLink
-                    title="Announcements"
-                    description="Latest school notices and reminders"
-                    icon={Megaphone}
-                    href="/student/announcements"
-                    color="rose"
-                />
-            </div>
+            {orderedIds.map((id) => (
+                <Fragment key={id}>{blocks[id]}</Fragment>
+            ))}
         </section>
     );
 }
 
 function RoleSectionBlock({ section }: { section: RoleSection }) {
+    const { preferences } = usePreferences();
+    const orderedIds = resolveWidgets(
+        section.key,
+        ROLE_BLOCKS.map((b) => b.id),
+        preferences,
+    );
+
+    const blocks: Record<string, ReactNode> = {};
+
+    if (section.stats && section.stats.length > 0) {
+        blocks.stats = (
+            <div
+                className={cn(
+                    'grid gap-4 sm:grid-cols-2',
+                    section.stats.length >= 4
+                        ? 'lg:grid-cols-4'
+                        : 'lg:grid-cols-3',
+                )}
+            >
+                {section.stats.map((stat) => (
+                    <SectionStatCard
+                        key={stat.label}
+                        label={stat.label}
+                        value={stat.value}
+                    />
+                ))}
+            </div>
+        );
+    }
+
+    if (section.tools && section.tools.length > 0) {
+        blocks.tools = (
+            <div className="rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
+                <h3 className="text-lg font-semibold">Quick Actions</h3>
+                <div className="mt-3 flex flex-wrap gap-2">
+                    {section.tools.map((t) => (
+                        <Link
+                            key={t.href}
+                            href={t.href}
+                            className="inline-flex items-center gap-2 rounded-lg border border-sidebar-border/70 px-4 py-2 text-sm font-medium hover:bg-sidebar-accent"
+                        >
+                            {t.label}
+                        </Link>
+                    ))}
+                </div>
+            </div>
+        );
+    }
+
+    if (section.activeSchoolYear) {
+        blocks['school-year'] = (
+            <div className="rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
+                <h3 className="text-lg font-semibold">Active School Year</h3>
+                <div className="mt-3 space-y-1">
+                    <div className="text-xl font-bold">
+                        {section.activeSchoolYear.name}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                        {section.activeSchoolYear.start_date} —{' '}
+                        {section.activeSchoolYear.end_date}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (section.typeBreakdown) {
+        blocks['report-types'] = (
+            <div className="rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
+                <h3 className="text-lg font-semibold">Report Types</h3>
+                <div className="mt-3 grid grid-cols-1 gap-3 min-[480px]:grid-cols-3">
+                    <BreakdownStat
+                        label="Bugs"
+                        value={section.typeBreakdown.bugs}
+                        icon={Bug}
+                        color="rose"
+                    />
+                    <BreakdownStat
+                        label="Suggestions"
+                        value={section.typeBreakdown.suggestions}
+                        icon={Lightbulb}
+                        color="amber"
+                    />
+                    <BreakdownStat
+                        label="Feedback"
+                        value={section.typeBreakdown.feedback}
+                        icon={MessageSquare}
+                        color="blue"
+                    />
+                </div>
+            </div>
+        );
+    }
+
+    if (section.statusBreakdown) {
+        blocks['report-status'] = (
+            <div className="rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
+                <h3 className="text-lg font-semibold">Report Status</h3>
+                <div className="mt-3 grid grid-cols-1 gap-3 min-[480px]:grid-cols-3">
+                    <BreakdownStat
+                        label="Accepted"
+                        value={section.statusBreakdown.accepted}
+                        icon={Check}
+                        color="emerald"
+                    />
+                    <BreakdownStat
+                        label="Rejected"
+                        value={section.statusBreakdown.rejected}
+                        icon={X}
+                        color="rose"
+                    />
+                    <BreakdownStat
+                        label="Resolved"
+                        value={section.statusBreakdown.resolved}
+                        icon={Check}
+                        color="blue"
+                    />
+                </div>
+            </div>
+        );
+    }
+
+    if (section.key === 'developer') {
+        blocks.charts = (
+            <Suspense
+                fallback={
+                    <div className="h-64 animate-pulse rounded-2xl bg-muted" />
+                }
+            >
+                <DeveloperCharts section={section} />
+            </Suspense>
+        );
+    }
+
+    if (section.recentAnnouncements) {
+        blocks.announcements = (
+            <div className="rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
+                <h3 className="text-lg font-semibold">Recent Announcements</h3>
+                {section.recentAnnouncements.length === 0 ? (
+                    <p className="mt-3 text-sm text-muted-foreground">
+                        No announcements yet.
+                    </p>
+                ) : (
+                    <ul className="mt-3 space-y-3">
+                        {section.recentAnnouncements.map((a, i) => (
+                            <li key={i} className="rounded-lg border p-3">
+                                <div className="font-medium">{a.title}</div>
+                                <div className="mt-1 text-xs text-muted-foreground">
+                                    {a.created_at}
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </div>
+        );
+    }
+
+    if (section.recentReports && section.recentReports.length > 0) {
+        blocks.reports = (
+            <div className="rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
+                <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold">Recent Reports</h3>
+                    <Link
+                        href="/developer/reports"
+                        className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+                    >
+                        View all <ArrowRight className="size-4" />
+                    </Link>
+                </div>
+                <div className="mt-4 space-y-3">
+                    {section.recentReports.map((report) => {
+                        const TypeIcon =
+                            typeConfig[report.type]?.icon ?? MessageSquare;
+                        const StatusIcon =
+                            statusConfig[report.status]?.icon ?? Clock;
+
+                        return (
+                            <div
+                                key={report.id}
+                                className="flex items-center justify-between rounded-xl border border-border p-3 transition hover:bg-muted/50"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div
+                                        className={cn(
+                                            'rounded-lg p-2',
+                                            typeConfig[report.type]?.bg ??
+                                                'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300',
+                                        )}
+                                    >
+                                        <TypeIcon className="size-4" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium">
+                                            {report.subject}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            by {report.user_name} ·{' '}
+                                            {report.created_at}
+                                        </p>
+                                    </div>
+                                </div>
+                                <span
+                                    className={cn(
+                                        'rounded-full px-2.5 py-0.5 text-xs font-medium',
+                                        statusConfig[report.status]?.bg ??
+                                            'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
+                                    )}
+                                >
+                                    <StatusIcon className="mr-1 inline size-3" />
+                                    {statusConfig[report.status]?.label ??
+                                        report.status}
+                                </span>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        );
+    }
+
+    // Adjacent panel cards share one 2-col grid (original look); every other
+    // block renders full-width. Order + visibility come from user prefs.
+    const PANEL_IDS = new Set([
+        'tools',
+        'school-year',
+        'report-types',
+        'report-status',
+        'announcements',
+    ]);
+    const nodes: ReactNode[] = [];
+    let panelRun: ReactNode[] = [];
+    const flushPanels = (key: string) => {
+        if (panelRun.length > 0) {
+            nodes.push(
+                <div key={key} className="grid gap-4 lg:grid-cols-2">
+                    {panelRun}
+                </div>,
+            );
+            panelRun = [];
+        }
+    };
+    orderedIds.forEach((id, index) => {
+        const node = blocks[id];
+
+        if (!node) {
+            return;
+        }
+
+        if (PANEL_IDS.has(id)) {
+            panelRun.push(<Fragment key={id}>{node}</Fragment>);
+        } else {
+            flushPanels(`after-${index}`);
+            nodes.push(<Fragment key={id}>{node}</Fragment>);
+        }
+    });
+    flushPanels('trailing');
+
     return (
         <section className="flex flex-col gap-4">
             <SectionHeading label={section.label} />
@@ -302,146 +592,7 @@ function RoleSectionBlock({ section }: { section: RoleSection }) {
                 </div>
             )}
 
-            {section.stats && section.stats.length > 0 && (
-                <div
-                    className={cn(
-                        'grid gap-4 sm:grid-cols-2',
-                        section.stats.length >= 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3',
-                    )}
-                >
-                    {section.stats.map((stat) => (
-                        <SectionStatCard
-                            key={stat.label}
-                            label={stat.label}
-                            value={stat.value}
-                        />
-                    ))}
-                </div>
-            )}
-
-            <div className="grid gap-4 lg:grid-cols-2">
-                {section.tools && section.tools.length > 0 && (
-                    <div className="rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
-                        <h3 className="text-lg font-semibold">Quick Actions</h3>
-                        <div className="mt-3 flex flex-wrap gap-2">
-                            {section.tools.map((t) => (
-                                <Link
-                                    key={t.href}
-                                    href={t.href}
-                                    className="inline-flex items-center gap-2 rounded-lg border border-sidebar-border/70 px-4 py-2 text-sm font-medium hover:bg-sidebar-accent"
-                                >
-                                    {t.label}
-                                </Link>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {section.activeSchoolYear && (
-                    <div className="rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
-                        <h3 className="text-lg font-semibold">Active School Year</h3>
-                        <div className="mt-3 space-y-1">
-                            <div className="text-xl font-bold">
-                                {section.activeSchoolYear.name}
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                                {section.activeSchoolYear.start_date} — {section.activeSchoolYear.end_date}
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {section.typeBreakdown && (
-                    <div className="rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
-                        <h3 className="text-lg font-semibold">Report Types</h3>
-                        <div className="mt-3 grid grid-cols-1 gap-3 min-[480px]:grid-cols-3">
-                            <BreakdownStat
-                                label="Bugs"
-                                value={section.typeBreakdown.bugs}
-                                icon={Bug}
-                                color="rose"
-                            />
-                            <BreakdownStat
-                                label="Suggestions"
-                                value={section.typeBreakdown.suggestions}
-                                icon={Lightbulb}
-                                color="amber"
-                            />
-                            <BreakdownStat
-                                label="Feedback"
-                                value={section.typeBreakdown.feedback}
-                                icon={MessageSquare}
-                                color="blue"
-                            />
-                        </div>
-                    </div>
-                )}
-
-                {section.recentAnnouncements && (
-                    <div className="rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
-                        <h3 className="text-lg font-semibold">Recent Announcements</h3>
-                        {section.recentAnnouncements.length === 0 ? (
-                            <p className="mt-3 text-sm text-muted-foreground">
-                                No announcements yet.
-                            </p>
-                        ) : (
-                            <ul className="mt-3 space-y-3">
-                                {section.recentAnnouncements.map((a, i) => (
-                                    <li key={i} className="rounded-lg border p-3">
-                                        <div className="font-medium">{a.title}</div>
-                                        <div className="mt-1 text-xs text-muted-foreground">
-                                            {a.created_at}
-                                        </div>
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
-                    </div>
-                )}
-            </div>
-
-            {section.recentReports && section.recentReports.length > 0 && (
-                <div className="rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
-                    <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-semibold">Recent Reports</h3>
-                        <Link
-                            href="/developer/reports"
-                            className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
-                        >
-                            View all <ArrowRight className="size-4" />
-                        </Link>
-                    </div>
-                    <div className="mt-4 space-y-3">
-                        {section.recentReports.map((report) => {
-                            const TypeIcon = typeConfig[report.type]?.icon ?? MessageSquare;
-                            const StatusIcon = statusConfig[report.status]?.icon ?? Clock;
-
-                            return (
-                                <div
-                                    key={report.id}
-                                    className="flex items-center justify-between rounded-xl border border-border p-3 transition hover:bg-muted/50"
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div className={cn('rounded-lg p-2', typeConfig[report.type]?.bg ?? 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300')}>
-                                            <TypeIcon className="size-4" />
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-medium">{report.subject}</p>
-                                            <p className="text-xs text-muted-foreground">
-                                                by {report.user_name} · {report.created_at}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <span className={cn('rounded-full px-2.5 py-0.5 text-xs font-medium', statusConfig[report.status]?.bg ?? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300')}>
-                                        <StatusIcon className="mr-1 inline size-3" />
-                                        {statusConfig[report.status]?.label ?? report.status}
-                                    </span>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-            )}
+            {nodes}
         </section>
     );
 }
@@ -497,8 +648,52 @@ function SectionStatCard({ label, value }: { label: string; value: number }) {
     );
 }
 
-function BreakdownStat({
-    label,
+// Preserved from the old developer/dashboard page: both charts derive
+// entirely from the section payload (stats + breakdowns), no extra fetch.
+function DeveloperCharts({ section }: { section: RoleSection }) {
+    const statValue = (label: string): number =>
+        section.stats?.find((s) => s.label === label)?.value ?? 0;
+
+    return (
+        <div className="grid gap-4 lg:grid-cols-2">
+            <SimpleBarChart
+                title="Status Overview"
+                data={[
+                    { label: 'Pending', value: statValue('Pending') },
+                    { label: 'Under Review', value: statValue('Under Review') },
+                    {
+                        label: 'Accepted',
+                        value: section.statusBreakdown?.accepted ?? 0,
+                    },
+                    {
+                        label: 'Rejected',
+                        value: section.statusBreakdown?.rejected ?? 0,
+                    },
+                    {
+                        label: 'Resolved',
+                        value: section.statusBreakdown?.resolved ?? 0,
+                    },
+                ]}
+            />
+            <SimplePieChart
+                title="Report Types"
+                data={[
+                    { label: 'Bugs', value: section.typeBreakdown?.bugs ?? 0 },
+                    {
+                        label: 'Suggestions',
+                        value: section.typeBreakdown?.suggestions ?? 0,
+                    },
+                    {
+                        label: 'Feedback',
+                        value: section.typeBreakdown?.feedback ?? 0,
+                    },
+                ]}
+            />
+        </div>
+    );
+}
+
+function BreakdownStat({    label,
     value,
     icon: Icon,
     color,

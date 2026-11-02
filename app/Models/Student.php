@@ -42,6 +42,7 @@ class Student extends Model
         'age',
         'grade_level',
         'school_year',
+        'status',
         'grades',
     ];
 

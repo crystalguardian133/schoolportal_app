@@ -20,9 +20,9 @@ export function PortalPageShell({
     showHeader = true,
 }: PortalPageShellProps) {
     return (
-        <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto p-3 sm:gap-6 sm:p-4">
+        <div className="flex flex-1 flex-col gap-4 overflow-x-auto p-3 sm:gap-6 sm:p-4">
             {showHeader && !showHero && (
-                <header className="flex flex-col gap-1">
+                <header className="sticky top-0 z-10 flex flex-col gap-1 bg-background/80 px-1 pt-1 pb-2 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                     <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
                         {title}
                     </h1>

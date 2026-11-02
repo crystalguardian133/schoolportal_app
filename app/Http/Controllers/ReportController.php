@@ -65,12 +65,14 @@ class ReportController extends Controller
         }
 
         $year = (int) now()->format('Y');
+        $number = Report::nextTicketNumber($year);
 
         Report::create([
             'user_id' => $request->user()->id,
             'type' => $validated['type'],
+            'ticket_id' => 'DNHS'.$year.'-'.str_pad((string) $number, 4, '0', STR_PAD_LEFT),
             'ticket_year' => $year,
-            'ticket_number' => Report::nextTicketNumber($year),
+            'ticket_number' => $number,
             'subject' => $validated['subject'],
             'message' => $validated['message'],
             'images' => $imagePaths ?: null,
@@ -146,7 +148,13 @@ class ReportController extends Controller
     {
         $query = Report::with(['user', 'replies.user'])->latest();
 
-        if ($request->filled('type')) {
+        if ($request->filled('tab')) {
+            if ($request->tab === 'support') {
+                $query->where('type', 'support');
+            } elseif ($request->tab === 'reports') {
+                $query->whereIn('type', ['bug', 'suggestion', 'feedback']);
+            }
+        } elseif ($request->filled('type')) {
             $query->where('type', $request->type);
         }
 
@@ -191,7 +199,7 @@ class ReportController extends Controller
         return Inertia::render('developer/reports', [
             'reports' => $reports,
             'stats' => $stats,
-            'filters' => $request->only(['type', 'status', 'search', 'resolution']),
+            'filters' => $request->only(['type', 'status', 'search', 'resolution', 'tab']),
         ]);
     }
 

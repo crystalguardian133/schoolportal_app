@@ -36,4 +36,14 @@ class AdminAssetController extends Controller
 
         return response()->file($path);
     }
+
+    public function serveProfileCover($filename)
+    {
+        $path = base_path('resources/assets/profile_covers/'.basename($filename));
+        if (! File::exists($path)) {
+            abort(404);
+        }
+
+        return response()->file($path);
+    }
 }

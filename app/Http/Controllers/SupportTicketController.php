@@ -29,39 +29,71 @@ class SupportTicketController extends Controller
         RateLimiter::hit($ipKey, 3600);
 
         $validated = $request->validate([
-            'email' => ['required', 'string', 'email', 'max:255'],
+            'email' => ['nullable', 'string', 'email', 'max:255'],
             'subject' => ['nullable', 'string', 'max:255'],
             'message' => ['required', 'string', 'max:5000'],
         ]);
 
+        $email = isset($validated['email']) ? Str::lower(trim($validated['email'])) : '';
+
+        // Cooldown: one support thread per session/guest per 24 hours.
+        $lastAt = $request->session()->get('support_ticket_last_at');
+        if ($lastAt && now()->diffInHours($lastAt) < 24) {
+            throw ValidationException::withMessages([
+                'message' => __('You can only submit one support request per day. Please try again later.'),
+            ]);
+        }
+
+        // If an email is provided, it must belong to a registered account.
+        if ($email !== '' && ! \App\Models\User::where('email', $email)->exists()) {
+            throw ValidationException::withMessages([
+                'email' => __('No account is associated with this email address.'),
+            ]);
+        }
+
         $user = $request->user();
         $year = (int) now()->format('Y');
+        $number = Report::nextTicketNumber($year);
 
         $report = Report::create([
             'user_id' => $user?->id,
-            'contact_email' => Str::lower($validated['email']),
+            'contact_email' => $email !== '' ? $email : null,
             'access_token' => Str::random(64),
             'type' => 'support',
+            'ticket_id' => 'DNHS'.$year.'-'.str_pad((string) $number, 4, '0', STR_PAD_LEFT),
             'ticket_year' => $year,
-            'ticket_number' => Report::nextTicketNumber($year),
+            'ticket_number' => $number,
             'subject' => $validated['subject'] ?: __('Account Access Help'),
             'message' => $validated['message'],
             'status' => 'pending',
         ]);
 
+        session()->put('support_ticket_last_at', now()->toDateTimeString());
+        session()->flash('support_ticket_id', $report->ticket_id);
+
         if (! $user) {
             session()->flash('support_thread_url', '/support/tickets/'.$report->id.'?token='.$report->access_token);
         }
 
-        return back()->with('success', __('Support request submitted. Our team will contact you at :email.', ['email' => $validated['email']]));
+        $successMsg = __('Support request submitted. Your ticket ID is :ticket.', ['ticket' => $report->ticket_id]);
+        if ($email !== '') {
+            $successMsg .= ' '.__('Our team will contact you at :email.', ['email' => $email]);
+        }
+
+        return back()->with('success', $successMsg);
     }
 
     /**
      * Guest-accessible thread view via unguessable token.
      */
-    public function show(Request $request, Report $report)
+    public function show(Request $request, string $report)
     {
-        abort_unless($this->tokenMatches($request, $report), 404);
+        $report = Report::query()
+            ->where('id', $report)
+            ->where('type', 'support')
+            ->first();
+
+        abort_unless($report && $this->tokenMatches($request, $report), 404);
 
         $report->load(['replies.user']);
 
@@ -70,12 +102,13 @@ class SupportTicketController extends Controller
                 'id' => $report->id,
                 'ticket_id' => $report->ticket_id,
                 'subject' => $report->subject,
+                'contact_email' => $report->contact_email,
                 'status' => $report->status,
                 'closed' => $report->closed,
                 'created_at' => $report->created_at->toISOString(),
                 'messages' => collect([[
                     'id' => 'op',
-                    'author' => $report->contact_email,
+                    'author' => $report->contact_email ?: __('Guest'),
                     'is_staff' => false,
                     'message' => $report->message,
                     'images' => null,
@@ -96,9 +129,14 @@ class SupportTicketController extends Controller
     /**
      * Guest reply to their own ticket.
      */
-    public function reply(Request $request, Report $report)
+    public function reply(Request $request, string $report)
     {
-        abort_unless($this->tokenMatches($request, $report), 404);
+        $report = Report::query()
+            ->where('id', $report)
+            ->where('type', 'support')
+            ->first();
+
+        abort_unless($report && $this->tokenMatches($request, $report), 404);
         abort_if($report->closed, 422, 'This thread is closed.');
 
         $validated = $request->validate([
@@ -150,12 +188,19 @@ class SupportTicketController extends Controller
         $value = trim($validated['query']);
 
         // Support the human-friendly ticket id (e.g. DNHS-2026-0001)
-        if (preg_match('/^\s*dnhs-(\d{4})-(\d{1,6})\s*$/i', $value, $m)) {
+        if (preg_match('/^\s*dnhs-?(\d{4})-(\d{1,6})\s*$/i', $value, $m)) {
             $ticket = Report::where('type', 'support')
                 ->whereNotNull('access_token')
-                ->where('ticket_year', (int) $m[1])
-                ->where('ticket_number', (int) $m[2])
+                ->where('ticket_id', 'DNHS'.(int) $m[1].'-'.str_pad((string) ((int) $m[2]), 4, '0', STR_PAD_LEFT))
                 ->first();
+
+            if (! $ticket) {
+                $ticket = Report::where('type', 'support')
+                    ->whereNotNull('access_token')
+                    ->where('ticket_year', (int) $m[1])
+                    ->where('ticket_number', (int) $m[2])
+                    ->first();
+            }
 
             if (! $ticket) {
                 throw ValidationException::withMessages([

@@ -67,6 +67,19 @@ class AdminStudentController extends Controller
                 's.lrn',
                 's.section',
                 's.grade_level',
+                's.last_grade_level',
+                's.previous_section',
+                's.status',
+                's.birthday',
+                's.contact_number',
+                's.address_zone_street',
+                's.address_barangay',
+                's.address_municipality',
+                's.address_province',
+                's.previous_school',
+                's.last_school_year',
+                's.section_uuid',
+                's.profile_picture',
                 's.first_name',
                 's.middle_name',
                 's.last_name',
@@ -96,74 +109,36 @@ class AdminStudentController extends Controller
 
         return inertia('admin/manage-students', [
             'students' => $students,
+            'classSections' => ClassSection::query()
+                ->select(['uuid', 'name', 'grade_level'])
+                ->orderBy('name')
+                ->get()
+                ->map(fn ($s) => [
+                    'uuid' => $s->uuid,
+                    'name' => $s->name,
+                    'grade_level' => $s->grade_level,
+                ])
+                ->values()
+                ->all(),
+            'commonAddresses' => CommonAddress::query()
+                ->orderBy('label')
+                ->get()
+                ->map(fn (CommonAddress $address) => [
+                    'id' => $address->id,
+                    'label' => $address->label,
+                    'address_zone_street' => $address->address_zone_street,
+                    'address_barangay' => $address->address_barangay,
+                    'address_municipality' => $address->address_municipality,
+                    'address_province' => $address->address_province,
+                ])
+                ->values()
+                ->all(),
             'filters' => [
                 'q' => $q,
                 'per_page' => $perPage,
                 'sort_by' => $sortBy,
                 'sort_direction' => $sortDirection,
             ],
-        ]);
-    }
-
-    public function edit(Request $request, string $uuid)
-    {
-        $this->authorizeAdmin($request);
-
-        $student = Student::where('uuid', $uuid)->firstOrFail();
-        $user = $student->user;
-
-        $classSections = ClassSection::query()
-            ->select(['uuid', 'name', 'grade_level'])
-            ->orderBy('name')
-            ->get()
-            ->map(fn ($s) => [
-                'uuid' => $s->uuid,
-                'name' => $s->name,
-                'grade_level' => $s->grade_level,
-            ])
-            ->values()
-            ->all();
-
-        $commonAddresses = CommonAddress::query()
-            ->orderBy('label')
-            ->get()
-            ->map(fn (CommonAddress $address) => [
-                'id' => $address->id,
-                'label' => $address->label,
-                'address_zone_street' => $address->address_zone_street,
-                'address_barangay' => $address->address_barangay,
-                'address_municipality' => $address->address_municipality,
-                'address_province' => $address->address_province,
-            ])
-            ->values()
-            ->all();
-
-        return inertia('admin/edit-student', [
-            'student' => [
-                'uuid' => $student->uuid,
-                'first_name' => $student->first_name,
-                'middle_name' => $student->middle_name,
-                'last_name' => $student->last_name,
-                'lrn' => $student->lrn,
-                'student_id' => $student->student_id,
-                'birthday' => $student->birthday,
-                'contact_number' => $student->contact_number,
-                'address_zone_street' => $student->address_zone_street,
-                'address_barangay' => $student->address_barangay,
-                'address_municipality' => $student->address_municipality,
-                'address_province' => $student->address_province,
-                'previous_school' => $student->previous_school,
-                'last_school_year' => $student->last_school_year,
-                'last_grade_level' => $student->last_grade_level,
-                'previous_section' => $student->previous_section,
-                'grade_level' => $student->grade_level,
-                'section' => $student->section,
-                'section_uuid' => $student->section_uuid,
-                'profile_picture' => $student->profile_picture ?: $user?->profile_picture,
-                'email' => $user?->email,
-            ],
-            'classSections' => $classSections,
-            'commonAddresses' => $commonAddresses,
         ]);
     }
 

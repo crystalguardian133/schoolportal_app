@@ -18,6 +18,7 @@ type Ticket = {
     id: string;
     ticket_id: string;
     subject: string;
+    contact_email: string | null;
     status: string;
     closed: boolean;
     created_at: string;
@@ -77,6 +78,11 @@ export default function SupportThread() {
                                 <p className="mt-0.5 text-xs text-slate-500">
                                     Opened {formatDateTime(ticket.created_at)} · Ticket #{ticket.ticket_id}
                                 </p>
+                                {ticket.contact_email && (
+                                    <p className="mt-0.5 text-xs text-slate-500">
+                                        Email: {ticket.contact_email}
+                                    </p>
+                                )}
                             </div>
                             {ticket.closed ? (
                                 <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 dark:bg-neutral-800 dark:text-neutral-300">

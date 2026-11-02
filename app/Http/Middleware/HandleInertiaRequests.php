@@ -35,13 +35,24 @@ class HandleInertiaRequests extends Middleware
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
                 'support_thread_url' => fn () => $request->session()->get('support_thread_url'),
+                'support_ticket_id' => fn () => $request->session()->get('support_ticket_id'),
+                'session_conflict' => fn () => $request->session()->get('session_conflict'),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            // Webpage customization prefs for first paint (no flash of defaults).
+            'preferences' => $user
+                ? \App\Http\Controllers\Settings\PreferencesController::forUser($user)
+                : \App\Http\Controllers\Settings\PreferencesController::DEFAULTS,
             'push' => [
                 'enabled' => (bool) config('push.enabled'),
                 'vapid_public_key' => config('push.vapid.public_key'),
             ],
             'unreadAnnouncementsCount' => $this->getUnreadAnnouncementsCount($user),
+            // Dashboard section keys this user may see (settings widget UI
+            // gating — mirrors DashboardController via DashboardSections).
+            'dashboardSections' => $user
+                ? \App\Support\DashboardSections::keysFor($user)
+                : [],
         ];
     }
 

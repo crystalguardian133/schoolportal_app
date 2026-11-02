@@ -1,11 +1,24 @@
 import type { PageProps } from '@inertiajs/core';
 import { Head, router, usePage } from '@inertiajs/react';
-import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { GraduationCap, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import {
+    EditStudentForm
+    
+    
+    
+} from '@/components/admin/edit-student-form';
+import type {EditStudentAddress, EditStudentData, EditStudentSection} from '@/components/admin/edit-student-form';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { PageLoader } from '@/components/page-loader';
 import { PortalPageShell } from '@/components/portal-page-shell';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -21,6 +34,19 @@ type Student = {
     lrn?: string | null;
     section?: string | null;
     grade_level?: string | null;
+    last_grade_level?: string | null;
+    previous_section?: string | null;
+    status?: string | null;
+    birthday?: string | null;
+    contact_number?: string | null;
+    address_zone_street?: string | null;
+    address_barangay?: string | null;
+    address_municipality?: string | null;
+    address_province?: string | null;
+    previous_school?: string | null;
+    last_school_year?: string | null;
+    section_uuid?: string | null;
+    profile_picture?: string | null;
     first_name?: string | null;
     middle_name?: string | null;
     last_name?: string | null;
@@ -45,6 +71,8 @@ type Filters = {
 type PageData = PageProps & {
     students?: StudentPage;
     filters?: Filters;
+    classSections?: EditStudentSection[];
+    commonAddresses?: EditStudentAddress[];
 };
 
 function formatStudentName(s: Student) {
@@ -72,6 +100,8 @@ export default function ManageStudents() {
     const [sortBy, setSortBy] = useState(filters.sort_by ?? 'name');
     const [sortDirection, setSortDirection] = useState(filters.sort_direction ?? 'asc');
     const [deleteTarget, setDeleteTarget] = useState<Student | null>(null);
+    const [promoteTarget, setPromoteTarget] = useState<Student | null>(null);
+    const [editTarget, setEditTarget] = useState<Student | null>(null);
     const initialRender = useRef(true);
 
     useEffect(() => {
@@ -136,6 +166,39 @@ export default function ManageStudents() {
         });
     }
 
+    function isPromoted(student: Student): boolean {
+        return (
+            student.last_grade_level != null &&
+            student.grade_level !== student.last_grade_level
+        );
+    }
+
+    function promoteStudent(uuid: string) {
+        setPromoteTarget(null);
+        router.post(
+            `/admin/students/${uuid}/promote`,
+            {},
+            {
+                onSuccess: (page: any) => {
+                    if (page?.props?.flash?.error) {
+                        showToast(page.props.flash.error, 'error');
+                    } else {
+                        showToast('Student promoted successfully.', 'success');
+                    }
+
+                    router.reload();
+                },
+                onError: (errors: any) => {
+                    const firstError = Object.values(errors || {})[0];
+                    showToast(
+                        (firstError as string) || 'Unable to promote student.',
+                        'error',
+                    );
+                },
+            },
+        );
+    }
+
     return (
         <>
             <Head title="Manage Students" />
@@ -185,6 +248,7 @@ export default function ManageStudents() {
                                         </button>
                                     </th>
                                     <th className="px-4 py-3 font-medium">Section</th>
+                                    <th className="px-4 py-3 font-medium">Status</th>
                                     <th className="px-4 py-3 font-medium">Email</th>
                                     <th className="px-4 py-3 text-right font-medium">Actions</th>
                                 </tr>
@@ -206,6 +270,15 @@ export default function ManageStudents() {
                                         <td className="px-4 py-3 text-muted-foreground">{student.lrn || '-'}</td>
                                         <td className="px-4 py-3 text-muted-foreground">{student.grade_level || 'N/A'}</td>
                                         <td className="px-4 py-3 text-muted-foreground">{student.section || '-'}</td>
+                                        <td className="px-4 py-3 text-muted-foreground">
+                                            {student.status === 'graduated' ? (
+                                                <span className="inline-flex items-center rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-medium text-sky-700 dark:bg-sky-900/30 dark:text-sky-300">
+                                                    Graduated
+                                                </span>
+                                            ) : (
+                                                <span className="text-muted-foreground/60">—</span>
+                                            )}
+                                        </td>
                                         <td className="px-4 py-3 text-muted-foreground">{student.email || '-'}</td>
                                         <td className="px-4 py-3 text-right">
                                             <DropdownMenu>
@@ -215,9 +288,24 @@ export default function ManageStudents() {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem onSelect={() => router.get(`/admin/manage-students/${student.uuid}/edit`)}>
+                                                    <DropdownMenuItem onSelect={() => setEditTarget(student)}>
                                                         <Pencil className="size-4" />
                                                         Edit
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        disabled={
+                                                            !student.grade_level ||
+                                                            isPromoted(student) ||
+                                                            student.status === 'graduated'
+                                                        }
+                                                        onSelect={() => setPromoteTarget(student)}
+                                                    >
+                                                        <GraduationCap className="size-4" />
+                                                        {student.status === 'graduated'
+                                                            ? 'Graduated'
+                                                            : isPromoted(student)
+                                                              ? 'Promoted'
+                                                              : 'Promote'}
                                                     </DropdownMenuItem>
                                                     <DropdownMenuSeparator />
                                                     <DropdownMenuItem
@@ -270,6 +358,57 @@ setDeleteTarget(null);
                     }}
                     onConfirm={() => deleteTarget && deleteStudent(deleteTarget.uuid)}
                 />
+
+                <ConfirmDialog
+                    open={promoteTarget !== null}
+                    title="Promote student"
+                    description={`Promote ${promoteTarget ? formatStudentName(promoteTarget) : ''} from ${promoteTarget?.grade_level ?? 'N/A'} to the next grade level? This clears their current section assignment.`}
+                    confirmLabel="Promote"
+                    onOpenChange={(open) => {
+                        if (!open) {
+setPromoteTarget(null);
+}
+                    }}
+                    onConfirm={() => promoteTarget && promoteStudent(promoteTarget.uuid)}
+                />
+
+                <Dialog
+                    open={editTarget !== null}
+                    onOpenChange={(open) => {
+                        if (!open) {
+                            setEditTarget(null);
+                        }
+                    }}
+                >
+                    <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+                        <DialogHeader>
+                            <DialogTitle>
+                                Edit Student
+                                {editTarget
+                                    ? ` — ${formatStudentName(editTarget)}`
+                                    : ''}
+                            </DialogTitle>
+                        </DialogHeader>
+                        {editTarget && (
+                            <EditStudentForm
+                                key={editTarget.uuid}
+                                student={editTarget as EditStudentData}
+                                classSections={
+                                    (props.classSections || []) as EditStudentSection[]
+                                }
+                                commonAddresses={
+                                    (props.commonAddresses ||
+                                        []) as EditStudentAddress[]
+                                }
+                                onSuccess={() => {
+                                    setEditTarget(null);
+                                    router.reload();
+                                }}
+                                onCancel={() => setEditTarget(null)}
+                            />
+                        )}
+                    </DialogContent>
+                </Dialog>
             </PortalPageShell>
         </>
     );

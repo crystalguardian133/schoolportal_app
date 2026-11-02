@@ -20,7 +20,6 @@ import {
     Shield,
     UserCog,
     UserCheck,
-    UserRound,
     Users,
 } from 'lucide-react';
 import { toUrl } from '@/lib/utils';
@@ -43,11 +42,6 @@ const platformNavItems: NavItem[] = [
         title: 'Reports & Feedback',
         href: '/feedback',
         icon: MessageSquare,
-    },
-    {
-        title: 'My Profile',
-        href: '/profile',
-        icon: UserRound,
     },
 ];
 
@@ -82,11 +76,6 @@ const studentNavItems: NavItem[] = [
         href: '/feedback',
         icon: MessageSquare,
     },
-    {
-        title: 'My Profile',
-        href: '/student/profile',
-        icon: UserRound,
-    },
 ];
 
 const staffNavItems: NavItem[] = [
@@ -119,11 +108,6 @@ const staffNavItems: NavItem[] = [
         title: 'Reports & Feedback',
         href: '/feedback',
         icon: MessageSquare,
-    },
-    {
-        title: 'My Profile',
-        href: '/profile',
-        icon: UserRound,
     },
 ];
 
@@ -213,7 +197,7 @@ const adminNavItems: NavItem[] = [
     },
     {
         title: 'Manage Teachers',
-        href: '/admin/manage-teachers',
+        href: '/admin/users?role=teacher',
         icon: BookOpenText,
         permission: 'manage users',
     },
@@ -234,15 +218,10 @@ const adminNavItems: NavItem[] = [
         icon: MessageSquare,
     },
     {
-        title: 'Developer Reports',
+        title: 'User Support Console',
         href: '/developer/reports',
         icon: Bug,
         permission: 'access developer dashboard',
-    },
-    {
-        title: 'My Profile',
-        href: '/profile',
-        icon: UserRound,
     },
 ];
 
@@ -293,11 +272,6 @@ const teacherNavItems: NavItem[] = [
         title: 'Reports & Feedback',
         href: '/feedback',
         icon: MessageSquare,
-    },
-    {
-        title: 'My Profile',
-        href: '/profile',
-        icon: UserRound,
     },
 ];
 
@@ -351,11 +325,6 @@ const deptHeadNavItems: NavItem[] = [
         title: 'Reports & Feedback',
         href: '/feedback',
         icon: MessageSquare,
-    },
-    {
-        title: 'My Profile',
-        href: '/profile',
-        icon: UserRound,
     },
 ];
 
@@ -429,15 +398,10 @@ const schoolHeadNavItems: NavItem[] = [
         icon: MessageSquare,
     },
     {
-        title: 'Developer Reports',
+        title: 'User Support Console',
         href: '/developer/reports',
         icon: Bug,
         permission: 'access developer dashboard',
-    },
-    {
-        title: 'My Profile',
-        href: '/profile',
-        icon: UserRound,
     },
 ];
 
@@ -453,14 +417,9 @@ const developerNavItems: NavItem[] = [
         icon: MessageSquare,
     },
     {
-        title: 'Developer Reports',
+        title: 'User Support Console',
         href: '/developer/reports',
         icon: Bug,
-    },
-    {
-        title: 'My Profile',
-        href: '/profile',
-        icon: UserRound,
     },
 ];
 
