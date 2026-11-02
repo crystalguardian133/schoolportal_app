@@ -85,8 +85,102 @@ export function LayoutOptions() {
                     { value: 's', label: 'Sharp' },
                     { value: 'm', label: 'Medium' },
                     { value: 'l', label: 'Round' },
+                    { value: 'xl', label: 'Extra' },
                 ]}
             />
+            <Segmented
+                label="Content width"
+                value={preferences.contentWidth}
+                onChange={(contentWidth) => updatePreferences({ contentWidth })}
+                options={[
+                    { value: 'narrow', label: 'Narrow' },
+                    { value: 'comfortable', label: 'Comfortable' },
+                    { value: 'wide', label: 'Wide' },
+                    { value: 'full', label: 'Full' },
+                ]}
+            />
+            <Segmented
+                label="Border style"
+                value={preferences.borderStyle}
+                onChange={(borderStyle) => updatePreferences({ borderStyle })}
+                options={[
+                    { value: 'subtle', label: 'Subtle' },
+                    { value: 'default', label: 'Default' },
+                    { value: 'strong', label: 'Strong' },
+                ]}
+            />
+            <Segmented
+                label="Surface style"
+                value={preferences.surfaceStyle}
+                onChange={(surfaceStyle) => updatePreferences({ surfaceStyle })}
+                options={[
+                    { value: 'plain', label: 'Plain' },
+                    { value: 'elevated', label: 'Elevated' },
+                    { value: 'glass', label: 'Glass' },
+                ]}
+            />
+            <Segmented
+                label="Shadows"
+                value={preferences.shadowIntensity}
+                onChange={(shadowIntensity) =>
+                    updatePreferences({ shadowIntensity })
+                }
+                options={[
+                    { value: 'none', label: 'None' },
+                    { value: 'subtle', label: 'Subtle' },
+                    { value: 'medium', label: 'Medium' },
+                    { value: 'strong', label: 'Strong' },
+                ]}
+            />
+            <Segmented
+                label="Focus ring"
+                value={preferences.focusStyle}
+                onChange={(focusStyle) => updatePreferences({ focusStyle })}
+                options={[
+                    { value: 'default', label: 'Default' },
+                    { value: 'brand', label: 'Brand' },
+                    { value: 'none', label: 'None' },
+                ]}
+            />
+            <Segmented
+                label="UI style"
+                value={preferences.uiStyle}
+                onChange={(uiStyle) => updatePreferences({ uiStyle })}
+                options={[
+                    { value: 'default', label: 'Default' },
+                    { value: 'minimal', label: 'Minimal' },
+                    { value: 'modern', label: 'Modern' },
+                ]}
+            />
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <span className="text-sm font-medium">Backdrop blur</span>
+                <button
+                    type="button"
+                    role="switch"
+                    aria-checked={preferences.blur}
+                    onClick={() =>
+                        updatePreferences({
+                            blur: !preferences.blur,
+                        })
+                    }
+                    className={cn(
+                        'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors',
+                        preferences.blur
+                            ? 'border-primary bg-primary'
+                            : 'border-sidebar-border/70 bg-muted',
+                    )}
+                >
+                    <span
+                        aria-hidden="true"
+                        className={cn(
+                            'absolute left-0.5 size-5 rounded-full bg-white shadow transition-transform',
+                            preferences.blur
+                                ? 'translate-x-5'
+                                : 'translate-x-0',
+                        )}
+                    />
+                </button>
+            </div>
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <span className="text-sm font-medium">Reduce motion</span>
                 <button

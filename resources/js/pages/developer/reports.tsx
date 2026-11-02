@@ -85,6 +85,15 @@ export default function DeveloperReports({ reports, stats, filters }: Props) {
     const flash: any = props.flash || {};
     const [search, setSearch] = useState(filters.search || '');
     const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+    const activeTab = filters.tab === 'support' ? 'support' : 'reports';
+
+    function handleTab(tab: 'reports' | 'support') {
+        router.get(
+            '/developer/reports',
+            { ...filters, tab, type: undefined, page: 1 },
+            { preserveState: true, replace: true },
+        );
+    }
 
     function handleFilter(key: string, value: string) {
         router.get(
@@ -124,12 +133,37 @@ return;
 
     return (
         <>
-            <Head title="Developer Reports" />
+            <Head title="User Support Console" />
             <PortalPageShell
-                title="Developer Reports"
-                description="View and manage bug reports, suggestions, and feedback from all users."
+                title="User Support Console"
+                description="View and manage user reports, suggestions, feedback, and immediate account support."
                 showBackLink={false}
             >
+                <div className="flex gap-2 border-b border-sidebar-border/70 pb-2">
+                    <button
+                        onClick={() => handleTab('reports')}
+                        className={cn(
+                            'rounded-lg px-4 py-2 text-sm font-medium transition',
+                            activeTab === 'reports'
+                                ? 'bg-primary/10 text-primary'
+                                : 'text-muted-foreground hover:bg-muted',
+                        )}
+                    >
+                        Reports
+                    </button>
+                    <button
+                        onClick={() => handleTab('support')}
+                        className={cn(
+                            'rounded-lg px-4 py-2 text-sm font-medium transition',
+                            activeTab === 'support'
+                                ? 'bg-primary/10 text-primary'
+                                : 'text-muted-foreground hover:bg-muted',
+                        )}
+                    >
+                        Immediate Support
+                    </button>
+                </div>
+
                 {flash.success && (
                     <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
                         {flash.success}

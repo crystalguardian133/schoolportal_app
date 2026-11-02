@@ -11,6 +11,10 @@ use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Event;
 use App\Events\AnnouncementPublished;
 use App\Listeners\SendAnnouncementPushNotification;
+use App\Models\User;
+use Illuminate\Auth\Events\Login;
+use Illuminate\Auth\Events\Logout;
+use Laravel\Fortify\Events\ValidTwoFactorAuthenticationCodeProvided;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -35,6 +39,27 @@ class AppServiceProvider extends ServiceProvider
             AnnouncementPublished::class,
             SendAnnouncementPushNotification::class,
         );
+
+        Event::listen(Logout::class, function (Logout $event) {
+            if ($event->user instanceof User) {
+                $event->user->forceFill(['current_session_id' => null])->save();
+            }
+        });
+
+        Event::listen(Login::class, function (Login $event) {
+            if (request()->hasSession()) {
+                request()->session()->put('force_claim_session', true);
+            }
+        });
+
+        Event::listen(ValidTwoFactorAuthenticationCodeProvided::class, function (ValidTwoFactorAuthenticationCodeProvided $event) {
+            $user = $event->user;
+            if ($user instanceof User && app(\App\Services\ActiveSessionChecker::class)->hasActiveSession($user, request()->session()->getId())) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'code' => __('This account is currently signed in on another device. Please sign out there first.'),
+                ]);
+            }
+        });
     }
 
     /**

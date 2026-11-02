@@ -35,6 +35,8 @@ class HandleInertiaRequests extends Middleware
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
                 'support_thread_url' => fn () => $request->session()->get('support_thread_url'),
+                'support_ticket_id' => fn () => $request->session()->get('support_ticket_id'),
+                'session_conflict' => fn () => $request->session()->get('session_conflict'),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             // Webpage customization prefs for first paint (no flash of defaults).

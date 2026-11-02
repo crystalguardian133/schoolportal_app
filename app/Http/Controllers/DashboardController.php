@@ -239,7 +239,7 @@ class DashboardController extends Controller
             ],
             'recentReports' => $recentReports,
             'tools' => [
-                ['label' => 'Developer Reports', 'href' => '/developer/reports'],
+                ['label' => 'User Support Console', 'href' => '/developer/reports'],
             ],
         ];
     }

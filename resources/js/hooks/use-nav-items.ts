@@ -218,7 +218,7 @@ const adminNavItems: NavItem[] = [
         icon: MessageSquare,
     },
     {
-        title: 'Developer Reports',
+        title: 'User Support Console',
         href: '/developer/reports',
         icon: Bug,
         permission: 'access developer dashboard',
@@ -398,7 +398,7 @@ const schoolHeadNavItems: NavItem[] = [
         icon: MessageSquare,
     },
     {
-        title: 'Developer Reports',
+        title: 'User Support Console',
         href: '/developer/reports',
         icon: Bug,
         permission: 'access developer dashboard',
@@ -417,7 +417,7 @@ const developerNavItems: NavItem[] = [
         icon: MessageSquare,
     },
     {
-        title: 'Developer Reports',
+        title: 'User Support Console',
         href: '/developer/reports',
         icon: Bug,
     },

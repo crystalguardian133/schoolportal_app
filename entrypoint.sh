@@ -4,12 +4,14 @@ set -e
 APP_PID=""
 REVERB_PID=""
 QUEUE_PID=""
+SCHEDULE_PID=""
 
 cleanup() {
   echo "Stopping background services..."
   [ -n "$APP_PID" ] && kill "$APP_PID" 2>/dev/null || true
   [ -n "$REVERB_PID" ] && kill "$REVERB_PID" 2>/dev/null || true
   [ -n "$QUEUE_PID" ] && kill "$QUEUE_PID" 2>/dev/null || true
+  [ -n "$SCHEDULE_PID" ] && kill "$SCHEDULE_PID" 2>/dev/null || true
   wait 2>/dev/null || true
   exit 0
 }
@@ -86,6 +88,22 @@ start_services() {
     echo "Starting queue worker..."
     php artisan queue:work --sleep=1 --tries=3 >/dev/null 2>&1 &
     QUEUE_PID=$!
+  fi
+
+  # Scheduler: runs daily cleanups registered in routes/console.php
+  # (announcements:clean-old, logs:clean-old). Without this process those
+  # schedules never fire in a container — no host crontab runs Laravel here.
+  echo "Starting scheduler..."
+  php artisan schedule:work >/dev/null 2>&1 &
+  SCHEDULE_PID=$!
+
+  # Single-session enforcement ("one account, one device") detects a second
+  # device via the DB `sessions` table + users.current_session_id. With a
+  # non-database session driver that check cannot work, so warn loudly.
+  if [ "${SESSION_DRIVER:-file}" != "database" ]; then
+    echo "WARNING: SESSION_DRIVER='${SESSION_DRIVER:-file}' — single-session"
+    echo "enforcement needs SESSION_DRIVER=database (set SESSION_DRIVER in .env.prod)."
+    echo "Accounts may still open sessions on multiple devices until changed."
   fi
 
   echo "Starting server on port ${PORT:-8080}..."

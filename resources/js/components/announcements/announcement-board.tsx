@@ -375,8 +375,8 @@ export function AnnouncementBoard({
             <div
                 className={
                     manageable
-                        ? 'grid gap-4 lg:grid-cols-[380px_minmax(0,1fr)]'
-                        : undefined
+                        ? 'grid w-full items-start gap-4 lg:grid-cols-[30%_70%]'
+                        : 'flex w-full flex-col'
                 }
             >
                 {manageable && (
@@ -730,12 +730,25 @@ export function AnnouncementBoard({
                     </form>
                 )}
 
-                <div className="rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
-                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                        <div className="text-sm font-semibold text-foreground dark:text-sidebar-foreground">
-                            {manageable
-                                ? 'Recent announcements'
-                                : 'Latest announcements'}
+                <div className="flex max-h-[calc(100vh-220px)] flex-col rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
+                    <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                                <Sparkles className="size-4" />
+                            </div>
+                            <div>
+                                <div className="text-sm font-semibold text-foreground dark:text-sidebar-foreground">
+                                    {manageable
+                                        ? 'Recent announcements'
+                                        : 'Latest announcements'}
+                                </div>
+                                <div className="text-xs text-muted-foreground dark:text-sidebar-foreground/70">
+                                    {announcements.length}{' '}
+                                    {announcements.length === 1
+                                        ? 'post'
+                                        : 'posts'}
+                                </div>
+                            </div>
                         </div>
                         <div className="flex items-center gap-2">
                             <label className="flex items-center gap-2 text-xs text-muted-foreground dark:text-sidebar-foreground/80">
@@ -757,18 +770,23 @@ export function AnnouncementBoard({
                             </label>
                         </div>
                     </div>
-                    <div className="space-y-3">
+                    <div
+                        className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1 [scrollbar-width:thin]"
+                        style={{
+                            scrollbarGutter: 'stable',
+                        }}
+                    >
                         {announcements.length === 0 ? (
-                            <div className="rounded-2xl border border-sidebar-border/70 bg-sidebar/40 p-4 text-sm text-muted-foreground dark:text-sidebar-foreground/70">
+                            <div className="flex h-full items-center justify-center rounded-2xl border border-dashed border-sidebar-border/70 bg-sidebar/40 p-6 text-center text-sm text-muted-foreground dark:text-sidebar-foreground/70">
                                 {manageable
-                                    ? 'No announcements yet.'
+                                    ? 'No announcements yet. Create your first post above.'
                                     : 'No announcements available.'}
                             </div>
                         ) : (
                             announcements.map((announcement) => (
                                 <article
                                     key={announcement.uuid}
-                                    className="overflow-hidden rounded-2xl border border-sidebar-border/70 bg-sidebar/30 p-4 dark:bg-sidebar/60"
+                                    className="group overflow-hidden rounded-2xl border border-sidebar-border/70 bg-sidebar/30 p-4 transition hover:border-primary/40 hover:bg-sidebar/40 dark:bg-sidebar/60 dark:hover:bg-sidebar/70"
                                 >
                                     <div className="flex flex-wrap items-center justify-between gap-2">
                                         <button

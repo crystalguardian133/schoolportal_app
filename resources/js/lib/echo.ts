@@ -105,45 +105,39 @@ export function ensureEcho(): Echo<'reverb'> | null {
 
     (window as unknown as { Pusher: typeof Pusher }).Pusher = Pusher;
 
-    // This Reverb server has no TLS (REVERB_SCHEME=http), so only the
-    // matching transport is offered.
-    const useTLS = (import.meta.env.VITE_REVERB_SCHEME ?? 'http') === 'https';
+    // On https pages the browser forbids plain ws://, and Reverb rides the
+    // same origin through a reverse proxy on the standard ports (443 wss).
+    // On plain http pages, connect to Reverb directly (localhost:8080).
+    const pageIsHTTPS = window.location.protocol === 'https:';
+    const useTLS =
+        pageIsHTTPS ||
+        (import.meta.env.VITE_REVERB_SCHEME ?? 'http') === 'https';
 
-    if (
-        DEV &&
-        typeof window !== 'undefined' &&
-        window.location.protocol === 'https:' &&
-        !useTLS
-    ) {
-        // pusher-js forces TLS whenever the page itself is https
-        // (shouldUseTLS ignores forceTLS:false), so a non-TLS Reverb can
-        // never connect from here — e.g. the app opened through an ngrok
-        // https tunnel while Reverb only listens as plain ws://localhost.
-        // Fix: open the app over plain http(same machine), or expose Reverb
-        // through its own TLS tunnel and point VITE_REVERB_* at it.
-        console.warn(
-            '[echo] page is https but VITE_REVERB_SCHEME is not "https": ' +
-                'realtime cannot connect (browsers block ws:// on https pages ' +
-                'and this Reverb has no TLS).',
-        );
-    }
+    const wsHost = pageIsHTTPS
+        ? window.location.hostname
+        : (import.meta.env.VITE_REVERB_HOST ?? window.location.hostname);
+    // The env port (8080) is Reverb's local server port — never valid on a
+    // proxied https page, where the tunnel only exposes 443.
+    const wsPort = pageIsHTTPS
+        ? 443
+        : (import.meta.env.VITE_REVERB_PORT ?? (useTLS ? 443 : 8080));
 
     setStatus('connecting');
 
     echo = new Echo({
         broadcaster: 'reverb',
         key: import.meta.env.VITE_REVERB_APP_KEY ?? 'local',
-        wsHost: import.meta.env.VITE_REVERB_HOST ?? window.location.hostname,
-        wsPort: import.meta.env.VITE_REVERB_PORT ?? 8080,
-        wssPort: import.meta.env.VITE_REVERB_PORT ?? 8080,
+        wsHost,
+        wsPort,
+        wssPort: wsPort,
         forceTLS: useTLS,
         enabledTransports: useTLS ? ['wss'] : ['ws'],
         disableStats: true,
     });
 
     devLog('created', {
-        host: import.meta.env.VITE_REVERB_HOST ?? window.location.hostname,
-        port: import.meta.env.VITE_REVERB_PORT ?? 8080,
+        host: wsHost,
+        port: wsPort,
         useTLS,
     });
 

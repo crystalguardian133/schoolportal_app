@@ -1,4 +1,4 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     GraduationCap,
     BookOpenText,
@@ -124,7 +124,13 @@ function formatGrade(n: number | null): string {
 export default function Dashboard({ user, sections }: Props) {
     const { auth } = usePage<Props>().props;
     const firstName = getFirstName(user?.name ?? auth.user?.name) || 'there';
-    const { unread: unreadCount } = useAnnouncements();
+    const { unread: unreadCount } = useAnnouncements({
+        onUpdate: () => {
+            // Live announcement arrived; refresh the Recent Announcements
+            // widget (and any announcement-dependent section stats).
+            router.reload({ only: ['sections'] });
+        },
+    });
     const [qrOpen, setQrOpen] = useState(false);
 
     const studentSection = sections.find(

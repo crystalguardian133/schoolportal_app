@@ -39,6 +39,7 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
             LogSystemActivity::class,
+            \App\Http\Middleware\EnsureSingleSession::class,
         ]);
 
         $middleware->alias([

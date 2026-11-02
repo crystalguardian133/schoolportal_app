@@ -10,10 +10,16 @@ import { cn } from '@/lib/utils';
 const ORDER: AccentName[] = [
     'default',
     'emerald',
+    'teal',
+    'cyan',
+    'sky',
     'violet',
-    'amber',
-    'rose',
+    'fuchsia',
     'slate',
+    'amber',
+    'orange',
+    'rose',
+    'pink',
     'custom',
 ];
 

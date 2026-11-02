@@ -7,11 +7,25 @@ export type AccentName =
     | 'amber'
     | 'rose'
     | 'slate'
+    | 'sky'
+    | 'orange'
+    | 'teal'
+    | 'pink'
+    | 'cyan'
+    | 'fuchsia'
     | 'custom';
+import type { Appearance as AppearanceMode } from '@/hooks/use-appearance';
+
 export type SidebarPref = 'expanded' | 'collapsed' | 'remember';
 export type DensityPref = 'comfortable' | 'compact';
 export type FontScalePref = 's' | 'm' | 'l';
-export type RadiusPref = 's' | 'm' | 'l';
+export type RadiusPref = 's' | 'm' | 'l' | 'xl';
+export type ContentWidthPref = 'narrow' | 'comfortable' | 'wide' | 'full';
+export type BorderStylePref = 'subtle' | 'default' | 'strong';
+export type SurfaceStylePref = 'plain' | 'elevated' | 'glass';
+export type ShadowPref = 'none' | 'subtle' | 'medium' | 'strong';
+export type FocusStylePref = 'default' | 'brand' | 'none';
+export type UiStylePref = 'default' | 'minimal' | 'modern';
 
 export type WidgetPrefs = {
     section: string;
@@ -22,22 +36,38 @@ export type WidgetPrefs = {
 export type Preferences = {
     accent: AccentName;
     customAccent: string | null;
+    appearance: AppearanceMode;
     radius: RadiusPref;
     reduceMotion: boolean;
     sidebar: SidebarPref;
     density: DensityPref;
     fontScale: FontScalePref;
+    contentWidth: ContentWidthPref;
+    borderStyle: BorderStylePref;
+    surfaceStyle: SurfaceStylePref;
+    blur: boolean;
+    shadowIntensity: ShadowPref;
+    focusStyle: FocusStylePref;
+    uiStyle: UiStylePref;
     widgets: WidgetPrefs[];
 };
 
 export const DEFAULT_PREFERENCES: Preferences = {
     accent: 'default',
     customAccent: null,
+    appearance: 'system',
     radius: 'm',
     reduceMotion: false,
     sidebar: 'remember',
     density: 'comfortable',
     fontScale: 'm',
+    contentWidth: 'comfortable',
+    borderStyle: 'default',
+    surfaceStyle: 'plain',
+    blur: false,
+    shadowIntensity: 'subtle',
+    focusStyle: 'default',
+    uiStyle: 'default',
     widgets: [],
 };
 
@@ -164,6 +194,126 @@ export const ACCENTS: Record<AccentName, AccentDef> = {
             '--chart-1': 'oklch(0.71 0.16 255)',
         },
     },
+    sky: {
+        label: 'Sky',
+        dot: '#0ea5e9',
+        light: {
+            '--primary': 'oklch(0.59 0.14 241)',
+            '--primary-foreground': 'oklch(0.985 0 0)',
+            '--ring': 'oklch(0.76 0.11 241)',
+            '--sidebar-primary': 'oklch(0.59 0.14 241)',
+            '--sidebar-primary-foreground': 'oklch(0.985 0 0)',
+            '--chart-1': 'oklch(0.59 0.14 241)',
+        },
+        dark: {
+            '--primary': 'oklch(0.76 0.12 241)',
+            '--primary-foreground': 'oklch(0.14 0.02 241)',
+            '--ring': 'oklch(0.52 0.12 241)',
+            '--sidebar-primary': 'oklch(0.76 0.12 241)',
+            '--sidebar-primary-foreground': 'oklch(0.14 0.02 241)',
+            '--chart-1': 'oklch(0.76 0.12 241)',
+        },
+    },
+    orange: {
+        label: 'Orange',
+        dot: '#ea580c',
+        light: {
+            '--primary': 'oklch(0.65 0.19 41)',
+            '--primary-foreground': 'oklch(0.985 0 0)',
+            '--ring': 'oklch(0.78 0.16 51)',
+            '--sidebar-primary': 'oklch(0.65 0.19 41)',
+            '--sidebar-primary-foreground': 'oklch(0.985 0 0)',
+            '--chart-1': 'oklch(0.65 0.19 41)',
+        },
+        dark: {
+            '--primary': 'oklch(0.8 0.17 70)',
+            '--primary-foreground': 'oklch(0.16 0.02 41)',
+            '--ring': 'oklch(0.58 0.16 51)',
+            '--sidebar-primary': 'oklch(0.8 0.17 70)',
+            '--sidebar-primary-foreground': 'oklch(0.16 0.02 41)',
+            '--chart-1': 'oklch(0.8 0.17 70)',
+        },
+    },
+    teal: {
+        label: 'Teal',
+        dot: '#14b8a6',
+        light: {
+            '--primary': 'oklch(0.65 0.12 185)',
+            '--primary-foreground': 'oklch(0.985 0 0)',
+            '--ring': 'oklch(0.8 0.1 185)',
+            '--sidebar-primary': 'oklch(0.65 0.12 185)',
+            '--sidebar-primary-foreground': 'oklch(0.985 0 0)',
+            '--chart-1': 'oklch(0.65 0.12 185)',
+        },
+        dark: {
+            '--primary': 'oklch(0.8 0.11 185)',
+            '--primary-foreground': 'oklch(0.14 0.02 185)',
+            '--ring': 'oklch(0.55 0.1 185)',
+            '--sidebar-primary': 'oklch(0.8 0.11 185)',
+            '--sidebar-primary-foreground': 'oklch(0.14 0.02 185)',
+            '--chart-1': 'oklch(0.8 0.11 185)',
+        },
+    },
+    pink: {
+        label: 'Pink',
+        dot: '#ec4899',
+        light: {
+            '--primary': 'oklch(0.65 0.24 350)',
+            '--primary-foreground': 'oklch(0.985 0 0)',
+            '--ring': 'oklch(0.8 0.18 350)',
+            '--sidebar-primary': 'oklch(0.65 0.24 350)',
+            '--sidebar-primary-foreground': 'oklch(0.985 0 0)',
+            '--chart-1': 'oklch(0.65 0.24 350)',
+        },
+        dark: {
+            '--primary': 'oklch(0.8 0.2 350)',
+            '--primary-foreground': 'oklch(0.16 0.02 350)',
+            '--ring': 'oklch(0.58 0.18 350)',
+            '--sidebar-primary': 'oklch(0.8 0.2 350)',
+            '--sidebar-primary-foreground': 'oklch(0.16 0.02 350)',
+            '--chart-1': 'oklch(0.8 0.2 350)',
+        },
+    },
+    cyan: {
+        label: 'Cyan',
+        dot: '#06b6d4',
+        light: {
+            '--primary': 'oklch(0.71 0.13 210)',
+            '--primary-foreground': 'oklch(0.13 0.02 210)',
+            '--ring': 'oklch(0.82 0.1 210)',
+            '--sidebar-primary': 'oklch(0.71 0.13 210)',
+            '--sidebar-primary-foreground': 'oklch(0.13 0.02 210)',
+            '--chart-1': 'oklch(0.71 0.13 210)',
+        },
+        dark: {
+            '--primary': 'oklch(0.86 0.12 210)',
+            '--primary-foreground': 'oklch(0.14 0.02 210)',
+            '--ring': 'oklch(0.58 0.12 210)',
+            '--sidebar-primary': 'oklch(0.86 0.12 210)',
+            '--sidebar-primary-foreground': 'oklch(0.14 0.02 210)',
+            '--chart-1': 'oklch(0.86 0.12 210)',
+        },
+    },
+    fuchsia: {
+        label: 'Fuchsia',
+        dot: '#d946ef',
+        light: {
+            '--primary': 'oklch(0.67 0.26 322)',
+            '--primary-foreground': 'oklch(0.985 0 0)',
+            '--ring': 'oklch(0.82 0.2 322)',
+            '--sidebar-primary': 'oklch(0.67 0.26 322)',
+            '--sidebar-primary-foreground': 'oklch(0.985 0 0)',
+            '--chart-1': 'oklch(0.67 0.26 322)',
+        },
+        dark: {
+            '--primary': 'oklch(0.83 0.22 322)',
+            '--primary-foreground': 'oklch(0.16 0.02 322)',
+            '--ring': 'oklch(0.58 0.2 322)',
+            '--sidebar-primary': 'oklch(0.83 0.22 322)',
+            '--sidebar-primary-foreground': 'oklch(0.16 0.02 322)',
+            '--chart-1': 'oklch(0.83 0.22 322)',
+        },
+    },
 };
 
 const ACCENT_KEYS = Object.keys(ACCENTS);
@@ -178,6 +328,26 @@ const RADII: Record<RadiusPref, string> = {
     s: '0.375rem',
     m: '0.625rem',
     l: '1rem',
+    xl: '1.25rem',
+};
+
+const CONTENT_WIDTHS: Record<ContentWidthPref, string> = {
+    narrow: '56rem',
+    comfortable: '72rem',
+    wide: '88rem',
+    full: '100%',
+};
+
+const BORDER_OPACITIES: Record<BorderStylePref, string> = {
+    subtle: '0.4',
+    default: '0.7',
+    strong: '1',
+};
+
+const SURFACE_STYLES: Record<SurfaceStylePref, string> = {
+    plain: '',
+    elevated: 'shadow-sm',
+    glass: 'backdrop-blur-sm bg-white/80 dark:bg-sidebar/80',
 };
 
 const HEX_RE = /^#[0-9a-fA-F]{6}$/;
@@ -320,6 +490,38 @@ export function reapplyAccentForMode() {
     applyAccent(current.accent, current.customAccent);
 }
 
+const SHADOWS: Record<ShadowPref, string> = {
+    none: '0 0 0 0 rgb(0 0 0 / 0)',
+    subtle: '0 1px 2px 0 rgb(0 0 0 / 0.02), 0 1px 3px 0 rgb(0 0 0 / 0.01)',
+    medium: '0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.03)',
+    strong: '0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.05)',
+};
+
+function applyTheme(appearance: AppearanceMode) {
+    if (typeof document === 'undefined') {
+        return;
+    }
+
+    const prefersDark =
+        typeof window !== 'undefined' &&
+        window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const isDark =
+        appearance === 'dark' ||
+        (appearance === 'system' && prefersDark);
+
+    document.documentElement.classList.toggle('dark', isDark);
+    document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
+}
+
+function setAppearanceCookie(appearance: AppearanceMode) {
+    if (typeof document === 'undefined') {
+        return;
+    }
+
+    const maxAge = 365 * 24 * 60 * 60;
+    document.cookie = `appearance=${appearance};path=/;max-age=${maxAge};SameSite=Lax`;
+}
+
 function applyLayout(prefs: Preferences) {
     if (typeof document === 'undefined') {
         return;
@@ -333,9 +535,29 @@ function applyLayout(prefs: Preferences) {
     document.documentElement.dataset.motion = prefs.reduceMotion
         ? 'reduce'
         : '';
+    document.documentElement.dataset.border = prefs.borderStyle ?? 'default';
+    document.documentElement.dataset.surface = prefs.surfaceStyle ?? 'plain';
+    document.documentElement.dataset.blur = prefs.blur ? 'true' : 'false';
+    document.documentElement.dataset.width = prefs.contentWidth ?? 'comfortable';
+    document.documentElement.dataset.shadow = prefs.shadowIntensity ?? 'subtle';
+    document.documentElement.dataset.focus = prefs.focusStyle ?? 'default';
+    document.documentElement.dataset.uistyle = prefs.uiStyle ?? 'default';
+
     document.documentElement.style.setProperty(
         '--radius',
         RADII[prefs.radius] ?? RADII.m,
+    );
+    document.documentElement.style.setProperty(
+        '--content-width',
+        CONTENT_WIDTHS[prefs.contentWidth] ?? CONTENT_WIDTHS.comfortable,
+    );
+    document.documentElement.style.setProperty(
+        '--border-alpha',
+        BORDER_OPACITIES[prefs.borderStyle] ?? BORDER_OPACITIES.default,
+    );
+    document.documentElement.style.setProperty(
+        '--shadow-intensity',
+        SHADOWS[prefs.shadowIntensity] ?? SHADOWS.subtle,
     );
     document.documentElement.style.fontSize =
         FONT_SIZES[prefs.fontScale] ?? FONT_SIZES.m;
@@ -343,8 +565,10 @@ function applyLayout(prefs: Preferences) {
 
 export function applyPreferences(prefs: Preferences) {
     current = { ...DEFAULT_PREFERENCES, ...prefs };
+    applyTheme(current.appearance);
     applyAccent(current.accent, current.customAccent);
     applyLayout(current);
+    setAppearanceCookie(current.appearance);
     notify();
 }
 
@@ -366,7 +590,13 @@ function sanitize(input: unknown): Preferences {
             HEX_RE.test(p.customAccent)
                 ? p.customAccent
                 : null,
-        radius: ['s', 'm', 'l'].includes(p.radius ?? '')
+        appearance:
+            p.appearance === 'light' ||
+            p.appearance === 'dark' ||
+            p.appearance === 'system'
+                ? (p.appearance as Preferences['appearance'])
+                : base.appearance,
+        radius: ['s', 'm', 'l', 'xl'].includes(p.radius ?? '')
             ? (p.radius as Preferences['radius'])
             : base.radius,
         reduceMotion:
@@ -384,6 +614,34 @@ function sanitize(input: unknown): Preferences {
         fontScale: ['s', 'm', 'l'].includes(p.fontScale ?? '')
             ? (p.fontScale as Preferences['fontScale'])
             : base.fontScale,
+        contentWidth: ['narrow', 'comfortable', 'wide', 'full'].includes(
+            p.contentWidth ?? '',
+        )
+            ? (p.contentWidth as Preferences['contentWidth'])
+            : base.contentWidth,
+        borderStyle: ['subtle', 'default', 'strong'].includes(
+            p.borderStyle ?? '',
+        )
+            ? (p.borderStyle as Preferences['borderStyle'])
+            : base.borderStyle,
+        surfaceStyle: ['plain', 'elevated', 'glass'].includes(
+            p.surfaceStyle ?? '',
+        )
+            ? (p.surfaceStyle as Preferences['surfaceStyle'])
+            : base.surfaceStyle,
+        blur:
+            typeof p.blur === 'boolean' ? p.blur : base.blur,
+        shadowIntensity: ['none', 'subtle', 'medium', 'strong'].includes(
+            p.shadowIntensity ?? '',
+        )
+            ? (p.shadowIntensity as Preferences['shadowIntensity'])
+            : base.shadowIntensity,
+        focusStyle: ['default', 'brand', 'none'].includes(p.focusStyle ?? '')
+            ? (p.focusStyle as Preferences['focusStyle'])
+            : base.focusStyle,
+        uiStyle: ['default', 'minimal', 'modern'].includes(p.uiStyle ?? '')
+            ? (p.uiStyle as Preferences['uiStyle'])
+            : base.uiStyle,
         widgets: Array.isArray(p.widgets) ? p.widgets : [],
     };
 }
@@ -395,6 +653,13 @@ export function initializePreferences() {
     }
 
     applyPreferences({ ...DEFAULT_PREFERENCES, ...readLocal() });
+
+    // Re-apply theme vars when system preference changes (only matters in 'system' mode).
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    mq.addEventListener('change', () => {
+        applyTheme(current.appearance);
+        applyAccent(current.accent, current.customAccent);
+    });
 
     // Accent sets are mode-specific; re-apply whenever light/dark flips,
     // wherever the toggle lives (sidebar, settings, login header).

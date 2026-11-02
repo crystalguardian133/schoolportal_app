@@ -19,7 +19,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Models\Role;
 use App\Models\Concerns\HasRolesAndPermissions;
 
-#[Fillable(['name', 'email', 'password', 'profile_picture', 'cover_image', 'preferences'])]
+#[Fillable(['name', 'email', 'password', 'profile_picture', 'cover_image', 'preferences', 'current_session_id'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable implements PasskeyUser
 {

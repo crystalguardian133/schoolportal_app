@@ -14,39 +14,41 @@ export default function Appearance() {
             <h1 className="sr-only">Appearance settings</h1>
 
             <div className="space-y-6">
-                <Heading
-                    variant="small"
-                    title="Appearance settings"
-                    description="Update the appearance settings for your account"
-                />
-                <AppearanceTabs />
+                <div className="space-y-4 rounded-xl border border-sidebar-border/70 bg-white p-6 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
+                    <Heading
+                        variant="small"
+                        title="Appearance settings"
+                        description="Update the appearance settings for your account"
+                    />
+                    <AppearanceTabs />
+                </div>
 
-                <section className="space-y-3 rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
+                <div className="space-y-3 rounded-xl border border-sidebar-border/70 bg-white p-6 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
                     <Heading
                         variant="small"
                         title="Accent theme"
                         description="Recolors buttons, highlights, charts, and the sidebar across light and dark mode. Applies instantly and syncs to your account."
                     />
                     <AccentSwatches />
-                </section>
+                </div>
 
-                <section className="space-y-3 rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
+                <div className="space-y-3 rounded-xl border border-sidebar-border/70 bg-white p-6 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
                     <Heading
                         variant="small"
                         title="Layout"
                         description="Sidebar behavior, table density, and text size."
                     />
                     <LayoutOptions />
-                </section>
+                </div>
 
-                <section className="space-y-3 rounded-2xl border border-sidebar-border/70 bg-white p-5 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
+                <div className="space-y-3 rounded-xl border border-sidebar-border/70 bg-white p-6 shadow-sm dark:border-sidebar-border dark:bg-sidebar">
                     <Heading
                         variant="small"
                         title="Dashboard widgets"
                         description="Show, hide, and reorder the blocks on your dashboard."
                     />
                     <WidgetToggles />
-                </section>
+                </div>
             </div>
         </>
     );
